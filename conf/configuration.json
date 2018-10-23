@@ -1,6 +1,6 @@
 {
   "Server":"",
-  "Port": "4443",
+  "Port": "8080",
   "Key": "server.key",
   "Cert": "server.crt",
   "ssl": false
