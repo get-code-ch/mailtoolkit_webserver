@@ -6,11 +6,13 @@ import (
 )
 
 type Configuration struct {
-	Server string
-	Port   string
-	Key    string
-	Cert   string
-	Ssl    bool
+	Server       string
+	Port         string
+	Key          string
+	Cert         string
+	Ssl          bool
+	MailFolder   string `json:"mail_folder"`
+	StaticFolder string `json:"static_folder"`
 }
 
 func getConfiguration(file string) (Configuration, error) {

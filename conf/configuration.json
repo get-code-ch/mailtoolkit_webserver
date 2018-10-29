@@ -1,7 +1,9 @@
 {
   "Server":"",
-  "Port": "8080",
+  "Port": "8081",
   "Key": "server.key",
   "Cert": "server.crt",
-  "ssl": false
+  "ssl": false,
+  "mail_folder": "./mail/",
+  "static_folder": "./static/"
 }
