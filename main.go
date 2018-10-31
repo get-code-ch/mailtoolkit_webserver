@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 )
@@ -33,19 +32,23 @@ type Href struct {
 
 const file = "./conf/configuration.json"
 
-var mailLst []mailtoolkit.Mail
+var mailLst map[string]mailtoolkit.Mail
 
 var conf Configuration
 var removeCid *regexp.Regexp
 
 func init() {
 	var err error
+
 	conf, err = getConfiguration(file)
 	if err != nil {
 		log.Fatal("getConfiguration: ", err)
 	}
 	removeCid = regexp.MustCompile(`(?mi)(src=["]?)(cid:)(["]?)`)
+	mailLst = make(map[string]mailtoolkit.Mail)
+}
 
+func root(w http.ResponseWriter, r *http.Request) {
 	emailLst := []os.FileInfo{}
 
 	// Get email files in folder
@@ -55,7 +58,7 @@ func init() {
 	}
 
 	for _, fn := range files {
-		if filepath.Ext(fn.Name()) == ".eml" {
+		if filepath.Ext(fn.Name()) == conf.Ext {
 			emailLst = append(emailLst, fn)
 		}
 	}
@@ -63,19 +66,19 @@ func init() {
 	sg := sync.WaitGroup{}
 	sg.Add(len(emailLst))
 
-	results := make(chan mailtoolkit.Mail, 100)
+	results := make(chan map[string]mailtoolkit.Mail, 100)
 
 	// Parse mailcontent to an array
 	for _, fn := range emailLst {
 		go func(name string) {
-			r := mailtoolkit.Mail{}
+			r := map[string]mailtoolkit.Mail{}
 			buffer, err := ioutil.ReadFile(conf.MailFolder + name)
 			if err != nil {
 				log.Printf("Error open mail file: %v", err)
 				sg.Done()
 				return
 			}
-			r = mailtoolkit.Parse(buffer)
+			r[name] = mailtoolkit.Parse(buffer)
 			results <- r
 			sg.Done()
 		}(fn.Name())
@@ -86,27 +89,25 @@ func init() {
 		close(results)
 	}()
 
-	mailLst = []mailtoolkit.Mail{}
-	for m := range results {
-		mailLst = append(mailLst, m)
+	for maps := range results {
+		for key, value := range maps {
+			mailLst[key] = value
+		}
 	}
 
-}
-
-func root(w http.ResponseWriter, r *http.Request) {
 	p := []mailTpl{}
-	for i, m := range mailLst {
+	for key, value := range mailLst {
 		r := mailTpl{}
-		r.From = m.Header.From
-		r.To = m.Header.To
-		r.Subject = m.Header.Subject
+		r.From = value.Header.From
+		r.To = value.Header.To
+		r.Subject = value.Header.Subject
 		r.Content = []Href{}
 		r.Attachment = []Href{}
-		for c := range m.Contents {
-			r.Content = append(r.Content, Href{"/mail/" + strconv.Itoa(i) + "/" + c, m.Contents[c].ContentInfo.Type.Type + "/" + m.Contents[c].ContentInfo.Type.Subtype})
+		for c := range value.Contents {
+			r.Content = append(r.Content, Href{"/display/" + key + "/" + c, value.Contents[c].ContentInfo.Type.Type + "/" + value.Contents[c].ContentInfo.Type.Subtype})
 		}
-		for a := range m.Attachments {
-			r.Attachment = append(r.Attachment, Href{"/mail/" + strconv.Itoa(i) + "/attachment/" + a, a})
+		for a := range value.Attachments {
+			r.Attachment = append(r.Attachment, Href{"/mail/" + key + "/attachment/" + a, a})
 		}
 		p = append(p, r)
 	}
@@ -130,6 +131,33 @@ func root(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, data)
 }
 
+func displayContent(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	id, _ := vars["id"]
+	contentKey, _ := vars["content"]
+
+	h, err := ioutil.ReadFile("view/mail.html")
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+	t, err := template.New("mail").Parse(string(h))
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		Title       string
+		Header      mailtoolkit.Header
+		ContentInfo mailtoolkit.ContentInfo
+		Content     string
+	}{Title: "mailtoolkit demo webserver (Display Mail)", Header: mailLst[id].Header, ContentInfo: mailLst[id].Contents[contentKey].ContentInfo, Content: "/mail/" + id + "/" + contentKey}
+
+	t.Execute(w, data)
+}
+
 func mailContent(w http.ResponseWriter, r *http.Request) {
 	var data []byte
 	var err error
@@ -137,12 +165,8 @@ func mailContent(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	id, _ := strconv.Atoi(vars["id"])
+	id, _ := vars["id"]
 	contentKey, _ := vars["content"]
-	if id >= len(mailLst) {
-		http.Error(w, "Not Found", http.StatusNotFound)
-		return
-	}
 	content, ok := mailLst[id].Contents[contentKey]
 	if !ok {
 		http.Error(w, "Not Found", http.StatusNotFound)
@@ -180,12 +204,8 @@ func mailAttachment(w http.ResponseWriter, r *http.Request) {
 
 	vars := mux.Vars(r)
 
-	id, _ := strconv.Atoi(vars["id"])
+	id, _ := vars["id"]
 	attachmentKey, _ := vars["attachment"]
-	if id >= len(mailLst) {
-		http.Error(w, "Not Found", http.StatusNotFound)
-		return
-	}
 	attachment, ok := mailLst[id].Attachments[attachmentKey]
 	if !ok {
 		http.Error(w, "Not Found", http.StatusNotFound)
@@ -223,6 +243,7 @@ func main() {
 
 	// Display select mail content
 	router.HandleFunc("/mail/{id}/{content}", mailContent)
+	router.HandleFunc("/display/{id}/{content}", displayContent)
 	router.HandleFunc("/mail/{id}/attachment/{attachment}", mailAttachment)
 	// Serving static files
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(conf.StaticFolder))))

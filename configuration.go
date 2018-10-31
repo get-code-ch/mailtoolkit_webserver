@@ -11,6 +11,7 @@ type Configuration struct {
 	Key          string
 	Cert         string
 	Ssl          bool
+	Ext          string
 	MailFolder   string `json:"mail_folder"`
 	StaticFolder string `json:"static_folder"`
 }

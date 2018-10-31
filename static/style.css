@@ -25,3 +25,17 @@ tr.mailcontent td {
     border-radius: 3px;
     border: 1px solid darkslateblue;
 }
+
+embed.image {
+    border: none;
+    max-width: 610px;
+    max-height: 885px;
+    horiz-align: center;
+    vertical-align: center;
+}
+
+embed.text {
+    border: none;
+    width: 100%;
+    height: 100%;
+}
