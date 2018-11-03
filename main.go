@@ -46,6 +46,7 @@ func init() {
 	}
 	removeCid = regexp.MustCompile(`(?mi)(src=["]?)(cid:)(["]?)`)
 	mailLst = make(map[string]mailtoolkit.Mail)
+	log.Printf("Configuration %v\n", conf)
 }
 
 func root(w http.ResponseWriter, r *http.Request) {

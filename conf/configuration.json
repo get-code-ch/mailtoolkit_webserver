@@ -1,8 +1,8 @@
 {
   "Server":"",
-  "Port": "8081",
-  "Key": "server.key",
-  "Cert": "server.crt",
+  "Port": "80",
+  "Key": "./ssl/server.key",
+  "Cert": "./ssl/server.crt",
   "ssl": false,
   "mail_folder": "./mail/",
   "ext": ".*",
