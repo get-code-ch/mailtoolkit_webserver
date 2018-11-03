@@ -58,7 +58,7 @@ func root(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, fn := range files {
-		if filepath.Ext(fn.Name()) == conf.Ext {
+		if filepath.Ext(fn.Name()) == conf.Ext || conf.Ext == ".*" {
 			emailLst = append(emailLst, fn)
 		}
 	}
@@ -71,19 +71,22 @@ func root(w http.ResponseWriter, r *http.Request) {
 	// Parse mailcontent to an array
 	for _, fn := range emailLst {
 		go func(name string) {
-			r := map[string]mailtoolkit.Mail{}
-			buffer, err := ioutil.ReadFile(conf.MailFolder + name)
-			if err != nil {
-				log.Printf("Error open mail file: %v", err)
-				sg.Done()
-				return
+			if _, ok := mailLst[name]; !ok {
+				r := map[string]mailtoolkit.Mail{}
+				buffer, err := ioutil.ReadFile(conf.MailFolder + name)
+				if err != nil {
+					log.Printf("Error open mail file: %v", err)
+					sg.Done()
+					return
+				}
+				r[name] = mailtoolkit.Parse(buffer)
+				results <- r
 			}
-			r[name] = mailtoolkit.Parse(buffer)
-			results <- r
 			sg.Done()
 		}(fn.Name())
 	}
 
+	// Wait for processing all files
 	go func() {
 		sg.Wait()
 		close(results)

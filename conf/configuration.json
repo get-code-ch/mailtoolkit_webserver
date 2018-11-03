@@ -5,6 +5,6 @@
   "Cert": "server.crt",
   "ssl": false,
   "mail_folder": "./mail/",
-  "ext": ".eml",
+  "ext": ".*",
   "static_folder": "./static/"
 }
