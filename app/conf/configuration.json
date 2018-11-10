@@ -1,0 +1,11 @@
+{
+  "Server": "",
+  "Port": "8080",
+  "Key": "./ssl/mycert.key",
+  "Cert": "./ssl/mycert.crt",
+  "ssl": false,
+  "mail_folder": "./mail/",
+  "ext": ".*",
+  "static_folder": "./static/",
+  "Users": "./conf/users"
+}

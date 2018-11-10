@@ -1,0 +1,24 @@
+version: '3.2'
+
+services:
+  mailtoolkit:
+    build: .
+    restart: always
+    volumes:
+    - /data/postfix/ssl/myca.crt:/etc/ssl/certs/myca.crt
+    - /data/postfix/ssl/mycert.crt:/etc/ssl/certs/mycert.crt
+    - /data/postfix/ssl/mycert.key:/etc/ssl/certs/mycert.key
+    - /data/mail:/mail
+    ports:
+    - target: 80
+      published: 80
+      protocol: tcp
+      mode: host
+    - target: 443
+      published: 443
+      protocol: tcp
+      mode: host
+volumes:
+  mail:
+  mycert.crt:
+  mycert.key:

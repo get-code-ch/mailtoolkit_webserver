@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/app/static/style.css">
+</head>
+<body>
+<div>
+{{with .Header}}
+    <b>From:</b> {{.From}} - <b>To:</b> {{.To}}<br/>
+    <b>Subject:</b> {{.Subject}}<br/>
+{{end}}<br/>
+</div>
+
+<div style="width:620px;Height:895px;border: 1px grey solid;horiz-align: center">
+
+    <embed align="center" type="{{.ContentInfo.Type.Type}}/{{.ContentInfo.Type.Subtype}}" src="{{.Content}}"
+           class="{{.ContentInfo.Type.Type}}">
+
+</div>
+</body>
+</html>

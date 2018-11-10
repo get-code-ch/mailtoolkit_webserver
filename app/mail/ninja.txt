@@ -1,0 +1,2070 @@
+Delivered-To: claude@debieux.ch
+Received: by 2002:a02:a88d:0:0:0:0:0 with SMTP id l13-v6csp5035055jam;
+        Tue, 30 Oct 2018 00:15:14 -0700 (PDT)
+X-Google-Smtp-Source: AJdET5cxLnbIzaYveQYQ6sR3/xQj1hpUU4F9+AnRXxvjEujlxrTzVz/nfLRpoTJoWUVNhj/COv3U
+X-Received: by 2002:a25:af90:: with SMTP id g16-v6mr16646818ybh.148.1540883714150;
+        Tue, 30 Oct 2018 00:15:14 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1540883714; cv=none;
+        d=google.com; s=arc-20160816;
+        b=XCVxC58AAEhXbggoVAYOgpysmq8TLWL18aW6ci8yH8IJkw4vwYfTsBnIh+TxQ1dtb8
+         NE8x+1tBCKLGbRQ6h93s91NLaZm8h+jQLfwKuqg3iQ8/t43fC/mSnpZe5knGq1Eh5i5l
+         mBCw8cJlMrx1HLAlYD+YXCGNvdTMlBhTmGCx29jcMr8WweWGFyE/+tu5Xts76qUZPEtc
+         PdLaIiwLQENLf4INWjJ1oPLaVJq/YBLZnn9uRk3RG4Q0nCN+LfyWsUzcgaaAgK6tk0gU
+         s2+Tx25WPj8shZq0ZcfIVyaiG2x3DVhMZBWbgbEY2t51YtBdRGxEqLmw0jHqHeKHycVq
+         H+TQ==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20160816;
+        h=mime-version:list-unsubscribe-post:list-unsubscribe:precedence
+         :list-id:feedback-id:message-id:date:to:reply-to:from:subject
+         :dkim-signature;
+        bh=TLGQML1zHHJmTYADkn+YVUquTBeebkq6agNAz22hTcI=;
+        b=QXdU1wImOY0IRpboD1CIEzceBDf1eV4oF6Ip3qBeBuCAmWGOv5uJhVO/XN+T+c8367
+         0doC+A9YQY5RQ9LtlN3lSQ3xIlOQ3HPmKcHFtiinJDwo8frQ52VOUt1OQx4AqpcGETm+
+         AwIMgCM7f/vB7DpF0Q4kzosrpuSWGDkAPUnFUEQa7/tnYhSTRCt6VJweiac7Xy4dNVGg
+         N1wIwSA7favp+eiMSGQ5Z80gFGgy3unteeRab9sGEmpLiYvp6LN0JYyrry56mXtskRFg
+         konoO+8GO/8V8ua3UZyXVKSwla2CfaNwrWiudkvE2hB32PAqJykM5ycenYjwL/OuKdJz
+         070g==
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@mailchimpapp.net header.s=k1 header.b=XMXgakxh;
+       spf=pass (google.com: domain of bounce-mc.us7_22051115.2226289-claude=debieux.ch@mail207.atl221.rsgsv.net designates 198.2.139.207 as permitted sender) smtp.mailfrom="bounce-mc.us7_22051115.2226289-claude=debieux.ch@mail207.atl221.rsgsv.net"
+Return-Path: <bounce-mc.us7_22051115.2226289-claude=debieux.ch@mail207.atl221.rsgsv.net>
+Received: from mail207.atl221.rsgsv.net (mail207.atl221.rsgsv.net. [198.2.139.207])
+        by mx.google.com with ESMTPS id i66-v6si8852104ywc.7.2018.10.30.00.15.13
+        for <claude@debieux.ch>
+        (version=TLS1_2 cipher=ECDHE-RSA-AES128-GCM-SHA256 bits=128/128);
+        Tue, 30 Oct 2018 00:15:14 -0700 (PDT)
+Received-SPF: pass (google.com: domain of bounce-mc.us7_22051115.2226289-claude=debieux.ch@mail207.atl221.rsgsv.net designates 198.2.139.207 as permitted sender) client-ip=198.2.139.207;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@mailchimpapp.net header.s=k1 header.b=XMXgakxh;
+       spf=pass (google.com: domain of bounce-mc.us7_22051115.2226289-claude=debieux.ch@mail207.atl221.rsgsv.net designates 198.2.139.207 as permitted sender) smtp.mailfrom="bounce-mc.us7_22051115.2226289-claude=debieux.ch@mail207.atl221.rsgsv.net"
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=mailchimpapp.net;
+	s=k1; t=1540883712; bh=TLGQML1zHHJmTYADkn+YVUquTBeebkq6agNAz22hTcI=;
+	h=Subject:From:Reply-To:To:Date:Message-ID:List-ID:List-Unsubscribe:
+	 Content-Type:MIME-Version;
+	b=XMXgakxhxaQGANIhcD62urmEjJd6wFpJeoiPaXVDgUSn52LNlmj5AlG38KFhqT9Uo
+	 uWebgH2tFh8Aa+dzTrNJygR8Lq8beWeqJnDK9Qxj1KN075He96vtukoh9VSYSP32co
+	 umBfXFZos6g6z3qjIo5x8EFE8GXSbzo5T9nEKmyo=
+Received: from localhost (localhost [127.0.0.1])
+	by mail207.atl221.rsgsv.net (MailChimp) with ESMTP id 42kjR45TtCz35wsjB
+	for <claude@debieux.ch>; Tue, 30 Oct 2018 07:15:12 +0000 (GMT)
+x-mcpf-jobid: mc.us7_22051115.2226289.5bd804cf05c79.full_000002
+Subject: =?utf-8?Q?=F0=9F=93=98=20Angular=207.0=20is=20out=21=20=E2=9C=A8?=
+From: =?utf-8?Q?Ninja=20Squad?= <hello+books@ninja-squad.com>
+Reply-To: =?utf-8?Q?Ninja=20Squad?= <hello+books@ninja-squad.com>
+To: <claude@debieux.ch>
+Date: Tue, 30 Oct 2018 07:15:02 +0000
+Message-ID: <dd5ecd8b17390174bec99df9b.fd165c66c8.20181030071431.429d3a27a3.7fa83d5b@mail207.atl221.rsgsv.net>
+X-Mailer: MailChimp Mailer - **CID429d3a27a3fd165c66c8**
+X-Campaign: mailchimpdd5ecd8b17390174bec99df9b.429d3a27a3
+X-campaignid: mailchimpdd5ecd8b17390174bec99df9b.429d3a27a3
+X-Report-Abuse: Please report abuse for this campaign here: https://mailchimp.com/contact/abuse/?u=dd5ecd8b17390174bec99df9b&id=429d3a27a3&e=fd165c66c8
+X-MC-User: dd5ecd8b17390174bec99df9b
+Feedback-ID: 22051115:22051115.2226289:us7:mc
+List-ID: dd5ecd8b17390174bec99df9bmc list <dd5ecd8b17390174bec99df9b.299253.list-id.mcsv.net>
+Precedence: bulk
+X-Accounttype: pd
+List-Unsubscribe: <https://ninja-squad.us7.list-manage.com/unsubscribe?u=dd5ecd8b17390174bec99df9b&id=e392140744&e=fd165c66c8&c=429d3a27a3>, <mailto:unsubscribe-mc.us7_dd5ecd8b17390174bec99df9b.429d3a27a3-fd165c66c8@mailin.mcsv.net?subject=unsubscribe>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+Content-Type: multipart/alternative; boundary="_----------=_MCPart_1175600151"
+MIME-Version: 1.0
+
+This is a multi-part message in MIME format
+
+--_----------=_MCPart_1175600151
+Content-Type: text/plain; charset="utf-8"; format="fixed"
+Content-Transfer-Encoding: quoted-printable
+
+
+
+
+** Angular 7.0 is out!
+------------------------------------------------------------
+Version fran=C3=A7aise ci-dessous (#french)
+Dear reader=2C
+
+As a perfectly tuned Swiss clock=2C the Angular team released the 7.0 rele=
+ase last week!
+This is a fairly small release=2C so the upgrade of your applications will=
+ be fast.
+
+If you missed it=2C Angular 6.1 has also been released during the summer=
+=2C introducing a few new features (you could even say they that it introd=
+uced more interesting features than Angular 7.0...).
+
+Check out our blog posts:
+
+What's new in Angular 6.1 (https://blog.ninja-squad.com/2018/07/26/what-is=
+-new-angular-6.1/)
+What's new in Angular 7.0 (https://blog.ninja-squad.com/2018/10/18/what-is=
+-new-angular-7/)
+
+The CLI has also been released in a 6.1 version=2C and then in a 7.0 versi=
+on. The CLI team is still very active and we have a ton of stuff in these=
+ two releases. Of course=2C we have blog posts explaining them!
+
+What's new in Angular CLI 6.1 (https://blog.ninja-squad.com/2018/07/27/ang=
+ular-cli-6.1/)
+What's new in Angular CLI 7.0 (https://blog.ninja-squad.com/2018/10/19/ang=
+ular-cli-7.0/)
+
+Our ebook and online training are already up-to-date with all these change=
+s! You can grab a fresh copy at the usual download page (https://books.nin=
+ja-squad.com/claim?email=3Dclaude@debieux.ch) . =E2=98=BA=EF=B8=8F
+
+Oh=2C and we added a chapter about Performances and another about Going to=
+ production!
+
+The Pro Pack (https://angular-exercises.ninja-squad.com)  is also up to da=
+te. The happy owners even have a brand new exercise to learn more about re=
+al life performances and how to optimize our famous Ponyracer application!
+
+One last thing that may interest you! We released two small open-source li=
+brairies that we use on our own projects:
+
+- ngx-speculoos=2C an Angular library to write simpler and cleaner unit te=
+sts. Check out the announcement (https://blog.ninja-squad.com/2018/06/05/a=
+nnouncing-ngx-speculoos/) and Github repository (https://github.com/Ninja-=
+Squad/ngx-speculoos)
+- ngx-valdemort=2C an Angular library for super simple=2C consistent valid=
+ation error messages. Check out the announcement (https://blog.ninja-squad=
+=2Ecom/2018/06/19/ngx-valdemort/) and Github repository (https://github.com/=
+Ninja-Squad/ngx-valdemort)
+
+We hope you'll enjoy all this!
+
+We continue to train teams over the world to the basics of the framework (=
+http://ninja-squad.com/formations/formation-angular) and to the more advan=
+ced concepts (http://ninja-squad.com/formations/formation-angular-advanced=
+) . And we can also audit your application: if you want to deliver better=
+ code=2C we may have a few tips and we can help prevent potential annoying=
+ issues (performances=2C memory leaks=2C etc.).
+
+If you missed it=2C we also improved the sale process for teams on our web=
+site: you can now buy several online training licenses at once=2C and see=
+ which discount it gets you (https://books.ninja-squad.com/angular?book=3D=
+NgProPack&quantity=3D5#buy) . For example=2C buying 5 licenses saves you m=
+ore than 30% / =E2=82=AC300. Check it out!
+Download latest ebook version (https://books.ninja-squad.com/claim?email=
+=3Dclaude@debieux.ch)
+
+
+** Angular 7.0 est sorti !
+------------------------------------------------------------
+Cher lecteur=2C ch=C3=A8re lectrice=2C
+
+Comme une horloge suisse parfaitement r=C3=A9gl=C3=A9e=2C l'=C3=A9quipe An=
+gular a sorti la version 7.0 la semaine derni=C3=A8re ! C'est une version=
+ sans grande nouveaut=C3=A9=2C la mise =C3=A0 jour de vos applications ser=
+a rapide.
+
+Si vous l'avez rat=C3=A9e=2C la version 6.1 est =C3=A9galement sortie cet=
+ =C3=A9t=C3=A9=2C avec=2C elle=2C pas mal de nouveaut=C3=A9s (on peut m=C3=
+=AAme le dire=2C avec plus de nouveaut=C3=A9s que la 7.0...).
+
+Vous pouvez d=C3=A9couvrir tout =C3=A7a sur notre blog :
+
+What's new in Angular 6.1 (https://blog.ninja-squad.com/2018/07/26/what-is=
+-new-angular-6.1/)
+What's new in Angular 7.0 (https://blog.ninja-squad.com/2018/10/18/what-is=
+-new-angular-7/)
+
+La CLI est aussi sortie en version 6.1=2C puis en version 7.0. L'=C3=A9qui=
+pe de la CLI est toujours tr=C3=A8s active et nous avons pas mal de foncti=
+onnalit=C3=A9s dans ces deux versions. Bien s=C3=BBr=2C nous avons =C3=A9c=
+rit des articles expliquant tout =C3=A7a !
+
+What's new in Angular CLI 6.1 (https://blog.ninja-squad.com/2018/07/27/ang=
+ular-cli-6.1/)
+What's new in Angular CLI 7.0 (https://blog.ninja-squad.com/2018/10/19/ang=
+ular-cli-7.0/)
+
+=C3=89videmment=2C notre ebook et notre formation en ligne sont =C3=A0 jou=
+r=2C et vous pouvez r=C3=A9cup=C3=A9rer la toute derni=C3=A8re version sur=
+ la page habituelle (https://books.ninja-squad.com/claim?email=3Dclaude@debieux.ch) . =E2=98=BA=EF=B8=8F
+
+Oh=2C et nous avons ajout=C3=A9 un chapitre sur les Performances et un aut=
+re sur la Mise en production !
+
+Le Pack Pro (https://angular-exercises.ninja-squad.com)  est =C3=A9galemen=
+t =C3=A0 jour. Les heureux possesseurs de celui-ci ont m=C3=AAme un tout n=
+ouvel exercice pour en apprendre plus sur les performances dans la vraie v=
+ie et sur comment optimiser notre fameuse application Ponyracer !
+
+Une derni=C3=A8re chose qui pourrait vous int=C3=A9resser. Nous avons publ=
+i=C3=A9 deux petites biblioth=C3=A8ques open-sources que nous utilisons su=
+r nos propres projets :
+
+- ngx-speculoos=2C une biblioth=C3=A8que Angular pour =C3=A9crire des test=
+s unitaires plus simples et plus clairs. Vous pouvez voir l'annonce (https=
+://blog.ninja-squad.com/2018/06/05/announcing-ngx-speculoos/) et le reposi=
+tory Github (https://github.com/Ninja-Squad/ngx-speculoos)
+- ngx-valdemort=2C une biblioth=C3=A8que Angular pour des messages d'erreu=
+r de validation consistants et super simples =C3=A0 utiliser. Vous pouvez=
+ voir l'annonce (https://blog.ninja-squad.com/2018/06/19/ngx-valdemort/) e=
+t le repository Github (https://github.com/Ninja-Squad/ngx-valdemort)
+
+On esp=C3=A8re que vous appr=C3=A9cierez tout =C3=A7a !
+
+Et au cas o=C3=B9 vous l'avez rat=C3=A9=2C on a =C3=A9galement am=C3=A9lio=
+r=C3=A9 le processus pour les =C3=A9quipes sur notre site de vente : vous=
+ pouvez d=C3=A9sormais acheter plusieurs licences pour la formation en lig=
+ne en une seule fois=2C et m=C3=AAme constater avant achat quelle r=C3=A9d=
+uction vous obtiendrez (https://books.ninja-squad.com/angular?book=3DNgPro=
+Pack&quantity=3D5#buy) . Par exemple=2C acheter 5 licences vous fera =C3=
+=A9conomiser plus de 30% / 300=E2=82=AC.
+
+Nous continuons toujours =C3=A0 former des =C3=A9quipes aux bases du frame=
+work (http://ninja-squad.fr/formations/formation-angular) et aussi aux con=
+cepts plus avanc=C3=A9s (http://ninja-squad.fr/formations/formation-angula=
+r-advanced) . Et nous pouvons =C3=A9galement auditer votre application : s=
+i vous voulez livrer du code de meilleure qualit=C3=A9=2C on peut vous don=
+ner quelques astuces et vous pr=C3=A9venir de quelques probl=C3=A8mes pote=
+ntiels toujours emb=C3=AAtants (performances=2C fuites m=C3=A9moires=2C et=
+c...).
+T=C3=A9l=C3=A9charger la derni=C3=A8re version (https://books.ninja-squad.=
+com/claim?email=3Dclaude@debieux.ch)
+
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+** (http://www.twitter.com/NinjaSquad)
+** (http://ninja-squad.com)
+** (mailto:hello+books@ninja-squad.com)
+Copyright =C2=A9 2018 Ninja Squad=2C All rights reserved.
+You bought "Become a Ninja with Angular" ebook from Ninja Squad
+
+Want to change how you receive these emails?
+You can ** update your preferences (https://ninja-squad.us7.list-manage.co=
+m/profile?u=3Ddd5ecd8b17390174bec99df9b&id=3De392140744&e=3Dfd165c66c8)
+or ** unsubscribe from this list (https://ninja-squad.us7.list-manage.com/=
+unsubscribe?u=3Ddd5ecd8b17390174bec99df9b&id=3De392140744&e=3Dfd165c66c8&c=
+=3D429d3a27a3)
+--_----------=_MCPart_1175600151
+Content-Type: text/html; charset="utf-8"
+Content-Transfer-Encoding: quoted-printable
+
+<!doctype html>
+<html xmlns=3D"http://www.w3.org/1999/xhtml" xmlns:v=3D"urn:schemas-micros=
+oft-com:vml" xmlns:o=3D"urn:schemas-microsoft-com:office:office">
+    <head><meta name=3D"twitter:image:src" content=3D"https://gallery.mail=
+chimp.com/dd5ecd8b17390174bec99df9b/images/64094fbe-19cc-4758-b176-258e358=
+01439.png"><meta name=3D"twitter:description" content=3D"The DRM-free eboo=
+k at 'pay what you want' price=2C fully updated to Angular 4 !"><meta name=
+=3D"twitter:title" content=3D"Become a Ninja with Angular"><meta name=3D"t=
+witter:card" content=3D"summary_large_image"><meta property=3D"og:type" co=
+ntent=3D"article"><meta property=3D"og:description" content=3D"The DRM-fre=
+e ebook at 'pay what you want' price=2C fully updated to Angular 4 !"><met=
+a property=3D"og:image" content=3D"https://gallery.mailchimp.com/dd5ecd8b1=
+7390174bec99df9b/images/64094fbe-19cc-4758-b176-258e35801439.png"><meta pr=
+operty=3D"og:title" content=3D"Become a Ninja with Angular"><meta property=
+=3D"og:url" content=3D"http://eepurl.com/dLsbEo">
+        <!-- NAME: FOLLOW UP -->
+        <!--[if gte mso 15]>
+        <xml>
+            <o:OfficeDocumentSettings>
+            <o:AllowPNG/>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+        <![endif]-->
+        <meta charset=3D"UTF-8">
+        <meta http-equiv=3D"X-UA-Compatible" content=3D"IE=3Dedge">
+        <meta name=3D"viewport" content=3D"width=3Ddevice-width=2C initial=
+-scale=3D1">
+        <title>=F0=9F=93=98 Angular 7.0 is out! =E2=9C=A8</title>
+
+    <style type=3D"text/css">
+=09=09p{
+=09=09=09margin:10px 0;
+=09=09=09padding:0;
+=09=09}
+=09=09table{
+=09=09=09border-collapse:collapse;
+=09=09}
+=09=09h1=2Ch2=2Ch3=2Ch4=2Ch5=2Ch6{
+=09=09=09display:block;
+=09=09=09margin:0;
+=09=09=09padding:0;
+=09=09}
+=09=09img=2Ca img{
+=09=09=09border:0;
+=09=09=09height:auto;
+=09=09=09outline:none;
+=09=09=09text-decoration:none;
+=09=09}
+=09=09body=2C#bodyTable=2C#bodyCell{
+=09=09=09height:100%;
+=09=09=09margin:0;
+=09=09=09padding:0;
+=09=09=09width:100%;
+=09=09}
+=09=09.mcnPreviewText{
+=09=09=09display:none !important;
+=09=09}
+=09=09#outlook a{
+=09=09=09padding:0;
+=09=09}
+=09=09img{
+=09=09=09-ms-interpolation-mode:bicubic;
+=09=09}
+=09=09table{
+=09=09=09mso-table-lspace:0pt;
+=09=09=09mso-table-rspace:0pt;
+=09=09}
+=09=09.ReadMsgBody{
+=09=09=09width:100%;
+=09=09}
+=09=09.ExternalClass{
+=09=09=09width:100%;
+=09=09}
+=09=09p=2Ca=2Cli=2Ctd=2Cblockquote{
+=09=09=09mso-line-height-rule:exactly;
+=09=09}
+=09=09a[href^=3Dtel]=2Ca[href^=3Dsms]{
+=09=09=09color:inherit;
+=09=09=09cursor:default;
+=09=09=09text-decoration:none;
+=09=09}
+=09=09p=2Ca=2Cli=2Ctd=2Cbody=2Ctable=2Cblockquote{
+=09=09=09-ms-text-size-adjust:100%;
+=09=09=09-webkit-text-size-adjust:100%;
+=09=09}
+=09=09.ExternalClass=2C.ExternalClass p=2C.ExternalClass td=2C.ExternalCla=
+ss div=2C.ExternalClass span=2C.ExternalClass font{
+=09=09=09line-height:100%;
+=09=09}
+=09=09a[x-apple-data-detectors]{
+=09=09=09color:inherit !important;
+=09=09=09text-decoration:none !important;
+=09=09=09font-size:inherit !important;
+=09=09=09font-family:inherit !important;
+=09=09=09font-weight:inherit !important;
+=09=09=09line-height:inherit !important;
+=09=09}
+=09=09.templateContainer{
+=09=09=09max-width:600px !important;
+=09=09}
+=09=09a.mcnButton{
+=09=09=09display:block;
+=09=09}
+=09=09.mcnImage=2C.mcnRetinaImage{
+=09=09=09vertical-align:bottom;
+=09=09}
+=09=09.mcnTextContent{
+=09=09=09word-break:break-word;
+=09=09}
+=09=09.mcnTextContent img{
+=09=09=09height:auto !important;
+=09=09}
+=09=09.mcnDividerBlock{
+=09=09=09table-layout:fixed !important;
+=09=09}
+=09=09h1{
+=09=09=09color:#222222;
+=09=09=09font-family:Helvetica;
+=09=09=09font-size:40px;
+=09=09=09font-style:normal;
+=09=09=09font-weight:bold;
+=09=09=09line-height:150%;
+=09=09=09letter-spacing:normal;
+=09=09=09text-align:center;
+=09=09}
+=09=09h2{
+=09=09=09color:#222222;
+=09=09=09font-family:Helvetica;
+=09=09=09font-size:34px;
+=09=09=09font-style:normal;
+=09=09=09font-weight:bold;
+=09=09=09line-height:150%;
+=09=09=09letter-spacing:normal;
+=09=09=09text-align:left;
+=09=09}
+=09=09h3{
+=09=09=09color:#444444;
+=09=09=09font-family:Helvetica;
+=09=09=09font-size:22px;
+=09=09=09font-style:normal;
+=09=09=09font-weight:bold;
+=09=09=09line-height:150%;
+=09=09=09letter-spacing:normal;
+=09=09=09text-align:center;
+=09=09}
+=09=09h4{
+=09=09=09color:#999999;
+=09=09=09font-family:Georgia;
+=09=09=09font-size:20px;
+=09=09=09font-style:italic;
+=09=09=09font-weight:normal;
+=09=09=09line-height:125%;
+=09=09=09letter-spacing:normal;
+=09=09=09text-align:left;
+=09=09}
+=09=09#templateHeader{
+=09=09=09background-color:#F7F7F7;
+=09=09=09background-image:none;
+=09=09=09background-repeat:no-repeat;
+=09=09=09background-position:center;
+=09=09=09background-size:cover;
+=09=09=09border-top:0;
+=09=09=09border-bottom:0;
+=09=09=09padding-top:54px;
+=09=09=09padding-bottom:54px;
+=09=09}
+=09=09.headerContainer{
+=09=09=09background-color:transparent;
+=09=09=09background-image:none;
+=09=09=09background-repeat:no-repeat;
+=09=09=09background-position:center;
+=09=09=09background-size:cover;
+=09=09=09border-top:0;
+=09=09=09border-bottom:0;
+=09=09=09padding-top:0;
+=09=09=09padding-bottom:0;
+=09=09}
+=09=09.headerContainer .mcnTextContent=2C.headerContainer .mcnTextContent=
+ p{
+=09=09=09color:#808080;
+=09=09=09font-family:Helvetica;
+=09=09=09font-size:16px;
+=09=09=09line-height:150%;
+=09=09=09text-align:left;
+=09=09}
+=09=09.headerContainer .mcnTextContent a=2C.headerContainer .mcnTextConten=
+t p a{
+=09=09=09color:#00ADD8;
+=09=09=09font-weight:normal;
+=09=09=09text-decoration:underline;
+=09=09}
+=09=09#templateBody{
+=09=09=09background-color:#FFFFFF;
+=09=09=09background-image:none;
+=09=09=09background-repeat:no-repeat;
+=09=09=09background-position:center;
+=09=09=09background-size:cover;
+=09=09=09border-top:0;
+=09=09=09border-bottom:0;
+=09=09=09padding-top:27px;
+=09=09=09padding-bottom:54px;
+=09=09}
+=09=09.bodyContainer{
+=09=09=09background-color:transparent;
+=09=09=09background-image:none;
+=09=09=09background-repeat:no-repeat;
+=09=09=09background-position:center;
+=09=09=09background-size:cover;
+=09=09=09border-top:0;
+=09=09=09border-bottom:0;
+=09=09=09padding-top:0;
+=09=09=09padding-bottom:0;
+=09=09}
+=09=09.bodyContainer .mcnTextContent=2C.bodyContainer .mcnTextContent p{
+=09=09=09color:#808080;
+=09=09=09font-family:Helvetica;
+=09=09=09font-size:16px;
+=09=09=09line-height:150%;
+=09=09=09text-align:left;
+=09=09}
+=09=09.bodyContainer .mcnTextContent a=2C.bodyContainer .mcnTextContent p=
+ a{
+=09=09=09color:#00ADD8;
+=09=09=09font-weight:normal;
+=09=09=09text-decoration:underline;
+=09=09}
+=09=09#templateFooter{
+=09=09=09background-color:#333333;
+=09=09=09background-image:none;
+=09=09=09background-repeat:no-repeat;
+=09=09=09background-position:center;
+=09=09=09background-size:cover;
+=09=09=09border-top:0;
+=09=09=09border-bottom:0;
+=09=09=09padding-top:45px;
+=09=09=09padding-bottom:63px;
+=09=09}
+=09=09.footerContainer{
+=09=09=09background-color:transparent;
+=09=09=09background-image:none;
+=09=09=09background-repeat:no-repeat;
+=09=09=09background-position:center;
+=09=09=09background-size:cover;
+=09=09=09border-top:0;
+=09=09=09border-bottom:0;
+=09=09=09padding-top:0;
+=09=09=09padding-bottom:0;
+=09=09}
+=09=09.footerContainer .mcnTextContent=2C.footerContainer .mcnTextContent=
+ p{
+=09=09=09color:#FFFFFF;
+=09=09=09font-family:Helvetica;
+=09=09=09font-size:12px;
+=09=09=09line-height:150%;
+=09=09=09text-align:center;
+=09=09}
+=09=09.footerContainer .mcnTextContent a=2C.footerContainer .mcnTextConten=
+t p a{
+=09=09=09color:#FFFFFF;
+=09=09=09font-weight:normal;
+=09=09=09text-decoration:underline;
+=09=09}
+=09@media only screen and (min-width:768px){
+=09=09.templateContainer{
+=09=09=09width:600px !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09body=2Ctable=2Ctd=2Cp=2Ca=2Cli=2Cblockquote{
+=09=09=09-webkit-text-size-adjust:none !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09body{
+=09=09=09width:100% !important;
+=09=09=09min-width:100% !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcnRetinaImage{
+=09=09=09max-width:100% !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcnImage{
+=09=09=09width:100% !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcnCartContainer=2C.mcnCaptionTopContent=2C.mcnRecContentContainer=
+=2C.mcnCaptionBottomContent=2C.mcnTextContentContainer=2C.mcnBoxedTextCont=
+entContainer=2C.mcnImageGroupContentContainer=2C.mcnCaptionLeftTextContent=
+Container=2C.mcnCaptionRightTextContentContainer=2C.mcnCaptionLeftImageCon=
+tentContainer=2C.mcnCaptionRightImageContentContainer=2C.mcnImageCardLeftT=
+extContentContainer=2C.mcnImageCardRightTextContentContainer=2C.mcnImageCa=
+rdLeftImageContentContainer=2C.mcnImageCardRightImageContentContainer{
+=09=09=09max-width:100% !important;
+=09=09=09width:100% !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcnBoxedTextContentContainer{
+=09=09=09min-width:100% !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcnImageGroupContent{
+=09=09=09padding:9px !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcnCaptionLeftContentOuter .mcnTextContent=2C.mcnCaptionRightConten=
+tOuter .mcnTextContent{
+=09=09=09padding-top:9px !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcnImageCardTopImageContent=2C.mcnCaptionBottomContent:last-child .=
+mcnCaptionBottomImageContent=2C.mcnCaptionBlockInner .mcnCaptionTopContent=
+:last-child .mcnTextContent{
+=09=09=09padding-top:18px !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcnImageCardBottomImageContent{
+=09=09=09padding-bottom:9px !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcnImageGroupBlockInner{
+=09=09=09padding-top:0 !important;
+=09=09=09padding-bottom:0 !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcnImageGroupBlockOuter{
+=09=09=09padding-top:9px !important;
+=09=09=09padding-bottom:9px !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcnTextContent=2C.mcnBoxedTextContentColumn{
+=09=09=09padding-right:18px !important;
+=09=09=09padding-left:18px !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcnImageCardLeftImageContent=2C.mcnImageCardRightImageContent{
+=09=09=09padding-right:18px !important;
+=09=09=09padding-bottom:0 !important;
+=09=09=09padding-left:18px !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcpreview-image-uploader{
+=09=09=09display:none !important;
+=09=09=09width:100% !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09h1{
+=09=09=09font-size:30px !important;
+=09=09=09line-height:125% !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09h2{
+=09=09=09font-size:26px !important;
+=09=09=09line-height:125% !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09h3{
+=09=09=09font-size:20px !important;
+=09=09=09line-height:150% !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09h4{
+=09=09=09font-size:18px !important;
+=09=09=09line-height:150% !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.mcnBoxedTextContentContainer .mcnTextContent=2C.mcnBoxedTextContent=
+Container .mcnTextContent p{
+=09=09=09font-size:14px !important;
+=09=09=09line-height:150% !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.headerContainer .mcnTextContent=2C.headerContainer .mcnTextContent=
+ p{
+=09=09=09font-size:16px !important;
+=09=09=09line-height:150% !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.bodyContainer .mcnTextContent=2C.bodyContainer .mcnTextContent p{
+=09=09=09font-size:16px !important;
+=09=09=09line-height:150% !important;
+=09=09}
+
+}=09@media only screen and (max-width: 480px){
+=09=09.footerContainer .mcnTextContent=2C.footerContainer .mcnTextContent=
+ p{
+=09=09=09font-size:14px !important;
+=09=09=09line-height:150% !important;
+=09=09}
+
+}</style></head>
+    <body style=3D"height: 100%;margin: 0;padding: 0;width: 100%;-ms-text-=
+size-adjust: 100%;-webkit-text-size-adjust: 100%;"><div itemscope=3D"" ite=
+mtype=3D"http://schema.org/EmailMessage"><div itemprop=3D"publisher" items=
+cope=3D"" itemtype=3D"http://schema.org/Organization"><meta itemprop=3D"na=
+me" content=3D"Ninja Squad"><link itemprop=3D"url" content=3D"https://ninj=
+a-squad.com"></div><div itemprop=3D"about" itemscope=3D"" itemtype=3D"http=
+://schema.org/Offer"><link itemprop=3D"image" href=3D"https://gallery.mail=
+chimp.com/dd5ecd8b17390174bec99df9b/images/64094fbe-19cc-4758-b176-258e358=
+01439.png"></div></div>
+        <!--
+-->
+        <center>
+            <table align=3D"center" border=3D"0" cellpadding=3D"0" cellspa=
+cing=3D"0" height=3D"100%" width=3D"100%" id=3D"bodyTable" style=3D"border=
+-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-s=
+ize-adjust: 100%;-webkit-text-size-adjust: 100%;height: 100%;margin: 0;pad=
+ding: 0;width: 100%;">
+                <tr>
+                    <td align=3D"center" valign=3D"top" id=3D"bodyCell" st=
+yle=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-te=
+xt-size-adjust: 100%;height: 100%;margin: 0;padding: 0;width: 100%;">
+                        <!-- BEGIN TEMPLATE // -->
+                        <table border=3D"0" cellpadding=3D"0" cellspacing=
+=3D"0" width=3D"100%" style=3D"border-collapse: collapse;mso-table-lspace:=
+ 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-ad=
+just: 100%;">
+                            <tr>
+                                <td align=3D"center" valign=3D"top" id=3D"=
+templateHeader" data-template-container=3D"" style=3D"background:#F7F7F7 n=
+one no-repeat center/cover;mso-line-height-rule: exactly;-ms-text-size-adj=
+ust: 100%;-webkit-text-size-adjust: 100%;background-color: #F7F7F7;backgro=
+und-image: none;background-repeat: no-repeat;background-position: center;b=
+ackground-size: cover;border-top: 0;border-bottom: 0;padding-top: 54px;pad=
+ding-bottom: 54px;">
+                                    <!--[if (gte mso 9)|(IE)]>
+                                    <table align=3D"center" border=3D"0" c=
+ellspacing=3D"0" cellpadding=3D"0" width=3D"600" style=3D"width:600px;">
+                                    <tr>
+                                    <td align=3D"center" valign=3D"top" wi=
+dth=3D"600" style=3D"width:600px;">
+                                    <![endif]-->
+                                    <table align=3D"center" border=3D"0" c=
+ellpadding=3D"0" cellspacing=3D"0" width=3D"100%" class=3D"templateContain=
+er" style=3D"border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rsp=
+ace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;max-wid=
+th: 600px !important;">
+                                        <tr>
+                                            <td valign=3D"top" class=3D"he=
+aderContainer" style=3D"background:transparent none no-repeat center/cover=
+;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-siz=
+e-adjust: 100%;background-color: transparent;background-image: none;backgr=
+ound-repeat: no-repeat;background-position: center;background-size: cover;=
+border-top: 0;border-bottom: 0;padding-top: 0;padding-bottom: 0;"><table b=
+order=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"100%" class=3D"mc=
+nImageBlock" style=3D"min-width: 100%;border-collapse: collapse;mso-table-=
+lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-=
+size-adjust: 100%;">
+    <tbody class=3D"mcnImageBlockOuter">
+            <tr>
+                <td valign=3D"top" style=3D"padding: 9px;mso-line-height-r=
+ule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;" c=
+lass=3D"mcnImageBlockInner">
+                    <table align=3D"left" width=3D"100%" border=3D"0" cell=
+padding=3D"0" cellspacing=3D"0" class=3D"mcnImageContentContainer" style=
+=3D"min-width: 100%;border-collapse: collapse;mso-table-lspace: 0pt;mso-ta=
+ble-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;=
+">
+                        <tbody><tr>
+                            <td class=3D"mcnImageContent" valign=3D"top" s=
+tyle=3D"padding-right: 9px;padding-left: 9px;padding-top: 0;padding-bottom=
+: 0;text-align: center;mso-line-height-rule: exactly;-ms-text-size-adjust:=
+ 100%;-webkit-text-size-adjust: 100%;">
+
+
+                                        <img align=3D"center" alt=3D"" src=
+=3D"https://gallery.mailchimp.com/dd5ecd8b17390174bec99df9b/images/848ebe5=
+c-4480-4983-9a49-3f52a9faeb22.png" width=3D"564" style=3D"max-width: 1189p=
+x;padding-bottom: 0;display: inline !important;vertical-align: bottom;bord=
+er: 0;height: auto;outline: none;text-decoration: none;-ms-interpolation-m=
+ode: bicubic;" class=3D"mcnImage">
+
+
+                            </td>
+                        </tr>
+                    </tbody></table>
+                </td>
+            </tr>
+    </tbody>
+</table></td>
+                                        </tr>
+                                    </table>
+                                    <!--[if (gte mso 9)|(IE)]>
+                                    </td>
+                                    </tr>
+                                    </table>
+                                    <![endif]-->
+                                </td>
+                            </tr>
+                            <tr>
+                                <td align=3D"center" valign=3D"top" id=3D"=
+templateBody" data-template-container=3D"" style=3D"background:#FFFFFF non=
+e no-repeat center/cover;mso-line-height-rule: exactly;-ms-text-size-adjus=
+t: 100%;-webkit-text-size-adjust: 100%;background-color: #FFFFFF;backgroun=
+d-image: none;background-repeat: no-repeat;background-position: center;bac=
+kground-size: cover;border-top: 0;border-bottom: 0;padding-top: 27px;paddi=
+ng-bottom: 54px;">
+                                    <!--[if (gte mso 9)|(IE)]>
+                                    <table align=3D"center" border=3D"0" c=
+ellspacing=3D"0" cellpadding=3D"0" width=3D"600" style=3D"width:600px;">
+                                    <tr>
+                                    <td align=3D"center" valign=3D"top" wi=
+dth=3D"600" style=3D"width:600px;">
+                                    <![endif]-->
+                                    <table align=3D"center" border=3D"0" c=
+ellpadding=3D"0" cellspacing=3D"0" width=3D"100%" class=3D"templateContain=
+er" style=3D"border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rsp=
+ace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;max-wid=
+th: 600px !important;">
+                                        <tr>
+                                            <td valign=3D"top" class=3D"bo=
+dyContainer" style=3D"background:transparent none no-repeat center/cover;m=
+so-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-=
+adjust: 100%;background-color: transparent;background-image: none;backgrou=
+nd-repeat: no-repeat;background-position: center;background-size: cover;bo=
+rder-top: 0;border-bottom: 0;padding-top: 0;padding-bottom: 0;"><table cla=
+ss=3D"mcnTextBlock" style=3D"min-width: 100%;border-collapse: collapse;mso=
+-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webki=
+t-text-size-adjust: 100%;" width=3D"100%" cellspacing=3D"0" cellpadding=3D=
+"0" border=3D"0">
+    <tbody class=3D"mcnTextBlockOuter">
+        <tr>
+            <td class=3D"mcnTextBlockInner" style=3D"padding-top: 9px;mso-=
+line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adj=
+ust: 100%;" valign=3D"top">
+              =09<!--[if mso]>
+=09=09=09=09<table align=3D"left" border=3D"0" cellspacing=3D"0" cellpaddi=
+ng=3D"0" width=3D"100%" style=3D"width:100%;">
+=09=09=09=09<tr>
+=09=09=09=09<![endif]-->
+=09=09=09
+=09=09=09=09<!--[if mso]>
+=09=09=09=09<td valign=3D"top" width=3D"600" style=3D"width:600px;">
+=09=09=09=09<![endif]-->
+                <table style=3D"max-width: 100%;min-width: 100%;border-col=
+lapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-=
+adjust: 100%;-webkit-text-size-adjust: 100%;" class=3D"mcnTextContentConta=
+iner" width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" alig=
+n=3D"left">
+                    <tbody><tr>
+
+                        <td class=3D"mcnTextContent" style=3D"padding-top:=
+ 0;padding-right: 18px;padding-bottom: 9px;padding-left: 18px;mso-line-hei=
+ght-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100=
+%;word-break: break-word;color: #808080;font-family: Helvetica;font-size:=
+ 16px;line-height: 150%;text-align: left;" valign=3D"top">
+
+                            <h1 style=3D"display: block;margin: 0;padding:=
+ 0;color: #222222;font-family: Helvetica;font-size: 40px;font-style: norma=
+l;font-weight: bold;line-height: 150%;letter-spacing: normal;text-align: c=
+enter;">Angular 7.0 is out!</h1>
+
+                        </td>
+                    </tr>
+                </tbody></table>
+=09=09=09=09<!--[if mso]>
+=09=09=09=09</td>
+=09=09=09=09<![endif]-->
+
+=09=09=09=09<!--[if mso]>
+=09=09=09=09</tr>
+=09=09=09=09</table>
+=09=09=09=09<![endif]-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"1=
+00%" class=3D"mcnDividerBlock" style=3D"min-width: 100%;border-collapse: c=
+ollapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust:=
+ 100%;-webkit-text-size-adjust: 100%;table-layout: fixed !important;">
+    <tbody class=3D"mcnDividerBlockOuter">
+        <tr>
+            <td class=3D"mcnDividerBlockInner" style=3D"min-width: 100%;pa=
+dding: 18px 18px 0px;mso-line-height-rule: exactly;-ms-text-size-adjust: 1=
+00%;-webkit-text-size-adjust: 100%;">
+                <table class=3D"mcnDividerContent" border=3D"0" cellpaddin=
+g=3D"0" cellspacing=3D"0" width=3D"100%" style=3D"min-width: 100%;border-c=
+ollapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-siz=
+e-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                    <tbody><tr>
+                        <td style=3D"mso-line-height-rule: exactly;-ms-tex=
+t-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                            <span></span>
+                        </td>
+                    </tr>
+                </tbody></table>
+<!--
+                <td class=3D"mcnDividerBlockInner" style=3D"padding: 18px;=
+">
+                <hr class=3D"mcnDividerContent" style=3D"border-bottom-col=
+or:none; border-left-color:none; border-right-color:none; border-bottom-wi=
+dth:0; border-left-width:0; border-right-width:0; margin-top:0; margin-rig=
+ht:0; margin-bottom:0; margin-left:0;" />
+-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"1=
+00%" class=3D"mcnTextBlock" style=3D"min-width: 100%;border-collapse: coll=
+apse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;">
+    <tbody class=3D"mcnTextBlockOuter">
+        <tr>
+            <td valign=3D"top" class=3D"mcnTextBlockInner" style=3D"paddin=
+g-top: 9px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webki=
+t-text-size-adjust: 100%;">
+              =09<!--[if mso]>
+=09=09=09=09<table align=3D"left" border=3D"0" cellspacing=3D"0" cellpaddi=
+ng=3D"0" width=3D"100%" style=3D"width:100%;">
+=09=09=09=09<tr>
+=09=09=09=09<![endif]-->
+=09=09=09
+=09=09=09=09<!--[if mso]>
+=09=09=09=09<td valign=3D"top" width=3D"600" style=3D"width:600px;">
+=09=09=09=09<![endif]-->
+                <table align=3D"left" border=3D"0" cellpadding=3D"0" cells=
+pacing=3D"0" style=3D"max-width: 100%;min-width: 100%;border-collapse: col=
+lapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;" width=3D"100%" class=3D"mcnTextContent=
+Container">
+                    <tbody><tr>
+
+                        <td valign=3D"top" class=3D"mcnTextContent" style=
+=3D"padding-top: 0;padding-right: 18px;padding-bottom: 9px;padding-left: 1=
+8px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-=
+size-adjust: 100%;word-break: break-word;color: #808080;font-family: Helve=
+tica;font-size: 16px;line-height: 150%;text-align: left;">
+
+                            <div style=3D"text-align: right;"><a href=3D"#=
+french" target=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-=
+size-adjust: 100%;-webkit-text-size-adjust: 100%;color: #00ADD8;font-weigh=
+t: normal;text-decoration: underline;">Version fran=C3=A7aise ci-dessous</=
+a></div>
+
+                        </td>
+                    </tr>
+                </tbody></table>
+=09=09=09=09<!--[if mso]>
+=09=09=09=09</td>
+=09=09=09=09<![endif]-->
+
+=09=09=09=09<!--[if mso]>
+=09=09=09=09</tr>
+=09=09=09=09</table>
+=09=09=09=09<![endif]-->
+            </td>
+        </tr>
+    </tbody>
+</table><table class=3D"mcnCaptionBlock" width=3D"100%" cellspacing=3D"0"=
+ cellpadding=3D"0" border=3D"0" style=3D"border-collapse: collapse;mso-tab=
+le-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-te=
+xt-size-adjust: 100%;">
+    <tbody class=3D"mcnCaptionBlockOuter">
+        <tr>
+            <td class=3D"mcnCaptionBlockInner" style=3D"padding: 9px;mso-l=
+ine-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adju=
+st: 100%;" valign=3D"top">
+
+
+
+
+<table class=3D"mcnCaptionTopContent" cellspacing=3D"0" cellpadding=3D"0"=
+ border=3D"0" align=3D"left" style=3D"border-collapse: collapse;mso-table-=
+lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-=
+size-adjust: 100%;">
+    <tbody><tr>
+        <td class=3D"mcnTextContent" style=3D"padding: 0px 9px;text-align:=
+ left;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-tex=
+t-size-adjust: 100%;word-break: break-word;color: #808080;font-family: Hel=
+vetica;font-size: 16px;line-height: 150%;" width=3D"564" valign=3D"top">
+            Dear reader=2C<br>
+<br>
+As a perfectly tuned Swiss clock=2C the Angular team released the 7.0 rele=
+ase last week!<br>
+This is a fairly small release=2C so the upgrade of your applications will=
+ be fast.<br>
+<br>
+If you missed it=2C Angular 6.1 has also been released during the summer=
+=2C introducing a few new features (you could even say they that it introd=
+uced more interesting features than Angular 7.0...).<br>
+<br>
+Check out our blog posts:<br>
+<br>
+<a href=3D"https://ninja-squad.us7.list-manage.com/track/click?u=3Ddd5ecd8=
+b17390174bec99df9b&id=3D70e6f456fd&e=3Dfd165c66c8" target=3D"_blank" styl=
+e=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text=
+-size-adjust: 100%;color: #00ADD8;font-weight: normal;text-decoration: und=
+erline;">What's new in Angular 6.1</a><br>
+<a href=3D"https://ninja-squad.us7.list-manage.com/track/click?u=3Ddd5ecd8=
+b17390174bec99df9b&id=3D6cd596f269&e=3Dfd165c66c8" target=3D"_blank" styl=
+e=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text=
+-size-adjust: 100%;color: #00ADD8;font-weight: normal;text-decoration: und=
+erline;">What's new in Angular 7.0</a><br>
+<br>
+The CLI has also been released in a 6.1 version=2C and then in a 7.0 versi=
+on. The CLI team is still very active and we have a ton of stuff in these=
+ two releases. Of course=2C we have blog posts explaining them!<br>
+<br>
+<a href=3D"https://ninja-squad.us7.list-manage.com/track/click?u=3Ddd5ecd8=
+b17390174bec99df9b&id=3Df6279cfa59&e=3Dfd165c66c8" target=3D"_blank" styl=
+e=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text=
+-size-adjust: 100%;color: #00ADD8;font-weight: normal;text-decoration: und=
+erline;">What's new in Angular CLI 6.1</a><br>
+<a href=3D"https://ninja-squad.us7.list-manage.com/track/click?u=3Ddd5ecd8=
+b17390174bec99df9b&id=3D236554bca0&e=3Dfd165c66c8" target=3D"_blank" styl=
+e=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text=
+-size-adjust: 100%;color: #00ADD8;font-weight: normal;text-decoration: und=
+erline;">What's new in Angular CLI 7.0</a><br>
+<br>
+Our ebook and online training are already up-to-date with all these change=
+s! You can grab a fresh copy at the <a href=3D"https://ninja-squad.us7.lis=
+t-manage.com/track/click?u=3Ddd5ecd8b17390174bec99df9b&id=3Ddad5034174&e=
+=3Dfd165c66c8" target=3D"_blank" title=3D"fresh download" style=3D"mso-li=
+ne-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjus=
+t: 100%;color: #00ADD8;font-weight: normal;text-decoration: underline;">us=
+ual download page</a>.&nbsp;=E2=98=BA=EF=B8=8F<br>
+<br>
+Oh=2C and we added a chapter about <strong>Performances</strong> and anoth=
+er about <strong>Going to production</strong>!
+        </td>
+    </tr>
+    <tr>
+        <td class=3D"mcnCaptionTopImageContent" style=3D"padding: 9px 9px=
+ 0 9px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-te=
+xt-size-adjust: 100%;" valign=3D"top" align=3D"center">
+
+
+
+            <img alt=3D"" src=3D"https://gallery.mailchimp.com/dd5ecd8b173=
+90174bec99df9b/images/a7369fac-c5de-45b8-af30-8dd99db91217.png" style=3D"m=
+ax-width: 284px;border: 0;height: auto;outline: none;text-decoration: none=
+;-ms-interpolation-mode: bicubic;vertical-align: bottom;" class=3D"mcnImag=
+e" width=3D"284">
+
+
+
+        </td>
+    </tr>
+</tbody></table>
+
+
+
+            </td>
+        </tr>
+    </tbody>
+</table><table class=3D"mcnTextBlock" style=3D"min-width: 100%;border-coll=
+apse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-a=
+djust: 100%;-webkit-text-size-adjust: 100%;" width=3D"100%" cellspacing=3D=
+"0" cellpadding=3D"0" border=3D"0">
+    <tbody class=3D"mcnTextBlockOuter">
+        <tr>
+            <td class=3D"mcnTextBlockInner" style=3D"padding-top: 9px;mso-=
+line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adj=
+ust: 100%;" valign=3D"top">
+              =09<!--[if mso]>
+=09=09=09=09<table align=3D"left" border=3D"0" cellspacing=3D"0" cellpaddi=
+ng=3D"0" width=3D"100%" style=3D"width:100%;">
+=09=09=09=09<tr>
+=09=09=09=09<![endif]-->
+=09=09=09
+=09=09=09=09<!--[if mso]>
+=09=09=09=09<td valign=3D"top" width=3D"600" style=3D"width:600px;">
+=09=09=09=09<![endif]-->
+                <table style=3D"max-width: 100%;min-width: 100%;border-col=
+lapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-=
+adjust: 100%;-webkit-text-size-adjust: 100%;" class=3D"mcnTextContentConta=
+iner" width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" alig=
+n=3D"left">
+                    <tbody><tr>
+
+                        <td class=3D"mcnTextContent" style=3D"padding-top:=
+ 0;padding-right: 18px;padding-bottom: 9px;padding-left: 18px;mso-line-hei=
+ght-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100=
+%;word-break: break-word;color: #808080;font-family: Helvetica;font-size:=
+ 16px;line-height: 150%;text-align: left;" valign=3D"top">
+
+                            <p style=3D"margin: 10px 0;padding: 0;mso-line=
+-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust:=
+ 100%;color: #808080;font-family: Helvetica;font-size: 16px;line-height: 1=
+50%;text-align: left;">The <a href=3D"https://ninja-squad.us7.list-manage.=
+com/track/click?u=3Ddd5ecd8b17390174bec99df9b&id=3Db192029f67&e=3Dfd165c66c8" target=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-siz=
+e-adjust: 100%;-webkit-text-size-adjust: 100%;color: #00ADD8;font-weight:=
+ normal;text-decoration: underline;">Pro Pack</a>&nbsp;is also up to date.=
+ The happy owners even have a brand new exercise to learn more about real=
+ life performances and how to optimize our famous Ponyracer application!<b=
+r>
+<br>
+One last thing that may interest you! We released two small open-source li=
+brairies that we use on our own projects:<br>
+<br>
+- <strong>ngx-speculoos</strong>=2C an Angular library to write simpler an=
+d cleaner unit tests. Check out the <a href=3D"https://ninja-squad.us7.lis=
+t-manage.com/track/click?u=3Ddd5ecd8b17390174bec99df9b&id=3D47302654ac&e=
+=3Dfd165c66c8" target=3D"_blank" style=3D"mso-line-height-rule: exactly;-=
+ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;color: #00ADD8;fo=
+nt-weight: normal;text-decoration: underline;">announcement</a> and <a hre=
+f=3D"https://ninja-squad.us7.list-manage.com/track/click?u=3Ddd5ecd8b17390=
+174bec99df9b&id=3Dfd4968086b&e=3Dfd165c66c8" target=3D"_blank" style=3D"m=
+so-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-=
+adjust: 100%;color: #00ADD8;font-weight: normal;text-decoration: underline=
+;">Github repository</a><br>
+- <strong>ngx-valdemort</strong>=2C an Angular library for super simple=2C=
+ consistent validation error messages. Check out the <a href=3D"https://ni=
+nja-squad.us7.list-manage.com/track/click?u=3Ddd5ecd8b17390174bec99df9b&id=
+=3De826571baf&e=3Dfd165c66c8" target=3D"_blank" style=3D"mso-line-height-=
+rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;co=
+lor: #00ADD8;font-weight: normal;text-decoration: underline;">announcement=
+</a> and <a href=3D"https://ninja-squad.us7.list-manage.com/track/click?u=
+=3Ddd5ecd8b17390174bec99df9b&id=3Dfc3a8beb48&e=3Dfd165c66c8" target=3D"_b=
+lank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-w=
+ebkit-text-size-adjust: 100%;color: #00ADD8;font-weight: normal;text-decor=
+ation: underline;">Github repository</a><br>
+<br>
+We hope you'll enjoy all this!<br>
+<br>
+We continue<strong> to train teams over the world</strong> to the <a href=
+=3D"https://ninja-squad.us7.list-manage.com/track/click?u=3Ddd5ecd8b173901=
+74bec99df9b&id=3De9e3fd8c02&e=3Dfd165c66c8" target=3D"_blank" style=3D"ms=
+o-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-a=
+djust: 100%;color: #00ADD8;font-weight: normal;text-decoration: underline;=
+">basics of the framework</a> and to the <a href=3D"https://ninja-squad.us=
+7.list-manage.com/track/click?u=3Ddd5ecd8b17390174bec99df9b&id=3Ddc91cb52b=
+7&e=3Dfd165c66c8" target=3D"_blank" style=3D"mso-line-height-rule: exactl=
+y;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;color: #00ADD8=
+;font-weight: normal;text-decoration: underline;">more advanced concepts</=
+a>. And we can also <strong>audit your application</strong>: if you want t=
+o deliver better code=2C we may have a few tips and we can help prevent po=
+tential annoying issues (performances=2C memory leaks=2C etc.).<br>
+<br>
+If you missed it=2C we also improved the sale process for teams on our web=
+site: you can now<strong> buy several online training licenses at once</st=
+rong>=2C and see <a href=3D"https://ninja-squad.us7.list-manage.com/track/=
+click?u=3Ddd5ecd8b17390174bec99df9b&id=3Db67fb0258a&e=3Dfd165c66c8" targe=
+t=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust:=
+ 100%;-webkit-text-size-adjust: 100%;color: #00ADD8;font-weight: normal;te=
+xt-decoration: underline;">which discount it gets you</a>. For example=2C=
+ buying 5 licenses saves you more than 30% / =E2=82=AC300. Check it out!</=
+p>
+
+                        </td>
+                    </tr>
+                </tbody></table>
+=09=09=09=09<!--[if mso]>
+=09=09=09=09</td>
+=09=09=09=09<![endif]-->
+
+=09=09=09=09<!--[if mso]>
+=09=09=09=09</tr>
+=09=09=09=09</table>
+=09=09=09=09<![endif]-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"1=
+00%" class=3D"mcnDividerBlock" style=3D"min-width: 100%;border-collapse: c=
+ollapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust:=
+ 100%;-webkit-text-size-adjust: 100%;table-layout: fixed !important;">
+    <tbody class=3D"mcnDividerBlockOuter">
+        <tr>
+            <td class=3D"mcnDividerBlockInner" style=3D"min-width: 100%;pa=
+dding: 9px 18px 0px;mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;">
+                <table class=3D"mcnDividerContent" border=3D"0" cellpaddin=
+g=3D"0" cellspacing=3D"0" width=3D"100%" style=3D"min-width: 100%;border-c=
+ollapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-siz=
+e-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                    <tbody><tr>
+                        <td style=3D"mso-line-height-rule: exactly;-ms-tex=
+t-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                            <span></span>
+                        </td>
+                    </tr>
+                </tbody></table>
+<!--
+                <td class=3D"mcnDividerBlockInner" style=3D"padding: 18px;=
+">
+                <hr class=3D"mcnDividerContent" style=3D"border-bottom-col=
+or:none; border-left-color:none; border-right-color:none; border-bottom-wi=
+dth:0; border-left-width:0; border-right-width:0; margin-top:0; margin-rig=
+ht:0; margin-bottom:0; margin-left:0;" />
+-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"1=
+00%" class=3D"mcnDividerBlock" style=3D"min-width: 100%;border-collapse: c=
+ollapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust:=
+ 100%;-webkit-text-size-adjust: 100%;table-layout: fixed !important;">
+    <tbody class=3D"mcnDividerBlockOuter">
+        <tr>
+            <td class=3D"mcnDividerBlockInner" style=3D"min-width: 100%;pa=
+dding: 9px 18px 0px;mso-line-height-rule: exactly;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;">
+                <table class=3D"mcnDividerContent" border=3D"0" cellpaddin=
+g=3D"0" cellspacing=3D"0" width=3D"100%" style=3D"min-width: 100%;border-c=
+ollapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-siz=
+e-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                    <tbody><tr>
+                        <td style=3D"mso-line-height-rule: exactly;-ms-tex=
+t-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                            <span></span>
+                        </td>
+                    </tr>
+                </tbody></table>
+<!--
+                <td class=3D"mcnDividerBlockInner" style=3D"padding: 18px;=
+">
+                <hr class=3D"mcnDividerContent" style=3D"border-bottom-col=
+or:none; border-left-color:none; border-right-color:none; border-bottom-wi=
+dth:0; border-left-width:0; border-right-width:0; margin-top:0; margin-rig=
+ht:0; margin-bottom:0; margin-left:0;" />
+-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"1=
+00%" class=3D"mcnDividerBlock" style=3D"min-width: 100%;border-collapse: c=
+ollapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust:=
+ 100%;-webkit-text-size-adjust: 100%;table-layout: fixed !important;">
+    <tbody class=3D"mcnDividerBlockOuter">
+        <tr>
+            <td class=3D"mcnDividerBlockInner" style=3D"min-width: 100%;pa=
+dding: 18px 18px 0px;mso-line-height-rule: exactly;-ms-text-size-adjust: 1=
+00%;-webkit-text-size-adjust: 100%;">
+                <table class=3D"mcnDividerContent" border=3D"0" cellpaddin=
+g=3D"0" cellspacing=3D"0" width=3D"100%" style=3D"min-width: 100%;border-c=
+ollapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-siz=
+e-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                    <tbody><tr>
+                        <td style=3D"mso-line-height-rule: exactly;-ms-tex=
+t-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                            <span></span>
+                        </td>
+                    </tr>
+                </tbody></table>
+<!--
+                <td class=3D"mcnDividerBlockInner" style=3D"padding: 18px;=
+">
+                <hr class=3D"mcnDividerContent" style=3D"border-bottom-col=
+or:none; border-left-color:none; border-right-color:none; border-bottom-wi=
+dth:0; border-left-width:0; border-right-width:0; margin-top:0; margin-rig=
+ht:0; margin-bottom:0; margin-left:0;" />
+-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"1=
+00%" class=3D"mcnButtonBlock" style=3D"min-width: 100%;border-collapse: co=
+llapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 1=
+00%;-webkit-text-size-adjust: 100%;">
+    <tbody class=3D"mcnButtonBlockOuter">
+        <tr>
+            <td style=3D"padding-top: 0;padding-right: 18px;padding-bottom=
+: 18px;padding-left: 18px;mso-line-height-rule: exactly;-ms-text-size-adju=
+st: 100%;-webkit-text-size-adjust: 100%;" valign=3D"top" align=3D"center"=
+ class=3D"mcnButtonBlockInner">
+                <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" cl=
+ass=3D"mcnButtonContentContainer" style=3D"border-collapse: separate !impo=
+rtant;border-radius: 3px;background-color: #00ADD8;mso-table-lspace: 0pt;m=
+so-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust:=
+ 100%;">
+                    <tbody>
+                        <tr>
+                            <td align=3D"center" valign=3D"middle" class=
+=3D"mcnButtonContent" style=3D"font-family: Helvetica;font-size: 18px;padd=
+ing: 18px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit=
+-text-size-adjust: 100%;">
+                                <a class=3D"mcnButton " title=3D"Download=
+ latest ebook version" href=3D"https://ninja-squad.us7.list-manage.com/tra=
+ck/click?u=3Ddd5ecd8b17390174bec99df9b&id=3Deae5e81181&e=3Dfd165c66c8" ta=
+rget=3D"_self" style=3D"font-weight: bold;letter-spacing: -0.5px;line-heig=
+ht: 100%;text-align: center;text-decoration: none;color: #FFFFFF;mso-line-=
+height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust:=
+ 100%;display: block;">Download latest ebook version</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"1=
+00%" class=3D"mcnDividerBlock" style=3D"min-width: 100%;border-collapse: c=
+ollapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust:=
+ 100%;-webkit-text-size-adjust: 100%;table-layout: fixed !important;">
+    <tbody class=3D"mcnDividerBlockOuter">
+        <tr>
+            <td class=3D"mcnDividerBlockInner" style=3D"min-width: 100%;pa=
+dding: 18px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webk=
+it-text-size-adjust: 100%;">
+                <table class=3D"mcnDividerContent" border=3D"0" cellpaddin=
+g=3D"0" cellspacing=3D"0" width=3D"100%" style=3D"min-width: 100%;border-t=
+op: 2px solid #EAEAEA;border-collapse: collapse;mso-table-lspace: 0pt;mso-=
+table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100=
+%;">
+                    <tbody><tr>
+                        <td style=3D"mso-line-height-rule: exactly;-ms-tex=
+t-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                            <span></span>
+                        </td>
+                    </tr>
+                </tbody></table>
+<!--
+                <td class=3D"mcnDividerBlockInner" style=3D"padding: 18px;=
+">
+                <hr class=3D"mcnDividerContent" style=3D"border-bottom-col=
+or:none; border-left-color:none; border-right-color:none; border-bottom-wi=
+dth:0; border-left-width:0; border-right-width:0; margin-top:0; margin-rig=
+ht:0; margin-bottom:0; margin-left:0;" />
+-->
+            </td>
+        </tr>
+    </tbody>
+</table><table class=3D"mcnTextBlock" style=3D"min-width: 100%;border-coll=
+apse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-a=
+djust: 100%;-webkit-text-size-adjust: 100%;" width=3D"100%" cellspacing=3D=
+"0" cellpadding=3D"0" border=3D"0">
+    <tbody class=3D"mcnTextBlockOuter">
+        <tr>
+            <td class=3D"mcnTextBlockInner" style=3D"padding-top: 9px;mso-=
+line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adj=
+ust: 100%;" valign=3D"top">
+              =09<!--[if mso]>
+=09=09=09=09<table align=3D"left" border=3D"0" cellspacing=3D"0" cellpaddi=
+ng=3D"0" width=3D"100%" style=3D"width:100%;">
+=09=09=09=09<tr>
+=09=09=09=09<![endif]-->
+=09=09=09
+=09=09=09=09<!--[if mso]>
+=09=09=09=09<td valign=3D"top" width=3D"600" style=3D"width:600px;">
+=09=09=09=09<![endif]-->
+                <table style=3D"max-width: 100%;min-width: 100%;border-col=
+lapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-=
+adjust: 100%;-webkit-text-size-adjust: 100%;" class=3D"mcnTextContentConta=
+iner" width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" alig=
+n=3D"left">
+                    <tbody><tr>
+
+                        <td class=3D"mcnTextContent" style=3D"padding-top:=
+ 0;padding-right: 18px;padding-bottom: 9px;padding-left: 18px;mso-line-hei=
+ght-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100=
+%;word-break: break-word;color: #808080;font-family: Helvetica;font-size:=
+ 16px;line-height: 150%;text-align: left;" valign=3D"top">
+
+                            <h1 style=3D"display: block;margin: 0;padding:=
+ 0;color: #222222;font-family: Helvetica;font-size: 40px;font-style: norma=
+l;font-weight: bold;line-height: 150%;letter-spacing: normal;text-align: c=
+enter;"><a id=3D"french" name=3D"french" style=3D"mso-line-height-rule: ex=
+actly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;color: #00=
+ADD8;font-weight: normal;text-decoration: underline;"></a>Angular 7.0 est=
+ sorti&nbsp;!</h1>
+
+                        </td>
+                    </tr>
+                </tbody></table>
+=09=09=09=09<!--[if mso]>
+=09=09=09=09</td>
+=09=09=09=09<![endif]-->
+
+=09=09=09=09<!--[if mso]>
+=09=09=09=09</tr>
+=09=09=09=09</table>
+=09=09=09=09<![endif]-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"1=
+00%" class=3D"mcnDividerBlock" style=3D"min-width: 100%;border-collapse: c=
+ollapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust:=
+ 100%;-webkit-text-size-adjust: 100%;table-layout: fixed !important;">
+    <tbody class=3D"mcnDividerBlockOuter">
+        <tr>
+            <td class=3D"mcnDividerBlockInner" style=3D"min-width: 100%;pa=
+dding: 18px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webk=
+it-text-size-adjust: 100%;">
+                <table class=3D"mcnDividerContent" border=3D"0" cellpaddin=
+g=3D"0" cellspacing=3D"0" width=3D"100%" style=3D"min-width: 100%;border-t=
+op: 2px none #EAEAEA;border-collapse: collapse;mso-table-lspace: 0pt;mso-t=
+able-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%=
+;">
+                    <tbody><tr>
+                        <td style=3D"mso-line-height-rule: exactly;-ms-tex=
+t-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                            <span></span>
+                        </td>
+                    </tr>
+                </tbody></table>
+<!--
+                <td class=3D"mcnDividerBlockInner" style=3D"padding: 18px;=
+">
+                <hr class=3D"mcnDividerContent" style=3D"border-bottom-col=
+or:none; border-left-color:none; border-right-color:none; border-bottom-wi=
+dth:0; border-left-width:0; border-right-width:0; margin-top:0; margin-rig=
+ht:0; margin-bottom:0; margin-left:0;" />
+-->
+            </td>
+        </tr>
+    </tbody>
+</table><table class=3D"mcnCaptionBlock" width=3D"100%" cellspacing=3D"0"=
+ cellpadding=3D"0" border=3D"0" style=3D"border-collapse: collapse;mso-tab=
+le-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-te=
+xt-size-adjust: 100%;">
+    <tbody class=3D"mcnCaptionBlockOuter">
+        <tr>
+            <td class=3D"mcnCaptionBlockInner" style=3D"padding: 9px;mso-l=
+ine-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adju=
+st: 100%;" valign=3D"top">
+
+
+
+
+<table class=3D"mcnCaptionTopContent" cellspacing=3D"0" cellpadding=3D"0"=
+ border=3D"0" align=3D"left" style=3D"border-collapse: collapse;mso-table-=
+lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-=
+size-adjust: 100%;">
+    <tbody><tr>
+        <td class=3D"mcnTextContent" style=3D"padding: 0px 9px;text-align:=
+ left;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-tex=
+t-size-adjust: 100%;word-break: break-word;color: #808080;font-family: Hel=
+vetica;font-size: 16px;line-height: 150%;" width=3D"564" valign=3D"top">
+            Cher lecteur=2C ch=C3=A8re lectrice=2C<br>
+<br>
+Comme une horloge suisse parfaitement r=C3=A9gl=C3=A9e=2C l'=C3=A9quipe An=
+gular a sorti la version 7.0 la semaine derni=C3=A8re ! C'est une version=
+ sans grande nouveaut=C3=A9=2C la mise =C3=A0 jour de vos applications ser=
+a rapide.<br>
+<br>
+Si vous l'avez rat=C3=A9e=2C la version 6.1 est =C3=A9galement sortie cet=
+ =C3=A9t=C3=A9=2C avec=2C elle=2C pas mal de nouveaut=C3=A9s (on peut m=C3=
+=AAme le dire=2C avec plus de nouveaut=C3=A9s que la 7.0...).<br>
+<br>
+Vous pouvez d=C3=A9couvrir tout =C3=A7a sur notre blog :<br>
+<br>
+<a href=3D"https://ninja-squad.us7.list-manage.com/track/click?u=3Ddd5ecd8=
+b17390174bec99df9b&id=3D840d8e3395&e=3Dfd165c66c8" target=3D"_blank" styl=
+e=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text=
+-size-adjust: 100%;color: #00ADD8;font-weight: normal;text-decoration: und=
+erline;">What's new in Angular 6.1</a><br>
+<a href=3D"https://ninja-squad.us7.list-manage.com/track/click?u=3Ddd5ecd8=
+b17390174bec99df9b&id=3D56fe6e6447&e=3Dfd165c66c8" target=3D"_blank" styl=
+e=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text=
+-size-adjust: 100%;color: #00ADD8;font-weight: normal;text-decoration: und=
+erline;">What's new in Angular 7.0</a><br>
+<br>
+La CLI est aussi sortie en version 6.1=2C puis en version 7.0. L'=C3=A9qui=
+pe de la CLI est toujours tr=C3=A8s active et nous avons pas mal de foncti=
+onnalit=C3=A9s dans ces deux versions. Bien s=C3=BBr=2C nous avons =C3=A9c=
+rit des articles expliquant tout =C3=A7a !<br>
+<br>
+<a href=3D"https://ninja-squad.us7.list-manage.com/track/click?u=3Ddd5ecd8=
+b17390174bec99df9b&id=3D1e7548aa4a&e=3Dfd165c66c8" target=3D"_blank" styl=
+e=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text=
+-size-adjust: 100%;color: #00ADD8;font-weight: normal;text-decoration: und=
+erline;">What's new in Angular CLI 6.1</a><br>
+<a href=3D"https://ninja-squad.us7.list-manage.com/track/click?u=3Ddd5ecd8=
+b17390174bec99df9b&id=3Dcbed40fcfd&e=3Dfd165c66c8" target=3D"_blank" styl=
+e=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text=
+-size-adjust: 100%;color: #00ADD8;font-weight: normal;text-decoration: und=
+erline;">What's new in Angular CLI 7.0</a><br>
+<br>
+=C3=89videmment=2C notre ebook et notre formation en ligne sont =C3=A0 jou=
+r=2C et vous pouvez r=C3=A9cup=C3=A9rer la toute derni=C3=A8re version sur=
+&nbsp;la <a href=3D"https://ninja-squad.us7.list-manage.com/track/click?u=
+=3Ddd5ecd8b17390174bec99df9b&id=3Df9f3420831&e=3Dfd165c66c8" target=3D"_b=
+lank" title=3D"fresh download" style=3D"mso-line-height-rule: exactly;-ms-=
+text-size-adjust: 100%;-webkit-text-size-adjust: 100%;color: #00ADD8;font-=
+weight: normal;text-decoration: underline;">page habituelle</a>.&nbsp;=E2=
+=98=BA=EF=B8=8F<br>
+<br>
+Oh=2C et nous avons ajout=C3=A9 un chapitre sur les <strong>Performances</=
+strong> et un autre sur la <strong>Mise en production </strong>!<br>
+&nbsp;
+        </td>
+    </tr>
+    <tr>
+        <td class=3D"mcnCaptionTopImageContent" style=3D"padding: 9px 9px=
+ 0 9px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-te=
+xt-size-adjust: 100%;" valign=3D"top" align=3D"center">
+
+
+
+            <img alt=3D"" src=3D"https://gallery.mailchimp.com/dd5ecd8b173=
+90174bec99df9b/images/a7369fac-c5de-45b8-af30-8dd99db91217.png" style=3D"m=
+ax-width: 284px;border: 0;height: auto;outline: none;text-decoration: none=
+;-ms-interpolation-mode: bicubic;vertical-align: bottom;" class=3D"mcnImag=
+e" width=3D"284">
+
+
+
+        </td>
+    </tr>
+</tbody></table>
+
+
+
+            </td>
+        </tr>
+    </tbody>
+</table><table class=3D"mcnTextBlock" style=3D"min-width: 100%;border-coll=
+apse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-a=
+djust: 100%;-webkit-text-size-adjust: 100%;" width=3D"100%" cellspacing=3D=
+"0" cellpadding=3D"0" border=3D"0">
+    <tbody class=3D"mcnTextBlockOuter">
+        <tr>
+            <td class=3D"mcnTextBlockInner" style=3D"padding-top: 9px;mso-=
+line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adj=
+ust: 100%;" valign=3D"top">
+              =09<!--[if mso]>
+=09=09=09=09<table align=3D"left" border=3D"0" cellspacing=3D"0" cellpaddi=
+ng=3D"0" width=3D"100%" style=3D"width:100%;">
+=09=09=09=09<tr>
+=09=09=09=09<![endif]-->
+=09=09=09
+=09=09=09=09<!--[if mso]>
+=09=09=09=09<td valign=3D"top" width=3D"600" style=3D"width:600px;">
+=09=09=09=09<![endif]-->
+                <table style=3D"max-width: 100%;min-width: 100%;border-col=
+lapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-=
+adjust: 100%;-webkit-text-size-adjust: 100%;" class=3D"mcnTextContentConta=
+iner" width=3D"100%" cellspacing=3D"0" cellpadding=3D"0" border=3D"0" alig=
+n=3D"left">
+                    <tbody><tr>
+
+                        <td class=3D"mcnTextContent" style=3D"padding-top:=
+ 0;padding-right: 18px;padding-bottom: 9px;padding-left: 18px;mso-line-hei=
+ght-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100=
+%;word-break: break-word;color: #808080;font-family: Helvetica;font-size:=
+ 16px;line-height: 150%;text-align: left;" valign=3D"top">
+
+                            <p style=3D"margin: 10px 0;padding: 0;mso-line=
+-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust:=
+ 100%;color: #808080;font-family: Helvetica;font-size: 16px;line-height: 1=
+50%;text-align: left;">Le&nbsp;<a href=3D"https://ninja-squad.us7.list-man=
+age.com/track/click?u=3Ddd5ecd8b17390174bec99df9b&id=3D06a9004eb2&e=3Dfd165c66c8" target=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text=
+-size-adjust: 100%;-webkit-text-size-adjust: 100%;color: #00ADD8;font-weig=
+ht: normal;text-decoration: underline;">Pack Pro</a>&nbsp;est =C3=A9galeme=
+nt =C3=A0 jour. Les heureux possesseurs de celui-ci ont m=C3=AAme un tout=
+ nouvel exercice pour en apprendre plus sur les performances dans la vraie=
+ vie et sur comment optimiser notre fameuse application Ponyracer !<br>
+<br>
+Une derni=C3=A8re chose qui pourrait vous int=C3=A9resser. Nous avons publ=
+i=C3=A9 deux petites biblioth=C3=A8ques open-sources que nous utilisons su=
+r nos propres projets :<br>
+<br>
+- <strong>ngx-speculoos</strong>=2C une biblioth=C3=A8que Angular pour =C3=
+=A9crire des tests unitaires plus simples et plus clairs. Vous pouvez voir=
+ l'<a href=3D"https://ninja-squad.us7.list-manage.com/track/click?u=3Ddd5e=
+cd8b17390174bec99df9b&id=3Db73d6a5b80&e=3Dfd165c66c8" target=3D"_blank" s=
+tyle=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-t=
+ext-size-adjust: 100%;color: #00ADD8;font-weight: normal;text-decoration:=
+ underline;">annonce</a> et le <a href=3D"https://ninja-squad.us7.list-man=
+age.com/track/click?u=3Ddd5ecd8b17390174bec99df9b&id=3D01b53c8e25&e=3Dfd165c66c8" target=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text=
+-size-adjust: 100%;-webkit-text-size-adjust: 100%;color: #00ADD8;font-weig=
+ht: normal;text-decoration: underline;">repository Github</a><br>
+- <strong>ngx-valdemort</strong>=2C une biblioth=C3=A8que Angular pour des=
+ messages d'erreur de validation consistants et super simples =C3=A0 utili=
+ser. Vous pouvez voir l'<a href=3D"https://ninja-squad.us7.list-manage.com=
+/track/click?u=3Ddd5ecd8b17390174bec99df9b&id=3Db109ed46ea&e=3Dfd165c66c8=
+" target=3D"_blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-a=
+djust: 100%;-webkit-text-size-adjust: 100%;color: #00ADD8;font-weight: nor=
+mal;text-decoration: underline;">annonce</a> et le <a href=3D"https://ninj=
+a-squad.us7.list-manage.com/track/click?u=3Ddd5ecd8b17390174bec99df9b&id=
+=3D11c7076b9c&e=3Dfd165c66c8" target=3D"_blank" style=3D"mso-line-height-=
+rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;co=
+lor: #00ADD8;font-weight: normal;text-decoration: underline;">repository G=
+ithub</a><br>
+<br>
+On esp=C3=A8re que vous appr=C3=A9cierez tout =C3=A7a !<br>
+<br>
+Et au cas o=C3=B9 vous l'avez rat=C3=A9=2C on a =C3=A9galement am=C3=A9lio=
+r=C3=A9&nbsp;le processus pour les =C3=A9quipes sur notre site de vente :=
+ vous pouvez d=C3=A9sormais <strong>acheter plusieurs licences pour la for=
+mation en ligne en une seule fois</strong>=2C et m=C3=AAme constater avant=
+ achat <a href=3D"https://ninja-squad.us7.list-manage.com/track/click?u=3D=
+dd5ecd8b17390174bec99df9b&id=3D5bbf3bad54&e=3Dfd165c66c8" target=3D"_blan=
+k" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webk=
+it-text-size-adjust: 100%;color: #00ADD8;font-weight: normal;text-decorati=
+on: underline;">quelle r=C3=A9duction vous obtiendrez</a>. Par exemple=2C=
+ acheter 5 licences vous fera =C3=A9conomiser plus de 30% / 300=E2=82=AC.<=
+br>
+<br>
+Nous continuons toujours =C3=A0 <strong>former des =C3=A9quipes</strong> <=
+a href=3D"https://ninja-squad.us7.list-manage.com/track/click?u=3Ddd5ecd8b=
+17390174bec99df9b&id=3De7ab7315fd&e=3Dfd165c66c8" target=3D"_blank" style=
+=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-=
+size-adjust: 100%;color: #00ADD8;font-weight: normal;text-decoration: unde=
+rline;">aux bases du framework</a> et aussi <a href=3D"https://ninja-squad=
+=2Eus7.list-manage.com/track/click?u=3Ddd5ecd8b17390174bec99df9b&id=3D26c763=
+e278&e=3Dfd165c66c8" target=3D"_blank" style=3D"mso-line-height-rule: exa=
+ctly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;color: #00A=
+DD8;font-weight: normal;text-decoration: underline;">aux concepts plus ava=
+nc=C3=A9s</a>. Et nous pouvons =C3=A9galement <strong>auditer votre applic=
+ation</strong> : si vous voulez livrer du code de meilleure qualit=C3=A9=
+=2C on peut vous donner quelques astuces et vous pr=C3=A9venir de quelques=
+ probl=C3=A8mes potentiels toujours emb=C3=AAtants (performances=2C fuites=
+ m=C3=A9moires=2C etc...).</p>
+
+                        </td>
+                    </tr>
+                </tbody></table>
+=09=09=09=09<!--[if mso]>
+=09=09=09=09</td>
+=09=09=09=09<![endif]-->
+
+=09=09=09=09<!--[if mso]>
+=09=09=09=09</tr>
+=09=09=09=09</table>
+=09=09=09=09<![endif]-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"1=
+00%" class=3D"mcnDividerBlock" style=3D"min-width: 100%;border-collapse: c=
+ollapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust:=
+ 100%;-webkit-text-size-adjust: 100%;table-layout: fixed !important;">
+    <tbody class=3D"mcnDividerBlockOuter">
+        <tr>
+            <td class=3D"mcnDividerBlockInner" style=3D"min-width: 100%;pa=
+dding: 18px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webk=
+it-text-size-adjust: 100%;">
+                <table class=3D"mcnDividerContent" border=3D"0" cellpaddin=
+g=3D"0" cellspacing=3D"0" width=3D"100%" style=3D"min-width: 100%;border-t=
+op: 2px none #EAEAEA;border-collapse: collapse;mso-table-lspace: 0pt;mso-t=
+able-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%=
+;">
+                    <tbody><tr>
+                        <td style=3D"mso-line-height-rule: exactly;-ms-tex=
+t-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                            <span></span>
+                        </td>
+                    </tr>
+                </tbody></table>
+<!--
+                <td class=3D"mcnDividerBlockInner" style=3D"padding: 18px;=
+">
+                <hr class=3D"mcnDividerContent" style=3D"border-bottom-col=
+or:none; border-left-color:none; border-right-color:none; border-bottom-wi=
+dth:0; border-left-width:0; border-right-width:0; margin-top:0; margin-rig=
+ht:0; margin-bottom:0; margin-left:0;" />
+-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"1=
+00%" class=3D"mcnDividerBlock" style=3D"min-width: 100%;border-collapse: c=
+ollapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust:=
+ 100%;-webkit-text-size-adjust: 100%;table-layout: fixed !important;">
+    <tbody class=3D"mcnDividerBlockOuter">
+        <tr>
+            <td class=3D"mcnDividerBlockInner" style=3D"min-width: 100%;pa=
+dding: 18px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webk=
+it-text-size-adjust: 100%;">
+                <table class=3D"mcnDividerContent" border=3D"0" cellpaddin=
+g=3D"0" cellspacing=3D"0" width=3D"100%" style=3D"min-width: 100%;border-t=
+op: 2px none #EAEAEA;border-collapse: collapse;mso-table-lspace: 0pt;mso-t=
+able-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%=
+;">
+                    <tbody><tr>
+                        <td style=3D"mso-line-height-rule: exactly;-ms-tex=
+t-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                            <span></span>
+                        </td>
+                    </tr>
+                </tbody></table>
+<!--
+                <td class=3D"mcnDividerBlockInner" style=3D"padding: 18px;=
+">
+                <hr class=3D"mcnDividerContent" style=3D"border-bottom-col=
+or:none; border-left-color:none; border-right-color:none; border-bottom-wi=
+dth:0; border-left-width:0; border-right-width:0; margin-top:0; margin-rig=
+ht:0; margin-bottom:0; margin-left:0;" />
+-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"1=
+00%" class=3D"mcnButtonBlock" style=3D"min-width: 100%;border-collapse: co=
+llapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 1=
+00%;-webkit-text-size-adjust: 100%;">
+    <tbody class=3D"mcnButtonBlockOuter">
+        <tr>
+            <td style=3D"padding-top: 0;padding-right: 18px;padding-bottom=
+: 18px;padding-left: 18px;mso-line-height-rule: exactly;-ms-text-size-adju=
+st: 100%;-webkit-text-size-adjust: 100%;" valign=3D"top" align=3D"center"=
+ class=3D"mcnButtonBlockInner">
+                <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" cl=
+ass=3D"mcnButtonContentContainer" style=3D"border-collapse: separate !impo=
+rtant;border-radius: 3px;background-color: #00ADD8;mso-table-lspace: 0pt;m=
+so-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust:=
+ 100%;">
+                    <tbody>
+                        <tr>
+                            <td align=3D"center" valign=3D"middle" class=
+=3D"mcnButtonContent" style=3D"font-family: Helvetica;font-size: 18px;padd=
+ing: 18px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit=
+-text-size-adjust: 100%;">
+                                <a class=3D"mcnButton " title=3D"T=C3=A9l=
+=C3=A9charger la derni=C3=A8re version" href=3D"https://ninja-squad.us7.li=
+st-manage.com/track/click?u=3Ddd5ecd8b17390174bec99df9b&id=3D1758f1b5a6&e=
+=3Dfd165c66c8" target=3D"_self" style=3D"font-weight: bold;letter-spacing=
+: -0.5px;line-height: 100%;text-align: center;text-decoration: none;color:=
+ #FFFFFF;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-=
+text-size-adjust: 100%;display: block;">T=C3=A9l=C3=A9charger la derni=C3=
+=A8re version</a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+    </tbody>
+</table></td>
+                                        </tr>
+                                    </table>
+                                    <!--[if (gte mso 9)|(IE)]>
+                                    </td>
+                                    </tr>
+                                    </table>
+                                    <![endif]-->
+                                </td>
+                            </tr>
+                            <tr>
+                                <td align=3D"center" valign=3D"top" id=3D"=
+templateFooter" data-template-container=3D"" style=3D"background:#333333 n=
+one no-repeat center/cover;mso-line-height-rule: exactly;-ms-text-size-adj=
+ust: 100%;-webkit-text-size-adjust: 100%;background-color: #333333;backgro=
+und-image: none;background-repeat: no-repeat;background-position: center;b=
+ackground-size: cover;border-top: 0;border-bottom: 0;padding-top: 45px;pad=
+ding-bottom: 63px;">
+                                    <!--[if (gte mso 9)|(IE)]>
+                                    <table align=3D"center" border=3D"0" c=
+ellspacing=3D"0" cellpadding=3D"0" width=3D"600" style=3D"width:600px;">
+                                    <tr>
+                                    <td align=3D"center" valign=3D"top" wi=
+dth=3D"600" style=3D"width:600px;">
+                                    <![endif]-->
+                                    <table align=3D"center" border=3D"0" c=
+ellpadding=3D"0" cellspacing=3D"0" width=3D"100%" class=3D"templateContain=
+er" style=3D"border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rsp=
+ace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;max-wid=
+th: 600px !important;">
+                                        <tr>
+                                            <td valign=3D"top" class=3D"fo=
+oterContainer" style=3D"background:transparent none no-repeat center/cover=
+;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-siz=
+e-adjust: 100%;background-color: transparent;background-image: none;backgr=
+ound-repeat: no-repeat;background-position: center;background-size: cover;=
+border-top: 0;border-bottom: 0;padding-top: 0;padding-bottom: 0;"><table b=
+order=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"100%" class=3D"mc=
+nFollowBlock" style=3D"min-width: 100%;border-collapse: collapse;mso-table=
+-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text=
+-size-adjust: 100%;">
+    <tbody class=3D"mcnFollowBlockOuter">
+        <tr>
+            <td align=3D"center" valign=3D"top" style=3D"padding: 9px;mso-=
+line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adj=
+ust: 100%;" class=3D"mcnFollowBlockInner">
+                <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" wi=
+dth=3D"100%" class=3D"mcnFollowContentContainer" style=3D"min-width: 100%;=
+border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-=
+text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+    <tbody><tr>
+        <td align=3D"center" style=3D"padding-left: 9px;padding-right: 9px=
+;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-siz=
+e-adjust: 100%;">
+            <table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=
+=3D"100%" style=3D"min-width: 100%;border-collapse: collapse;mso-table-lsp=
+ace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-siz=
+e-adjust: 100%;" class=3D"mcnFollowContent">
+                <tbody><tr>
+                    <td align=3D"center" valign=3D"top" style=3D"padding-t=
+op: 9px;padding-right: 9px;padding-left: 9px;mso-line-height-rule: exactly=
+;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                        <table align=3D"center" border=3D"0" cellpadding=
+=3D"0" cellspacing=3D"0" style=3D"border-collapse: collapse;mso-table-lspa=
+ce: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size=
+-adjust: 100%;">
+                            <tbody><tr>
+                                <td align=3D"center" valign=3D"top" style=
+=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-=
+size-adjust: 100%;">
+                                    <!--[if mso]>
+                                    <table align=3D"center" border=3D"0" c=
+ellspacing=3D"0" cellpadding=3D"0">
+                                    <tr>
+                                    <![endif]-->
+
+                                        <!--[if mso]>
+                                        <td align=3D"center" valign=3D"top=
+">
+                                        <![endif]-->
+
+
+                                            <table align=3D"left" border=
+=3D"0" cellpadding=3D"0" cellspacing=3D"0" style=3D"display: inline;border=
+-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-s=
+ize-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                                <tbody><tr>
+                                                    <td valign=3D"top" sty=
+le=3D"padding-right: 10px;padding-bottom: 9px;mso-line-height-rule: exactl=
+y;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;" class=3D"mcn=
+FollowContentItemContainer">
+                                                        <table border=3D"0=
+" cellpadding=3D"0" cellspacing=3D"0" width=3D"100%" class=3D"mcnFollowCon=
+tentItem" style=3D"border-collapse: collapse;mso-table-lspace: 0pt;mso-tab=
+le-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;"=
+>
+                                                            <tbody><tr>
+                                                                <td align=
+=3D"left" valign=3D"middle" style=3D"padding-top: 5px;padding-right: 10px;=
+padding-bottom: 5px;padding-left: 9px;mso-line-height-rule: exactly;-ms-te=
+xt-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                                                    <table=
+ align=3D"left" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"=
+" style=3D"border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspac=
+e: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                                                        <t=
+body><tr>
+
+                                                                         =
+       <td align=3D"center" valign=3D"middle" width=3D"24" class=3D"mcnFol=
+lowIconContent" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjus=
+t: 100%;-webkit-text-size-adjust: 100%;">
+                                                                         =
+           <a href=3D"https://ninja-squad.us7.list-manage.com/track/click?=
+u=3Ddd5ecd8b17390174bec99df9b&id=3Ddb8d170fa7&e=3Dfd165c66c8" target=3D"_=
+blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-=
+webkit-text-size-adjust: 100%;"><img src=3D"https://cdn-images.mailchimp.c=
+om/icons/social-block-v2/outline-light-twitter-48.png" style=3D"display: b=
+lock;border: 0;height: auto;outline: none;text-decoration: none;-ms-interp=
+olation-mode: bicubic;" height=3D"24" width=3D"24" class=3D""></a>
+                                                                         =
+       </td>
+
+
+                                                                        </=
+tr>
+                                                                    </tbod=
+y></table>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>
+                                            </tbody></table>
+
+                                        <!--[if mso]>
+                                        </td>
+                                        <![endif]-->
+
+                                        <!--[if mso]>
+                                        <td align=3D"center" valign=3D"top=
+">
+                                        <![endif]-->
+
+
+                                            <table align=3D"left" border=
+=3D"0" cellpadding=3D"0" cellspacing=3D"0" style=3D"display: inline;border=
+-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-s=
+ize-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                                <tbody><tr>
+                                                    <td valign=3D"top" sty=
+le=3D"padding-right: 10px;padding-bottom: 9px;mso-line-height-rule: exactl=
+y;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;" class=3D"mcn=
+FollowContentItemContainer">
+                                                        <table border=3D"0=
+" cellpadding=3D"0" cellspacing=3D"0" width=3D"100%" class=3D"mcnFollowCon=
+tentItem" style=3D"border-collapse: collapse;mso-table-lspace: 0pt;mso-tab=
+le-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;"=
+>
+                                                            <tbody><tr>
+                                                                <td align=
+=3D"left" valign=3D"middle" style=3D"padding-top: 5px;padding-right: 10px;=
+padding-bottom: 5px;padding-left: 9px;mso-line-height-rule: exactly;-ms-te=
+xt-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                                                    <table=
+ align=3D"left" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"=
+" style=3D"border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspac=
+e: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                                                        <t=
+body><tr>
+
+                                                                         =
+       <td align=3D"center" valign=3D"middle" width=3D"24" class=3D"mcnFol=
+lowIconContent" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjus=
+t: 100%;-webkit-text-size-adjust: 100%;">
+                                                                         =
+           <a href=3D"https://ninja-squad.us7.list-manage.com/track/click?=
+u=3Ddd5ecd8b17390174bec99df9b&id=3Dfb7fb8ab68&e=3Dfd165c66c8" target=3D"_=
+blank" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-=
+webkit-text-size-adjust: 100%;"><img src=3D"https://cdn-images.mailchimp.c=
+om/icons/social-block-v2/outline-light-link-48.png" style=3D"display: bloc=
+k;border: 0;height: auto;outline: none;text-decoration: none;-ms-interpola=
+tion-mode: bicubic;" height=3D"24" width=3D"24" class=3D""></a>
+                                                                         =
+       </td>
+
+
+                                                                        </=
+tr>
+                                                                    </tbod=
+y></table>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>
+                                            </tbody></table>
+
+                                        <!--[if mso]>
+                                        </td>
+                                        <![endif]-->
+
+                                        <!--[if mso]>
+                                        <td align=3D"center" valign=3D"top=
+">
+                                        <![endif]-->
+
+
+                                            <table align=3D"left" border=
+=3D"0" cellpadding=3D"0" cellspacing=3D"0" style=3D"display: inline;border=
+-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-s=
+ize-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                                <tbody><tr>
+                                                    <td valign=3D"top" sty=
+le=3D"padding-right: 0;padding-bottom: 9px;mso-line-height-rule: exactly;-=
+ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;" class=3D"mcnFol=
+lowContentItemContainer">
+                                                        <table border=3D"0=
+" cellpadding=3D"0" cellspacing=3D"0" width=3D"100%" class=3D"mcnFollowCon=
+tentItem" style=3D"border-collapse: collapse;mso-table-lspace: 0pt;mso-tab=
+le-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;"=
+>
+                                                            <tbody><tr>
+                                                                <td align=
+=3D"left" valign=3D"middle" style=3D"padding-top: 5px;padding-right: 10px;=
+padding-bottom: 5px;padding-left: 9px;mso-line-height-rule: exactly;-ms-te=
+xt-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                                                    <table=
+ align=3D"left" border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"=
+" style=3D"border-collapse: collapse;mso-table-lspace: 0pt;mso-table-rspac=
+e: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                                                                        <t=
+body><tr>
+
+                                                                         =
+       <td align=3D"center" valign=3D"middle" width=3D"24" class=3D"mcnFol=
+lowIconContent" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjus=
+t: 100%;-webkit-text-size-adjust: 100%;">
+                                                                         =
+           <a href=3D"mailto:hello+books@ninja-squad.com" target=3D"_blank=
+" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webki=
+t-text-size-adjust: 100%;"><img src=3D"https://cdn-images.mailchimp.com/ic=
+ons/social-block-v2/outline-light-forwardtofriend-48.png" style=3D"display=
+: block;border: 0;height: auto;outline: none;text-decoration: none;-ms-int=
+erpolation-mode: bicubic;" height=3D"24" width=3D"24" class=3D""></a>
+                                                                         =
+       </td>
+
+
+                                                                        </=
+tr>
+                                                                    </tbod=
+y></table>
+                                                                </td>
+                                                            </tr>
+                                                        </tbody></table>
+                                                    </td>
+                                                </tr>
+                                            </tbody></table>
+
+                                        <!--[if mso]>
+                                        </td>
+                                        <![endif]-->
+
+                                    <!--[if mso]>
+                                    </tr>
+                                    </table>
+                                    <![endif]-->
+                                </td>
+                            </tr>
+                        </tbody></table>
+                    </td>
+                </tr>
+            </tbody></table>
+        </td>
+    </tr>
+</tbody></table>
+
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"1=
+00%" class=3D"mcnDividerBlock" style=3D"min-width: 100%;border-collapse: c=
+ollapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust:=
+ 100%;-webkit-text-size-adjust: 100%;table-layout: fixed !important;">
+    <tbody class=3D"mcnDividerBlockOuter">
+        <tr>
+            <td class=3D"mcnDividerBlockInner" style=3D"min-width: 100%;pa=
+dding: 18px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webk=
+it-text-size-adjust: 100%;">
+                <table class=3D"mcnDividerContent" border=3D"0" cellpaddin=
+g=3D"0" cellspacing=3D"0" width=3D"100%" style=3D"min-width: 100%;border-t=
+op: 2px solid #505050;border-collapse: collapse;mso-table-lspace: 0pt;mso-=
+table-rspace: 0pt;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100=
+%;">
+                    <tbody><tr>
+                        <td style=3D"mso-line-height-rule: exactly;-ms-tex=
+t-size-adjust: 100%;-webkit-text-size-adjust: 100%;">
+                            <span></span>
+                        </td>
+                    </tr>
+                </tbody></table>
+<!--
+                <td class=3D"mcnDividerBlockInner" style=3D"padding: 18px;=
+">
+                <hr class=3D"mcnDividerContent" style=3D"border-bottom-col=
+or:none; border-left-color:none; border-right-color:none; border-bottom-wi=
+dth:0; border-left-width:0; border-right-width:0; margin-top:0; margin-rig=
+ht:0; margin-bottom:0; margin-left:0;" />
+-->
+            </td>
+        </tr>
+    </tbody>
+</table><table border=3D"0" cellpadding=3D"0" cellspacing=3D"0" width=3D"1=
+00%" class=3D"mcnTextBlock" style=3D"min-width: 100%;border-collapse: coll=
+apse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 100=
+%;-webkit-text-size-adjust: 100%;">
+    <tbody class=3D"mcnTextBlockOuter">
+        <tr>
+            <td valign=3D"top" class=3D"mcnTextBlockInner" style=3D"paddin=
+g-top: 9px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webki=
+t-text-size-adjust: 100%;">
+              =09<!--[if mso]>
+=09=09=09=09<table align=3D"left" border=3D"0" cellspacing=3D"0" cellpaddi=
+ng=3D"0" width=3D"100%" style=3D"width:100%;">
+=09=09=09=09<tr>
+=09=09=09=09<![endif]-->
+=09=09=09
+=09=09=09=09<!--[if mso]>
+=09=09=09=09<td valign=3D"top" width=3D"600" style=3D"width:600px;">
+=09=09=09=09<![endif]-->
+                <table align=3D"left" border=3D"0" cellpadding=3D"0" cells=
+pacing=3D"0" style=3D"max-width: 100%;min-width: 100%;border-collapse: col=
+lapse;mso-table-lspace: 0pt;mso-table-rspace: 0pt;-ms-text-size-adjust: 10=
+0%;-webkit-text-size-adjust: 100%;" width=3D"100%" class=3D"mcnTextContent=
+Container">
+                    <tbody><tr>
+
+                        <td valign=3D"top" class=3D"mcnTextContent" style=
+=3D"padding-top: 0;padding-right: 18px;padding-bottom: 9px;padding-left: 1=
+8px;mso-line-height-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-=
+size-adjust: 100%;word-break: break-word;color: #FFFFFF;font-family: Helve=
+tica;font-size: 12px;line-height: 150%;text-align: center;">
+
+                            <em>Copyright =C2=A9 2018 Ninja Squad=2C All r=
+ights reserved.</em><br>
+You bought "Become a Ninja with Angular" ebook from Ninja Squad<br>
+<br>
+Want to change how you receive these emails?<br>
+You can <a href=3D"https://ninja-squad.us7.list-manage.com/profile?u=3Ddd5=
+ecd8b17390174bec99df9b&id=3De392140744&e=3Dfd165c66c8" style=3D"mso-line-hei=
+ght-rule: exactly;-ms-text-size-adjust: 100%;-webkit-text-size-adjust: 100=
+%;color: #FFFFFF;font-weight: normal;text-decoration: underline;">update y=
+our preferences</a> or <a href=3D"https://ninja-squad.us7.list-manage.com/=
+unsubscribe?u=3Ddd5ecd8b17390174bec99df9b&id=3De392140744&e=3Dfd165c66c8&c=
+=3D429d3a27a3" style=3D"mso-line-height-rule: exactly;-ms-text-size-adjust=
+: 100%;-webkit-text-size-adjust: 100%;color: #FFFFFF;font-weight: normal;t=
+ext-decoration: underline;">unsubscribe from this list</a><br>
+&nbsp;
+                        </td>
+                    </tr>
+                </tbody></table>
+=09=09=09=09<!--[if mso]>
+=09=09=09=09</td>
+=09=09=09=09<![endif]-->
+
+=09=09=09=09<!--[if mso]>
+=09=09=09=09</tr>
+=09=09=09=09</table>
+=09=09=09=09<![endif]-->
+            </td>
+        </tr>
+    </tbody>
+</table></td>
+                                        </tr>
+                                    </table>
+                                    <!--[if (gte mso 9)|(IE)]>
+                                    </td>
+                                    </tr>
+                                    </table>
+                                    <![endif]-->
+                                </td>
+                            </tr>
+                        </table>
+                        <!-- // END TEMPLATE -->
+                    </td>
+                </tr>
+            </table>
+        </center>
+    <img src=3D"https://ninja-squad.us7.list-manage.com/track/open.php?u=
+=3Ddd5ecd8b17390174bec99df9b&id=3D429d3a27a3&e=3Dfd165c66c8" height=3D"1"=
+ width=3D"1"></body>
+</html>
+--_----------=_MCPart_1175600151--

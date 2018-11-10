@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+
+<table class="mailcontent">
+{{range .Mail}}
+    <tr class="mailcontent">
+        <td>{{.From}}</td>
+        <td>{{.To}}</td>
+        <td>{{.Subject}}</td>
+    </tr>
+    <tr>
+        <td colspan="3">
+            <table>
+                <tr>{{range .Content}}
+                    <td><a href="{{.Link}}">[{{.Text}}]</a></td>
+                {{end}}</tr>
+            </table>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="3">
+            <table>
+                <tr>{{range .Attachment}}
+                    <td><a href="{{.Link}}">{{.Text}}</a></td>
+                {{end}}</tr>
+            </table>
+        </td>
+    </tr>
+{{end}}
+</table>
+
+</body>
+</html>

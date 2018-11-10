@@ -10,13 +10,12 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-/.idea/
 .idea/
-/mail/ashay.eml
+/bin/
 
-/mail/Test.eml
-/mail/original_msg.eml
-mail/Test.eml
-mail/original_msg.eml
-mailtoolkit_webserver
-/mail/ninja.txt
+/app/mail/ashay.eml
+/app/mail/Test.eml
+/app/mail/original_msg.eml
+app/mail/Test.eml
+app/mail/original_msg.eml
+/app/mail/ninja.txt
