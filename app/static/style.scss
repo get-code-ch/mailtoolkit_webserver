@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css?family=Lato|Roboto:300|Pacifico');
+
+$primary: #1565c0;
+$primaryL: #5e92f3;
+$primaryD: #003c8f;
+$secondary: #d81b60;
+$secondaryL: #ff5c8d;
+$secondaryD: #a00037;
+$panelBackground: #E1E1E1;
+
+$shadowL: rgba(0, 0, 0, 0.12);
+$shadowD: rgba(0, 0, 0, 0.24);
+
+$contentFont: 'Roboto';
+$titleFont: 'Pacifico';
+
+body {
+  color: $primary;
+  font-family: $contentFont;
+  font-size: small;
+}
+
+.layout {
+  display: grid;
+  grid-template-areas: "header header header" "content content content" "footer footer footer";
+  grid-template-columns: 200px 1fr 200px;
+  grid-template-rows: auto 1fr auto;
+  grid-gap: 10px;
+
+  height: 100vh;
+}
+
+header {
+  grid-area: header;
+  h1 {
+    font-family: $titleFont;
+  }
+}
+
+footer {
+  grid-area: footer;
+}
+
+main {
+  grid-area: content;
+}
+
+.mailcontent {
+  color: $primary;
+  border-radius: 3px;
+  border: 1px solid;
+  border-collapse: collapse;
+}
+
+tr.mailcontent td {
+  background-color: $primaryD;
+  color: lightgray;
+}
+
+.mailcontent a {
+  color: $primary;
+  text-decoration: none;
+}
+
+.mail-text {
+  width: 800px;
+  height: 895px;
+  alignment: center;
+  border-radius: 10px;
+  border: 1px solid lightgray;
+}
+
+.mail-image {
+  width: 800px;
+  alignment: center;
+  border-radius: 20px;
+  border: none;
+}
+
+// Logon panel --> view/logon.html
+.logon {
+  display: grid;
+  width: 300px;
+  height: 160px;
+  background-color: $panelBackground;
+  margin: 80px auto auto auto;
+  border-radius: 1px;
+  box-shadow: 0 3px 6px $shadowD, 0 3px 6px $shadowL;
+  padding: 20px;
+
+  input[type="password"], input[type="text"] {
+    width: 240px;
+    height: 30px;
+    margin-top: 10px;
+    margin-left: 30px;
+
+    border: 1px solid #a1a3a3;
+    color: $primary;
+    padding-left: 3px;
+    transition: box-shadow 0.3s;
+  }
+  input[type="password"]:focus, input[type="text"]:focus {
+    box-shadow: 0 0 4px 1px $shadowL;
+    outline: 0;
+  }
+  input[type="submit"] {
+    display: block;
+    background-color: $primary;
+    color: white;
+    height: 30px;
+    width: 200px;
+    margin-left: 50px;
+    margin-top: 30px;
+    cursor: pointer;
+    position: relative;
+    text-align: center;
+    border: none;
+    box-shadow: 0 3px 6px $shadowD, 0 3px 6px $shadowL;
+  }
+}

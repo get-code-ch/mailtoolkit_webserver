@@ -1,0 +1,28 @@
+{{ define "layout" }}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="layout">
+    <header>
+    {{ template "header" . }}
+    </header>
+    <nav>
+    </nav>
+    <main>
+    {{ template "content" . }}
+    </main>
+
+    <footer>
+    {{ template "footer" . }}
+    </footer>
+</div>
+
+</body>
+</html>
+{{ end }}

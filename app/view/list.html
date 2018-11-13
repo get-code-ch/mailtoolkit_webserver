@@ -1,11 +1,4 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>{{.Title}}</title>
-    <link rel="stylesheet" href="static/style.css">
-</head>
-<body>
+{{ define "content" }}
 
 <table class="mailcontent">
 {{range .Mail}}
@@ -35,5 +28,4 @@
 {{end}}
 </table>
 
-</body>
-</html>
+{{ end }}

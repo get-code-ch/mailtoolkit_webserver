@@ -16,6 +16,9 @@ import (
 	"sync"
 )
 
+const file = "./conf/configuration.json"
+
+// Template to display mail list in array
 type mailTpl struct {
 	From       string
 	To         string
@@ -30,32 +33,70 @@ type Href struct {
 	Text string
 }
 
-const file = "./conf/configuration.json"
-
 var mailLst map[string]mailtoolkit.Mail
 
 var conf Configuration
 var removeCid *regexp.Regexp
+var templateLayout []string
 
 func init() {
 	var err error
 
+	// Get configuration
 	conf, err = getConfiguration(file)
 	if err != nil {
-		log.Fatal("getConfiguration: ", err)
+		log.Fatal("getConfiguration(): ", err)
 	}
+
+	// Load regex expression
 	removeCid = regexp.MustCompile(`(?mi)(src=["]?)(cid:)(["]?)`)
+
 	mailLst = make(map[string]mailtoolkit.Mail)
-	log.Printf("Configuration %v\n", conf)
+
+	// Define ground template
+	templateLayout = []string{"view/layout.html", "view/header.html", "view/footer.html"}
+
+	log.Printf("Configuration loaded...\n")
 }
 
 func root(w http.ResponseWriter, r *http.Request) {
 	var emailLst []os.FileInfo
+	var msg []string
+
+	// check if user is authenticated
+	// If authenticated --> loading mail list
+	// If not --> display login panel
+
+	session, _ := store.Get(r, userContext)
+
+	msg, ok := r.URL.Query()["msg"]
+	if !ok {
+		msg = make([]string, 1)
+		msg[0] = ""
+	}
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		view := append(templateLayout, "view/logon.html")
+		t, err := template.ParseFiles(view...)
+		if err != nil {
+			http.Error(w, "root() - logon template - Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		data := struct {
+			Title   string
+			Message string
+		}{Title: "mailtoolkit demo", Message: msg[0]}
+		t.ExecuteTemplate(w, "layout", data)
+		return
+	}
 
 	// Get email files in folder
+	//TODO: get folder content depending of user context
 	files, err := ioutil.ReadDir(conf.MailFolder)
 	if err != nil {
-		log.Fatal(err)
+		http.Error(w, "root() - reading mail folder  - Internal Server Error", http.StatusInternalServerError)
+		log.Printf("root() - Error reading mail folder %v", err)
+		return
 	}
 
 	for _, fn := range files {
@@ -64,20 +105,21 @@ func root(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// go rountine to parse mail to an array
 	sg := sync.WaitGroup{}
 	sg.Add(len(emailLst))
 
 	results := make(chan map[string]mailtoolkit.Mail, 100)
 
-	// Parse mailcontent to an array
 	for _, fn := range emailLst {
 		go func(name string) {
 			if _, ok := mailLst[name]; !ok {
 				r := map[string]mailtoolkit.Mail{}
 				buffer, err := ioutil.ReadFile(conf.MailFolder + name)
 				if err != nil {
-					log.Printf("Error open mail file: %v", err)
 					sg.Done()
+					log.Printf("Error open mail file: %v", err)
+					http.Error(w, "root() - logon template - Internal Server Error", http.StatusInternalServerError)
 					return
 				}
 				r[name] = mailtoolkit.Parse(buffer)
@@ -87,7 +129,7 @@ func root(w http.ResponseWriter, r *http.Request) {
 		}(fn.Name())
 	}
 
-	// Wait for processing all files
+	// Wait for until all files are processed
 	go func() {
 		sg.Wait()
 		close(results)
@@ -116,39 +158,43 @@ func root(w http.ResponseWriter, r *http.Request) {
 		p = append(p, r)
 	}
 
-	h, err := ioutil.ReadFile("view/home.html")
+	view := append(templateLayout, "view/list.html")
+	t, err := template.ParseFiles(view...)
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	t, err := template.New("home").Parse(string(h))
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, "root() - List mail - Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
 	data := struct {
 		Title string
 		Mail  []mailTpl
-	}{Title: "mailtoolkit demo webserver", Mail: p}
+	}{Title: "mailtoolkit demo", Mail: p}
 
-	t.Execute(w, data)
+	t.ExecuteTemplate(w, "layout", data)
 }
 
 func displayContent(w http.ResponseWriter, r *http.Request) {
+
+	// Check if user is authenticated
+	session, _ := store.Get(r, userContext)
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		if conf.Ssl {
+			http.Redirect(w, r, "https://"+r.Host+"/", http.StatusSeeOther)
+		} else {
+			http.Redirect(w, r, "http://"+r.Host+"/", http.StatusSeeOther)
+		}
+		return
+	}
+
 	vars := mux.Vars(r)
 
 	id, _ := vars["id"]
 	contentKey, _ := vars["content"]
 
-	h, err := ioutil.ReadFile("view/mail.html")
+	view := append(templateLayout, "view/mail.html")
+	t, err := template.ParseFiles(view...)
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	t, err := template.New("mail").Parse(string(h))
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		http.Error(w, "displayContent() - Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -157,12 +203,19 @@ func displayContent(w http.ResponseWriter, r *http.Request) {
 		Header      mailtoolkit.Header
 		ContentInfo mailtoolkit.ContentInfo
 		Content     string
-	}{Title: "mailtoolkit demo webserver (Display Mail)", Header: mailLst[id].Header, ContentInfo: mailLst[id].Contents[contentKey].ContentInfo, Content: "/mail/" + id + "/" + contentKey}
+	}{Title: mailLst[id].Header.Subject, Header: mailLst[id].Header, ContentInfo: mailLst[id].Contents[contentKey].ContentInfo, Content: "/mail/" + id + "/" + contentKey}
 
-	t.Execute(w, data)
+	t.ExecuteTemplate(w, "layout", data)
 }
 
 func mailContent(w http.ResponseWriter, r *http.Request) {
+	// Check if user is authenticated
+	session, _ := store.Get(r, userContext)
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		w.Write([]byte(""))
+		return
+	}
+
 	var data []byte
 	var err error
 	var contentType string
@@ -173,7 +226,7 @@ func mailContent(w http.ResponseWriter, r *http.Request) {
 	contentKey, _ := vars["content"]
 	content, ok := mailLst[id].Contents[contentKey]
 	if !ok {
-		http.Error(w, "Not Found", http.StatusNotFound)
+		http.Error(w, "mailContent() - Content not Found", http.StatusNotFound)
 		return
 	}
 
@@ -190,7 +243,7 @@ func mailContent(w http.ResponseWriter, r *http.Request) {
 	case "quoted-printable":
 		data, err = ioutil.ReadAll(quotedprintable.NewReader(strings.NewReader(string(content.Data))))
 		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			http.Error(w, "mailContent() - quoted-printable - Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		data = removeCid.ReplaceAll(data, []byte("$1$3"))
@@ -202,6 +255,13 @@ func mailContent(w http.ResponseWriter, r *http.Request) {
 }
 
 func mailAttachment(w http.ResponseWriter, r *http.Request) {
+	// Check if user is authenticated
+	session, _ := store.Get(r, userContext)
+	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
+		w.Write([]byte(""))
+		return
+	}
+
 	var data []byte
 	var err error
 	var attachmentType string
@@ -212,7 +272,7 @@ func mailAttachment(w http.ResponseWriter, r *http.Request) {
 	attachmentKey, _ := vars["attachment"]
 	attachment, ok := mailLst[id].Attachments[attachmentKey]
 	if !ok {
-		http.Error(w, "Not Found", http.StatusNotFound)
+		http.Error(w, "mailAttachment() - Attachment not Found", http.StatusNotFound)
 		return
 	}
 
@@ -228,7 +288,7 @@ func mailAttachment(w http.ResponseWriter, r *http.Request) {
 	case "quoted-printable":
 		data, err = ioutil.ReadAll(quotedprintable.NewReader(strings.NewReader(string(attachment.Data))))
 		if err != nil {
-			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			http.Error(w, "mailAttachment() - quoted-printable - Internal Server Error", http.StatusInternalServerError)
 		}
 	default:
 		data = attachment.Data
@@ -244,6 +304,9 @@ func main() {
 
 	// Display list of emails
 	router.HandleFunc("/", root)
+
+	// Process user auth
+	router.HandleFunc("/login", login).Methods("POST")
 
 	// Display select mail content
 	router.HandleFunc("/mail/{id}/{content}", mailContent)
