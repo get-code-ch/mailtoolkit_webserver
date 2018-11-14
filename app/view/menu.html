@@ -1,7 +1,10 @@
 {{ define "menu" }}
+<form action="/" method="get">
+    <input type="submit" value="Home"/>
+</form>
 {{range .Menu}}
 <form action="{{.Link}}" method="get">
-    <button type="submit">{{.Text}}</button>
+    <input type="submit" value="{{.Text}}"/>
 </form>
 {{ end }}
 {{ end }}
