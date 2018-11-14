@@ -1,0 +1,7 @@
+{{ define "menu" }}
+{{range .Menu}}
+<form action="{{.Link}}" method="get">
+    <button type="submit">{{.Text}}</button>
+</form>
+{{ end }}
+{{ end }}

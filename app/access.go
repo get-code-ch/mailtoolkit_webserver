@@ -76,3 +76,19 @@ func login(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "http://"+r.Host+"/", http.StatusSeeOther)
 	}
 }
+
+func logout(w http.ResponseWriter, r *http.Request) {
+	session, _ := store.Get(r, userContext)
+	if auth, ok := session.Values["authenticated"].(bool); ok || auth {
+		session.Values["authenticated"] = false
+		session.Values["username"] = ""
+		session.Save(r, w)
+	}
+	// Go to home page
+	if conf.Ssl {
+		http.Redirect(w, r, "https://"+r.Host+"/", http.StatusSeeOther)
+	} else {
+		http.Redirect(w, r, "http://"+r.Host+"/", http.StatusSeeOther)
+	}
+
+}

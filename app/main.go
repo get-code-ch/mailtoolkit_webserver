@@ -54,7 +54,7 @@ func init() {
 	mailLst = make(map[string]mailtoolkit.Mail)
 
 	// Define ground template
-	templateLayout = []string{"view/layout.html", "view/header.html", "view/footer.html"}
+	templateLayout = []string{"view/layout.html", "view/header.html", "view/menu.html", "view/footer.html"}
 
 	log.Printf("Configuration loaded...\n")
 }
@@ -85,7 +85,8 @@ func root(w http.ResponseWriter, r *http.Request) {
 		data := struct {
 			Title   string
 			Message string
-		}{Title: "mailtoolkit demo", Message: msg[0]}
+			Menu    []Href
+		}{Title: "mailtoolkit demo", Message: msg[0], Menu: []Href{}}
 		t.ExecuteTemplate(w, "layout", data)
 		return
 	}
@@ -94,9 +95,9 @@ func root(w http.ResponseWriter, r *http.Request) {
 	//TODO: get folder content depending of user context
 	files, err := ioutil.ReadDir(conf.MailFolder)
 	if err != nil {
-		http.Error(w, "root() - reading mail folder  - Internal Server Error", http.StatusInternalServerError)
-		log.Printf("root() - Error reading mail folder %v", err)
-		return
+		//http.Error(w, "root() - reading mail folder  - Internal Server Error", http.StatusInternalServerError)
+		//log.Printf("root() - Error reading mail folder %v", err)
+		files = []os.FileInfo{}
 	}
 
 	for _, fn := range files {
@@ -168,7 +169,8 @@ func root(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Title string
 		Mail  []mailTpl
-	}{Title: "mailtoolkit demo", Mail: p}
+		Menu  []Href
+	}{Title: "mailtoolkit demo", Mail: p, Menu: []Href{{"/logout", "logout"}}}
 
 	t.ExecuteTemplate(w, "layout", data)
 }
@@ -203,7 +205,12 @@ func displayContent(w http.ResponseWriter, r *http.Request) {
 		Header      mailtoolkit.Header
 		ContentInfo mailtoolkit.ContentInfo
 		Content     string
-	}{Title: mailLst[id].Header.Subject, Header: mailLst[id].Header, ContentInfo: mailLst[id].Contents[contentKey].ContentInfo, Content: "/mail/" + id + "/" + contentKey}
+		Menu        []Href
+	}{Title: mailLst[id].Header.Subject, Header: mailLst[id].Header,
+		ContentInfo: mailLst[id].Contents[contentKey].ContentInfo,
+		Content:     "/mail/" + id + "/" + contentKey,
+		Menu:        []Href{},
+	}
 
 	t.ExecuteTemplate(w, "layout", data)
 }
@@ -307,6 +314,7 @@ func main() {
 
 	// Process user auth
 	router.HandleFunc("/login", login).Methods("POST")
+	router.HandleFunc("/logout", logout)
 
 	// Display select mail content
 	router.HandleFunc("/mail/{id}/{content}", mailContent)

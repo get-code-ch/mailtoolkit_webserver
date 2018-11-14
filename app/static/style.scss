@@ -22,7 +22,7 @@ body {
 
 .layout {
   display: grid;
-  grid-template-areas: "header header header" "content content content" "footer footer footer";
+  grid-template-areas: "header header header" "menu content content" "footer footer footer";
   grid-template-columns: 200px 1fr 200px;
   grid-template-rows: auto 1fr auto;
   grid-gap: 10px;
@@ -39,10 +39,33 @@ header {
 
 footer {
   grid-area: footer;
+  color: $secondary;
+  margin-bottom: 0.5rem;
+}
+
+nav {
+  grid-area: menu;
+  margin-left: 0.5rem;
 }
 
 main {
   grid-area: content;
+}
+
+@media (max-width: 768px) {
+  .layout {
+    grid-template-areas: "header" "menu" "content" "footer";
+
+    grid-template-columns: 1fr;
+    grid-template-rows: auto /* Header */
+    minmax(75px, auto) /* Nav */
+    1fr /* Content */
+    auto; /* Footer */
+  }
+
+  nav {
+    margin: 0;
+  }
 }
 
 .mailcontent {

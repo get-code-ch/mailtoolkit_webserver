@@ -2,49 +2,68 @@
 body {
   color: #1565c0;
   font-family: "Roboto";
-  font-size: small;
+    font-size: small;
 }
 
 .layout {
   display: grid;
-  grid-template-areas: "header header header" "content content content" "footer footer footer";
+    grid-template-areas: "header header header" "menu content content" "footer footer footer";
   grid-template-columns: 200px 1fr 200px;
   grid-template-rows: auto 1fr auto;
   grid-gap: 10px;
-  height: 100vh;
+    height: 100vh;
 }
 
 header {
-  grid-area: header;
+    grid-area: header;
 }
 
 header h1 {
-  font-family: "Pacifico";
+    font-family: "Pacifico";
 }
 
 footer {
   grid-area: footer;
+    color: #d81b60;
+    margin-bottom: 0.5rem;
+}
+
+nav {
+    grid-area: menu;
+    margin-left: 0.5rem;
 }
 
 main {
-  grid-area: content;
+    grid-area: content;
 }
 
+@media (max-width: 768px) {
+    .layout {
+        grid-template-areas: "header" "menu" "content" "footer";
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(75px, auto) 1fr auto;
+        /* Footer */
+    }
+
+    nav {
+        margin: 0;
+    }
+}
 .mailcontent {
   color: #1565c0;
   border-radius: 3px;
   border: 1px solid;
-  border-collapse: collapse;
+    border-collapse: collapse;
 }
 
 tr.mailcontent td {
   background-color: #003c8f;
-  color: lightgray;
+    color: lightgray;
 }
 
 .mailcontent a {
   color: #1565c0;
-  text-decoration: none;
+    text-decoration: none;
 }
 
 .mail-text {
@@ -52,14 +71,14 @@ tr.mailcontent td {
   height: 895px;
   alignment: center;
   border-radius: 10px;
-  border: 1px solid lightgray;
+    border: 1px solid lightgray;
 }
 
 .mail-image {
   width: 800px;
   alignment: center;
   border-radius: 20px;
-  border: none;
+    border: none;
 }
 
 .logon {
@@ -70,38 +89,38 @@ tr.mailcontent td {
   margin: 80px auto auto auto;
   border-radius: 1px;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.24), 0 3px 6px rgba(0, 0, 0, 0.12);
-  padding: 20px;
+    padding: 20px;
 }
 
 .logon input[type="password"], .logon input[type="text"] {
-  width: 240px;
-  height: 30px;
-  margin-top: 10px;
-  margin-left: 30px;
-  border: 1px solid #a1a3a3;
-  color: #1565c0;
-  padding-left: 3px;
-  transition: box-shadow 0.3s;
+    width: 240px;
+    height: 30px;
+    margin-top: 10px;
+    margin-left: 30px;
+    border: 1px solid #a1a3a3;
+    color: #1565c0;
+    padding-left: 3px;
+    transition: box-shadow 0.3s;
 }
 
 .logon input[type="password"]:focus, .logon input[type="text"]:focus {
-  box-shadow: 0 0 4px 1px rgba(0, 0, 0, 0.12);
-  outline: 0;
+    box-shadow: 0 0 4px 1px rgba(0, 0, 0, 0.12);
+    outline: 0;
 }
 
 .logon input[type="submit"] {
-  display: block;
-  background-color: #1565c0;
-  color: white;
-  height: 30px;
-  width: 200px;
-  margin-left: 50px;
-  margin-top: 30px;
-  cursor: pointer;
-  position: relative;
-  text-align: center;
+    display: block;
+    background-color: #1565c0;
+    color: white;
+    height: 30px;
+    width: 200px;
+    margin-left: 50px;
+    margin-top: 30px;
+    cursor: pointer;
+    position: relative;
+    text-align: center;
     border: none;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.24), 0 3px 6px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.24), 0 3px 6px rgba(0, 0, 0, 0.12);
 }
 
 /*# sourceMappingURL=style.css.map */

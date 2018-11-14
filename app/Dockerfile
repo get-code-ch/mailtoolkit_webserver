@@ -17,12 +17,11 @@ MAINTAINER Claude Debieux <claude@get-code.ch>
 RUN apk add --no-cache --update bash ca-certificates openssl
 WORKDIR /app
 
-COPY app/conf /app/conf
-COPY app/static /app/static
-COPY app/view /app/view
-COPY app/mail /app/mail
-COPY app/ssl /app/ssl
+COPY conf /app/conf
+COPY static /app/static
+COPY view /app/view
+COPY mail /app/mail
+COPY ssl /app/ssl
 COPY --from=builder /go/bin/mailtoolkit_webserver /app/mailtoolkit_webserver
 
-EXPOSE 80
 ENTRYPOINT ["/app/mailtoolkit_webserver"]

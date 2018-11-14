@@ -2,15 +2,12 @@ version: '3.2'
 
 services:
   mailtoolkit:
-    build: .
+    build: ./app
     restart: always
     volumes:
-    - /data/postfix/ssl/myca.crt:/etc/ssl/certs/myca.crt
-    - /data/postfix/ssl/mycert.crt:/etc/ssl/certs/mycert.crt
-    - /data/postfix/ssl/mycert.key:/etc/ssl/certs/mycert.key
     - /data/mail:/mail
     ports:
-    - target: 80
+    - target: 8080
       published: 80
       protocol: tcp
       mode: host
@@ -18,7 +15,23 @@ services:
       published: 443
       protocol: tcp
       mode: host
+  postfix:
+    build: ./postfix
+    restart: always
+    volumes:
+    - /data/mail:/var/mail
+    ports:
+    - target: 25
+      published: 25
+      protocol: tcp
+      mode: host
+    - target: 587
+      published: 587
+      protocol: tcp
+      mode: host
+    - target: 465
+      published: 465
+      protocol: tcp
+      mode: host
 volumes:
   mail:
-  mycert.crt:
-  mycert.key:
