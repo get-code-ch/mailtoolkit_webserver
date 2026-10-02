@@ -1,0 +1,23 @@
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=example.com;
+ i=@example.com; q=dns/txt; s=test; t=1790940692; h=from : to : subject
+ : date : message-id : from : reply-to;
+ bh=NmB2wSOfAOqNYaVOSWNjRxM5lfLpk8YolMFZjRBkCbA=;
+ b=Bq8uEvQi7y5JDDn7NlFKgnRrrcp22PZe1FvQ0AMU4iE9q9/Vt3INWyZVlD+s7ER5yfjxe
+ AUzeLogWcM9qMeKeSiChkspheVZGzZcKF/hOOSGDkseZFs2f8DQTG/fqRVhUbbHHbc8+fMe
+ kL48XmBHXbFGqxBc/W2pOrHY8cR7HnHsO0hwdtF46ZniMKFRQLag9e3YfHXmKKHyhIKIPZ4
+ WTmmHbKkm5uRHKrcDRAqgMydsPogB9l1rcrXoRBl8spUsdXFlbkVAP9rkcJnUYPkz9LA9RA
+ bRIbRgntAtPJU+4HlUQQCRhQMW1ZryVzMWjyTpG48t/5J5+JXsVaoSHP4RIQ==
+From: Joe SixPack <joe@example.com>
+To: Suzie Q <suzie@shopping.example.net>
+Subject:   Is dinner	 ready?  
+  folded continuation
+Date: Fri, 11 Jul 2003 21:00:37 -0700 (PDT)
+Message-ID: <20030712040037.46341.5F8J@example.com>
+
+Hi.  
+
+We lost the game.	 Are you hungry yet?
+
+Joe.
+
+
