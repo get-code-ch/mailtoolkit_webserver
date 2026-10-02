@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main>
+    <h1>Analyse de mail</h1>
+    <p>Vous avez reçu un mail suspect ? Transférez-le à une adresse temporaire pour l'examiner sans risque :
+        son contenu est affiché sans exécuter de code et sans charger d'images distantes.</p>
+
+    <form method="post" action="/new">
+        <button type="submit">Nouvelle analyse</button>
+    </form>
+
+    <h2>Comment faire</h2>
+    <ol>
+        <li>Cliquez sur « Nouvelle analyse » : une adresse aléatoire et une page privée sont créées.</li>
+        <li>Transférez le mail suspect <strong>en tant que pièce jointe</strong> à cette adresse
+            (un simple transfert modifie le mail original et fausse l'analyse).</li>
+        <li>Le mail apparaît sur votre page privée après quelques secondes.</li>
+    </ol>
+    {{template "forward-help"}}
+    <p class="note">Les adresses et les mails reçus sont supprimés automatiquement après expiration.</p>
+</main>
+</body>
+</html>
+
+{{define "forward-help"}}
+<details>
+    <summary>Transférer un mail en pièce jointe</summary>
+    <ul>
+        <li><strong>Gmail</strong> : ouvrez le mail, menu « ⋮ » puis « Transférer en tant que pièce jointe ».</li>
+        <li><strong>Outlook</strong> : menu « … » du mail, « Transférer » puis « Transférer en tant que pièce jointe ».
+            Depuis Outlook pour Windows : <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd>.</li>
+        <li><strong>Thunderbird</strong> : clic droit sur le mail, « Transférer en tant que » puis « Pièce jointe ».</li>
+        <li><strong>Apple Mail</strong> : menu « Message » puis « Transférer en tant que pièce jointe ».</li>
+        <li>Vous pouvez aussi joindre un fichier <code>.eml</code> ou <code>.msg</code> enregistré depuis votre messagerie.</li>
+    </ul>
+</details>
+{{end}}

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="refresh" content="5">
+    <title>{{.Title}}</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<main>
+    <p><a href="/">← Accueil</a></p>
+    <h1>Votre adresse d'analyse</h1>
+    <p class="address"><code>{{.Address}}</code></p>
+    <p>Transférez le mail suspect en pièce jointe à cette adresse. Cette page se met à jour toute seule.<br>
+        Gardez son lien : c'est le seul moyen d'accéder aux résultats. Expiration : <strong>{{.Expires}}</strong>.</p>
+
+    <h2>Mails reçus</h2>
+    {{range .Submissions}}
+    <section class="submission">
+        <p class="meta">Reçu le {{.Received}}{{with .MailFrom}} de <code>{{.}}</code>{{end}}</p>
+        {{if .Items}}
+        <table>
+            <thead><tr><th>Mail analysé</th><th>Expéditeur</th><th>Sujet</th><th>Date</th></tr></thead>
+            <tbody>
+            {{range .Items}}
+            <tr>
+                <td><a href="{{.Link}}">{{.Filename}}</a>{{if eq .Format "msg"}} <span class="badge">Outlook .msg</span>{{end}}</td>
+                <td>{{.From}}</td>
+                <td>{{.Subject}}</td>
+                <td>{{.Date}}</td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+        {{end}}
+        {{if .Error}}
+        <p class="warning">{{if .Items}}{{.Error}}{{else}}Aucun mail en pièce jointe n'a été trouvé dans cet envoi.
+            Le mail suspect doit être transféré <strong>en tant que pièce jointe</strong>.{{end}}</p>
+        {{if not .Items}}{{template "forward-help"}}{{end}}
+        {{end}}
+    </section>
+    {{else}}
+    <p class="note">Aucun mail reçu pour l'instant.</p>
+    {{end}}
+</main>
+</body>
+</html>

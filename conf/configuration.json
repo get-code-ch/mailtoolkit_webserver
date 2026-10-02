@@ -1,10 +1,20 @@
 {
-  "Server":"",
-  "Port": "80",
-  "Key": "./ssl/server.key",
-  "Cert": "./ssl/server.crt",
-  "ssl": false,
-  "mail_folder": "./mail/",
-  "ext": ".*",
-  "static_folder": "./static/"
+  "hostname": "mx.example.com",
+  "domains": ["example.com"],
+  "server": "",
+  "http_port": "80",
+  "https_port": "443",
+  "smtp_ports": {
+    "mx": "25",
+    "submission": "587",
+    "smtps": "465"
+  },
+  "cert": "./ssl/server.crt",
+  "key": "./ssl/server.key",
+  "acme_webroot": "./acme/",
+  "data_folder": "./data/",
+  "static_folder": "./static/",
+  "retention": "24h",
+  "max_message_size": 26214400,
+  "max_mailboxes": 1000
 }

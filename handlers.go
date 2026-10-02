@@ -6,11 +6,14 @@ import (
 	"html/template"
 	"log"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
+	"sync"
+	"time"
 
 	"github.com/get-code-ch/mailtoolkit"
 )
@@ -19,106 +22,213 @@ import (
 // script, unique origin) and may only load images from this server, so
 // remote tracking images are blocked too.
 const (
-	appCSP  = "default-src 'self'; frame-ancestors 'self'"
+	appCSP  = "default-src 'self'; frame-ancestors 'self'; form-action 'self'"
 	mailCSP = "sandbox; default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; frame-ancestors 'self'"
 )
 
-// removeCid turns src="cid:xxx" into a link relative to /mail/{id}/, served
-// by mailContent.
+// removeCid turns src="cid:xxx" into a link relative to the part URL,
+// served by mailPart.
 var removeCid = regexp.MustCompile(`(?mi)(src=["]?)(cid:)(["]?)`)
 
-type mailTpl struct {
-	From       string
-	To         string
-	Subject    string
-	Date       string
-	Content    []Href
-	Attachment []Href
-}
-
 type Href struct {
-	Link string
-	Text string
+	Link   string
+	Text   string
+	Active bool
 }
 
 type server struct {
-	store     *mailStore
+	store     *mailboxStore
 	templates *template.Template
+	limiter   *rateLimiter
 }
 
 func (s *server) routes(staticFolder string) http.Handler {
 	mux := http.NewServeMux()
-	// Display list of emails
-	mux.HandleFunc("GET /{$}", s.root)
-	// Display select mail content
-	mux.HandleFunc("GET /display/{id}/{content}", s.displayContent)
-	mux.HandleFunc("GET /mail/{id}/{content}", s.mailContent)
-	mux.HandleFunc("GET /mail/{id}/attachment/{attachment}", s.mailAttachment)
-	// Serving static files
+	mux.HandleFunc("GET /{$}", s.index)
+	mux.HandleFunc("POST /new", s.newMailbox)
+	mux.HandleFunc("GET /inbox/{token}", s.inbox)
+	mux.HandleFunc("GET /inbox/{token}/{id}/{n}", s.analysis)
+	mux.HandleFunc("GET /inbox/{token}/{id}/{n}/part/{content}", s.mailPart)
+	mux.HandleFunc("GET /inbox/{token}/{id}/{n}/attachment/{attachment}", s.mailAttachment)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticFolder))))
-	return noSniff(mux)
+	return securityHeaders(mux)
 }
 
-func noSniff(next http.Handler) http.Handler {
+func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
+		// Inbox URLs are secret: never leak them to other sites.
+		w.Header().Set("Referrer-Policy", "no-referrer")
 		next.ServeHTTP(w, r)
 	})
 }
 
-func (s *server) root(w http.ResponseWriter, r *http.Request) {
-	ids, err := s.store.ids()
-	if err != nil {
-		serverError(w, "listing mails", err)
-		return
+// redirectToHTTPS serves the ACME challenges and redirects everything else
+// to the HTTPS port.
+func redirectToHTTPS(httpsPort, acmeWebroot string) http.Handler {
+	mux := http.NewServeMux()
+	if acmeWebroot != "" {
+		mux.Handle("GET /.well-known/acme-challenge/", http.FileServer(http.Dir(acmeWebroot)))
 	}
-
-	p := []mailTpl{}
-	for _, id := range ids {
-		mail, err := s.store.get(id)
-		if err != nil {
-			log.Printf("mail %s: %v", id, err)
-			continue
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		host := r.Host
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
 		}
-		escapedID := url.PathEscape(id)
-		t := mailTpl{From: mail.Header.From, To: mail.Header.To, Subject: mail.Header.Subject, Date: mail.Header.Date}
-		for _, key := range contentKeys(mail.Contents) {
-			ct := mail.Contents[key].ContentInfo.Type
-			t.Content = append(t.Content, Href{"/display/" + escapedID + "/" + url.PathEscape(key), ct.Type + "/" + ct.Subtype})
+		if httpsPort != "443" {
+			host = net.JoinHostPort(host, httpsPort)
 		}
-		for _, name := range sortedKeys(mail.Attachments) {
-			t.Attachment = append(t.Attachment, Href{"/mail/" + escapedID + "/attachment/" + url.PathEscape(name), name})
-		}
-		p = append(p, t)
-	}
-
-	s.render(w, "home.html", struct {
-		Title string
-		Mail  []mailTpl
-	}{Title: "mailtoolkit demo webserver", Mail: p})
-}
-
-func (s *server) displayContent(w http.ResponseWriter, r *http.Request) {
-	mail, content, ok := s.lookupContent(w, r)
-	if !ok {
-		return
-	}
-	s.render(w, "mail.html", struct {
-		Title       string
-		Header      mailtoolkit.Header
-		ContentInfo mailtoolkit.ContentInfo
-		Content     string
-	}{
-		Title:       "mailtoolkit demo webserver (Display Mail)",
-		Header:      mail.Header,
-		ContentInfo: content.ContentInfo,
-		Content:     "/mail/" + url.PathEscape(r.PathValue("id")) + "/" + url.PathEscape(r.PathValue("content")),
+		http.Redirect(w, r, "https://"+host+r.URL.RequestURI(), http.StatusMovedPermanently)
 	})
+	return mux
 }
 
-func (s *server) mailContent(w http.ResponseWriter, r *http.Request) {
-	_, content, ok := s.lookupContent(w, r)
+func (s *server) index(w http.ResponseWriter, r *http.Request) {
+	s.render(w, "index.html", struct{ Title string }{"Analyse de mail"})
+}
+
+func (s *server) newMailbox(w http.ResponseWriter, r *http.Request) {
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		ip = r.RemoteAddr
+	}
+	if !s.limiter.allow(ip) {
+		http.Error(w, "Trop de demandes, réessayez plus tard.", http.StatusTooManyRequests)
+		return
+	}
+	mailbox, err := s.store.Create()
+	if errors.Is(err, errTooManyMailboxes) {
+		http.Error(w, "Service saturé, réessayez plus tard.", http.StatusServiceUnavailable)
+		return
+	}
+	if err != nil {
+		serverError(w, "creating mailbox", err)
+		return
+	}
+	http.Redirect(w, r, "/inbox/"+mailbox.Token, http.StatusSeeOther)
+}
+
+type inboxItem struct {
+	Link     string
+	Filename string
+	Format   string
+	From     string
+	Subject  string
+	Date     string
+}
+
+type inboxSubmission struct {
+	Received string
+	MailFrom string
+	Error    string
+	Items    []inboxItem
+}
+
+func (s *server) inbox(w http.ResponseWriter, r *http.Request) {
+	token := r.PathValue("token")
+	mailbox, ok := s.store.ByToken(token)
 	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	submissions, err := s.store.Submissions(token)
+	if err != nil {
+		serverError(w, "listing submissions", err)
+		return
+	}
+
+	data := struct {
+		Title       string
+		Address     string
+		Expires     string
+		Submissions []inboxSubmission
+	}{Title: "Boîte " + mailbox.Address, Address: mailbox.Address, Expires: formatTime(mailbox.Expires)}
+	for _, submission := range submissions {
+		item := inboxSubmission{
+			Received: formatTime(submission.Envelope.Received),
+			MailFrom: submission.Envelope.MailFrom,
+			Error:    submission.Error,
+		}
+		for _, info := range submission.Analyzed {
+			item.Items = append(item.Items, inboxItem{
+				Link:     "/inbox/" + token + "/" + submission.ID + "/" + strconv.Itoa(info.N),
+				Filename: info.Filename,
+				Format:   info.Format,
+				From:     info.From,
+				Subject:  info.Subject,
+				Date:     info.Date,
+			})
+		}
+		data.Submissions = append(data.Submissions, item)
+	}
+	s.render(w, "inbox.html", data)
+}
+
+// analysis displays an extracted mail: header, parts and attachments, the
+// selected part (?part=key) being shown in a sandboxed frame.
+func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
+	mail, info, base, ok := s.lookupAnalyzed(w, r)
+	if !ok {
+		return
+	}
+	data := struct {
+		Title       string
+		Inbox       string
+		Info        AnalyzedInfo
+		Header      mailtoolkit.Header
+		Parts       []Href
+		Attachments []Href
+		Frame       string
+	}{
+		Title: "Analyse : " + info.Filename,
+		Inbox: "/inbox/" + r.PathValue("token"),
+		Info:  info,
+		// Header stays empty for formats not parsed yet (.msg).
+		Header: mail.Header,
+	}
+
+	keys := contentKeys(mail.Contents)
+	selected := r.URL.Query().Get("part")
+	if _, ok := mail.Contents[selected]; !ok {
+		selected = defaultPart(mail.Contents, keys)
+	}
+	for _, key := range keys {
+		ct := mail.Contents[key].ContentInfo.Type
+		data.Parts = append(data.Parts, Href{"?part=" + url.QueryEscape(key), ct.Type + "/" + ct.Subtype, key == selected})
+	}
+	if selected != "" {
+		data.Frame = base + "/part/" + url.PathEscape(selected)
+	}
+	for _, name := range sortedKeys(mail.Attachments) {
+		data.Attachments = append(data.Attachments, Href{Link: base + "/attachment/" + url.PathEscape(name), Text: name})
+	}
+	s.render(w, "mail.html", data)
+}
+
+// defaultPart prefers the HTML version of a mail, then the plain text one.
+func defaultPart(contents map[string]mailtoolkit.Content, keys []string) string {
+	for _, subtype := range []string{"html", "plain"} {
+		for _, key := range keys {
+			ct := contents[key].ContentInfo.Type
+			if ct.Type == "text" && ct.Subtype == subtype {
+				return key
+			}
+		}
+	}
+	if len(keys) > 0 {
+		return keys[0]
+	}
+	return ""
+}
+
+func (s *server) mailPart(w http.ResponseWriter, r *http.Request) {
+	mail, _, _, ok := s.lookupAnalyzed(w, r)
+	if !ok {
+		return
+	}
+	content, ok := mail.Contents[r.PathValue("content")]
+	if !ok {
+		http.NotFound(w, r)
 		return
 	}
 	data, err := content.Decode()
@@ -136,7 +246,7 @@ func (s *server) mailContent(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) mailAttachment(w http.ResponseWriter, r *http.Request) {
-	mail, ok := s.lookupMail(w, r)
+	mail, _, _, ok := s.lookupAnalyzed(w, r)
 	if !ok {
 		return
 	}
@@ -152,35 +262,32 @@ func (s *server) mailAttachment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", formatContentType(attachment.ContentInfo.Type))
+	// Attachments may be malicious: always downloaded, never displayed.
+	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", mime.FormatMediaType("attachment", map[string]string{"filename": name}))
 	w.Header().Set("Content-Security-Policy", mailCSP)
 	w.Write(data)
 }
 
-func (s *server) lookupMail(w http.ResponseWriter, r *http.Request) (mailtoolkit.Mail, bool) {
-	mail, err := s.store.get(r.PathValue("id"))
+// lookupAnalyzed returns the mail of /inbox/{token}/{id}/{n} and the base URL
+// of its parts, or writes the error response.
+func (s *server) lookupAnalyzed(w http.ResponseWriter, r *http.Request) (mailtoolkit.Mail, AnalyzedInfo, string, bool) {
+	token, id := r.PathValue("token"), r.PathValue("id")
+	n, err := strconv.Atoi(r.PathValue("n"))
+	if err != nil {
+		http.NotFound(w, r)
+		return mailtoolkit.Mail{}, AnalyzedInfo{}, "", false
+	}
+	mail, info, err := s.store.Analyzed(token, id, n)
 	if errors.Is(err, errNotFound) {
 		http.NotFound(w, r)
-		return mail, false
+		return mail, info, "", false
 	}
 	if err != nil {
 		serverError(w, "reading mail", err)
-		return mail, false
+		return mail, info, "", false
 	}
-	return mail, true
-}
-
-func (s *server) lookupContent(w http.ResponseWriter, r *http.Request) (mailtoolkit.Mail, mailtoolkit.Content, bool) {
-	mail, ok := s.lookupMail(w, r)
-	if !ok {
-		return mail, mailtoolkit.Content{}, false
-	}
-	content, ok := mail.Contents[r.PathValue("content")]
-	if !ok {
-		http.NotFound(w, r)
-	}
-	return mail, content, ok
+	return mail, info, "/inbox/" + token + "/" + id + "/" + strconv.Itoa(n), true
 }
 
 // render executes the template in a buffer so that a failing template gives a
@@ -208,6 +315,10 @@ func formatContentType(ct mailtoolkit.ContentType) string {
 	return "application/octet-stream"
 }
 
+func formatTime(t time.Time) string {
+	return t.Local().Format("02.01.2006 15:04:05 MST")
+}
+
 // contentKeys sorts positional keys ("0", "1"...) numerically, before the
 // Content-ID ones.
 func contentKeys(contents map[string]mailtoolkit.Content) []string {
@@ -232,4 +343,47 @@ func sortedKeys[V any](m map[string]V) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// rateLimiter allows a number of events per key over a sliding window.
+type rateLimiter struct {
+	limit  int
+	window time.Duration
+
+	mu     sync.Mutex
+	events map[string][]time.Time
+}
+
+func newRateLimiter(limit int, window time.Duration) *rateLimiter {
+	return &rateLimiter{limit: limit, window: window, events: make(map[string][]time.Time)}
+}
+
+func (l *rateLimiter) allow(key string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := time.Now()
+	recent := l.events[key][:0]
+	for _, t := range l.events[key] {
+		if now.Sub(t) < l.window {
+			recent = append(recent, t)
+		}
+	}
+	if len(recent) >= l.limit {
+		l.events[key] = recent
+		return false
+	}
+	l.events[key] = append(recent, now)
+	return true
+}
+
+// prune forgets the keys without recent events.
+func (l *rateLimiter) prune() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := time.Now()
+	for key, events := range l.events {
+		if len(events) == 0 || now.Sub(events[len(events)-1]) >= l.window {
+			delete(l.events, key)
+		}
+	}
 }
