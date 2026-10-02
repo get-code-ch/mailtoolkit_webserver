@@ -124,6 +124,102 @@ nav.parts a.active {
     background: var(--accent);
 }
 
+.analysis {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 24px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .analysis {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+aside.links h2 {
+    margin-top: 0;
+}
+
+.summary span {
+    margin-right: 8px;
+    font-weight: bold;
+}
+
+.level-danger {
+    --level: #c0392b;
+    color: var(--level);
+}
+
+.level-warning {
+    --level: #b9770e;
+    color: var(--level);
+}
+
+.level-info {
+    --level: #5b6273;
+    color: var(--level);
+}
+
+.level-ok {
+    color: #1e8449;
+}
+
+ol.link-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+li.link {
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--level, var(--border));
+    border-radius: 4px;
+}
+
+.link-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: baseline;
+    overflow-wrap: anywhere;
+}
+
+.link-text, .link-target {
+    margin-top: 4px;
+    overflow-wrap: anywhere;
+}
+
+code.link-url {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.85em;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+    user-select: all;
+}
+
+ul.link-warnings {
+    margin: 6px 0 0;
+    padding-left: 18px;
+}
+
+.link-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+    font-size: 0.85em;
+}
+
+button.copy {
+    padding: 2px 10px;
+    font-size: 0.9em;
+}
+
 .mail {
     height: 80vh;
     border: 1px solid var(--border);

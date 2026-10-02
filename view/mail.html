@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{.Title}}</title>
     <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/app.js" defer></script>
 </head>
 <body>
 <main class="wide">
@@ -14,36 +15,77 @@
     {{if eq .Info.Format "msg"}}
     <p class="warning">Format Outlook <code>.msg</code> : l'analyse de ce format sera disponible prochainement.</p>
     {{else}}
-    <dl class="header">
-        {{with .Header}}
-        <dt>De</dt><dd>{{range $i, $a := .FromList}}{{if $i}}, {{end}}{{with $a.Name}}{{.}} {{end}}&lt;{{$a.Address}}&gt;{{end}}</dd>
-        <dt>À</dt><dd>{{.To}}</dd>
-        {{with .Cc}}<dt>Cc</dt><dd>{{.}}</dd>{{end}}
-        <dt>Sujet</dt><dd>{{.Subject}}</dd>
-        <dt>Date</dt><dd>{{.Date}}</dd>
-        {{end}}
-    </dl>
+    <div class="analysis">
+        <div class="analysis-main">
+            <dl class="header">
+                {{with .Header}}
+                <dt>De</dt><dd>{{range $i, $a := .FromList}}{{if $i}}, {{end}}{{with $a.Name}}{{.}} {{end}}&lt;{{$a.Address}}&gt;{{end}}</dd>
+                <dt>À</dt><dd>{{.To}}</dd>
+                {{with .Cc}}<dt>Cc</dt><dd>{{.}}</dd>{{end}}
+                <dt>Sujet</dt><dd>{{.Subject}}</dd>
+                <dt>Date</dt><dd>{{.Date}}</dd>
+                {{end}}
+            </dl>
 
-    {{if .Parts}}
-    <nav class="parts">
-        {{range .Parts}}<a href="{{.Link}}"{{if .Active}} class="active"{{end}}>{{.Text}}</a>{{end}}
-    </nav>
-    {{end}}
+            {{if .Parts}}
+            <nav class="parts">
+                {{range .Parts}}<a href="{{.Link}}"{{if .Active}} class="active"{{end}}>{{.Text}}</a>{{end}}
+            </nav>
+            {{end}}
 
-    {{if .Frame}}
-    <div class="mail">
-        <!-- Mail content comes from third parties: no script, no same-origin access -->
-        <iframe sandbox src="{{.Frame}}" title="Contenu du mail"></iframe>
+            {{if .Frame}}
+            <div class="mail">
+                <!-- Mail content comes from third parties: no script, no same-origin access -->
+                <iframe sandbox src="{{.Frame}}" title="Contenu du mail"></iframe>
+            </div>
+            {{end}}
+
+            {{if .Attachments}}
+            <h2>Pièces jointes</h2>
+            <p class="note">Les pièces jointes sont téléchargées telles quelles, ne les ouvrez pas si le mail est suspect.</p>
+            <ul>
+                {{range .Attachments}}<li><a href="{{.Link}}">{{.Text}}</a></li>{{end}}
+            </ul>
+            {{end}}
+        </div>
+
+        <aside class="links" aria-label="Liens du mail">
+            <h2>Liens ({{len .Links}})</h2>
+            {{if .Links}}
+            <p class="summary">
+                {{if .Dangers}}<span class="level-danger">{{.Dangers}} dangereux</span>{{end}}
+                {{if .Warnings}}<span class="level-warning">{{.Warnings}} suspect{{if gt .Warnings 1}}s{{end}}</span>{{end}}
+                {{if not (or .Dangers .Warnings)}}<span class="level-ok">Aucune alerte</span>{{end}}
+            </p>
+            <p class="note">Les liens ne sont pas cliquables : copiez-les seulement si vous êtes sûr de la destination.</p>
+            <ol class="link-list">
+                {{range .Links}}
+                <li class="link {{with .Level}}level-{{.}}{{end}}">
+                    <div class="link-head">
+                        <strong>{{if .Host}}{{.Host}}{{else}}(sans domaine){{end}}</strong>
+                        <span class="badge">{{.Source}}</span>
+                        {{if gt .Count 1}}<span class="badge">×{{.Count}}</span>{{end}}
+                    </div>
+                    {{with .Text}}<div class="link-text">Texte affiché : « {{.}} »</div>{{end}}
+                    <code class="link-url">{{.URL}}</code>
+                    {{with .Target}}<div class="link-target">Destination finale : <code>{{.}}</code></div>{{end}}
+                    {{if .Warnings}}
+                    <ul class="link-warnings">
+                        {{range .Warnings}}<li class="level-{{.Level}}">{{.Message}}</li>{{end}}
+                    </ul>
+                    {{end}}
+                    <div class="link-foot">
+                        <span class="note">{{.Part}}</span>
+                        <button type="button" class="copy" data-copy="{{.URL}}">Copier</button>
+                    </div>
+                </li>
+                {{end}}
+            </ol>
+            {{else}}
+            <p class="note">Aucun lien dans ce mail.</p>
+            {{end}}
+        </aside>
     </div>
-    {{end}}
-
-    {{if .Attachments}}
-    <h2>Pièces jointes</h2>
-    <p class="note">Les pièces jointes sont téléchargées telles quelles, ne les ouvrez pas si le mail est suspect.</p>
-    <ul>
-        {{range .Attachments}}<li><a href="{{.Link}}">{{.Text}}</a></li>{{end}}
-    </ul>
-    {{end}}
     {{end}}
 </main>
 </body>

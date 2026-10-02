@@ -7,7 +7,8 @@ The server is the MX of a domain. A visitor clicks « Nouvelle analyse » and ge
 address; the attached mail (not the forwarding one) is displayed on the private page without running any of
 its code.
 
-Everything uses the Go standard library, including the SMTP server. Requires Go 1.25 or later.
+The SMTP server uses the Go standard library only; HTML parsing relies on `golang.org/x/net/html` (the
+tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or later.
 
 ## How it works
 
@@ -27,6 +28,11 @@ Everything uses the Go standard library, including the SMTP server. Requires Go 
 - **Display**: mail contents are shown in a sandboxed iframe with a `Content-Security-Policy: sandbox` header:
   no script runs and no remote image (tracking pixel) is loaded. Attachments are always downloaded, never
   displayed.
+- **Links panel**: every URL of the mail (links, images, forms, CSS, redirections, URLs written in the text)
+  is listed next to the content, never clickable, with alerts: displayed text pointing to another domain,
+  `javascript:` / `data:` schemes, `user@` before the domain, IP addresses, unusual ports, URL shorteners,
+  internationalized domains (homographs), forms, automatic redirections, tracking pixels, and the final
+  destination of redirectors such as Outlook Safe Links.
 
 ## Configuration
 

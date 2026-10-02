@@ -179,6 +179,9 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		Parts       []Href
 		Attachments []Href
 		Frame       string
+		Links       []Link
+		Dangers     int
+		Warnings    int
 	}{
 		Title: "Analyse : " + info.Filename,
 		Inbox: "/inbox/" + r.PathValue("token"),
@@ -201,6 +204,21 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, name := range sortedKeys(mail.Attachments) {
 		data.Attachments = append(data.Attachments, Href{Link: base + "/attachment/" + url.PathEscape(name), Text: name})
+	}
+
+	// Most suspicious links first, then in order of appearance.
+	data.Links = extractLinks(mail)
+	severity := map[string]int{levelDanger: 0, levelWarning: 1, levelInfo: 2, "": 3}
+	sort.SliceStable(data.Links, func(i, j int) bool {
+		return severity[data.Links[i].Level()] < severity[data.Links[j].Level()]
+	})
+	for _, link := range data.Links {
+		switch link.Level() {
+		case levelDanger:
+			data.Dangers++
+		case levelWarning:
+			data.Warnings++
+		}
 	}
 	s.render(w, "mail.html", data)
 }
