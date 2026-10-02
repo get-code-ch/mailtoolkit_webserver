@@ -84,40 +84,77 @@ Without `cert` and `key`, only the MX port (without STARTTLS) and plain HTTP are
 
 ## Deployment
 
-1. DNS, for the domain `example.com` served by the host `mx.example.com`:
+The reference deployment (`mtk.kite-project.net`): the web site behind the Cloudflare proxy, the mails
+received directly on port 25, everything in one Docker container.
 
-   ```
-   mx.example.com.  A    203.0.113.10
-   example.com.     MX   10 mx.example.com.
-   ```
+1. **DNS** (Cloudflare):
 
-2. Open the incoming ports 25, 465, 587, 80 and 443.
+   | Name                      | Type | Value                       | Proxy                     |
+   |---------------------------|------|-----------------------------|---------------------------|
+   | `mtk.kite-project.net`    | A    | IP of the server            | proxied (orange cloud)    |
+   | `mx.mtk.kite-project.net` | A    | IP of the server            | **DNS only** (grey cloud) |
+   | `mtk.kite-project.net`    | MX   | `10 mx.mtk.kite-project.net`|                           |
 
-3. Get a certificate covering `mx.example.com` (and the web site name), for example:
+   Cloudflare only proxies the web: the MX must point to a DNS only name, or no mail arrives. The addresses
+   are created in the domain of `domains` (`…@mtk.kite-project.net`), `hostname` is the MX name.
+
+2. **Firewall**: open the incoming ports 25 (mails), 587 (optional, direct submission), 80 and 443.
+
+3. **Code and configuration**, on the server:
 
    ```sh
-   certbot certonly --webroot -w ./acme -d mx.example.com
+   git clone -b mail-analyzer https://github.com/get-code-ch/mailtoolkit_webserver.git
+   cd mailtoolkit_webserver
    ```
 
-   The server must be running (port 80) for the webroot challenge. Renewals are picked up without restart.
+   `conf/configuration.json` holds the reference configuration: adapt `hostname` and `domains`. Keep
+   `"behind_cloudflare": true` when the site is proxied, so that the rate limits apply per visitor.
 
-4. Run it:
+4. **Certificate**: behind Cloudflare a self-signed certificate is enough, with the SSL/TLS mode **Full**
+   (not *Full (strict)*); mail servers do not check the certificate of an MX for STARTTLS either.
+
+   ```sh
+   mkdir -p ssl data
+   openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj "/CN=mtk.kite-project.net" \
+     -addext "subjectAltName=DNS:mtk.kite-project.net,DNS:mx.mtk.kite-project.net" \
+     -keyout ssl/server.key -out ssl/server.crt
+   ```
+
+   For *Full (strict)*, use a Cloudflare Origin CA certificate instead; without Cloudflare, a Let's Encrypt
+   certificate (`certbot certonly --webroot -w ./acme -d <host>`, the HTTP port serves the challenges and
+   renewals are picked up without restart). `ssl/` is ignored by git.
+
+5. **Build and run**:
 
    ```sh
    docker build -t mailtoolkit_webserver .
-   docker run -d --name mail-analyzer \
-     -p 25:25 -p 465:465 -p 587:587 -p 80:80 -p 443:443 \
+   docker run -d --name mail-analyzer --restart unless-stopped \
+     --user "$(id -u):$(id -g)" \
+     -p 25:25 -p 587:587 -p 80:80 -p 443:443 \
      -v "$PWD/conf:/app/conf:ro" \
-     -v /etc/letsencrypt:/etc/letsencrypt:ro \
-     -v "$PWD/acme:/app/acme" \
-     -v mail-analyzer-data:/app/data \
+     -v "$PWD/ssl:/app/ssl:ro" \
+     -v "$PWD/data:/app/data" \
      mailtoolkit_webserver
    ```
 
-   with `"cert": "/etc/letsencrypt/live/mx.example.com/fullchain.pem"` and
-   `"key": "/etc/letsencrypt/live/mx.example.com/privkey.pem"` in the configuration.
+   - the configuration and the certificate are mounted read only: after a change, `docker restart mail-analyzer`
+     is enough, no rebuild;
+   - `--user` runs the server as the owner of the folder, which can read `ssl/server.key` and write in `data/`;
+   - publish 465 too if `smtps` is enabled in the configuration.
 
-## Behind Cloudflare, without port 25
+6. **Check**:
+
+   ```sh
+   docker logs mail-analyzer       # one "listening" line per port
+   nc mx.mtk.kite-project.net 25   # 220 mx.mtk.kite-project.net ESMTP ready
+   ```
+
+   then create an address on `https://mtk.kite-project.net` and forward a mail to it as an attachment.
+
+**Update**: `git pull`, `docker build -t mailtoolkit_webserver .`, then `docker rm -f mail-analyzer` and the
+`docker run` command again; the mailboxes in `data/` are kept.
+
+## Without port 25: Cloudflare Email Routing
 
 Mail servers deliver to the MX on port 25 only. When the host blocks it, Cloudflare Email Routing can receive
 the mails and an Email Worker forwards them to the server over HTTPS (`POST /ingest`):
@@ -128,22 +165,14 @@ the mails and an Email Worker forwards them to the server over HTTPS (`POST /ing
    export MTK_INGEST_TOKEN=$(openssl rand -hex 32)
    ```
 
+   (`-e MTK_INGEST_TOKEN=...` with Docker).
 2. In Cloudflare, enable **Email Routing** for the domain of the addresses (it publishes its own MX records).
 3. Create a Worker with `cloudflare/email-worker.js`, a variable `INGEST_URL`
    (`https://<host>/ingest`) and a secret `INGEST_TOKEN` (the same value).
 4. Add a **catch-all** routing rule with the action *Send to a Worker*.
 
 Unknown or expired addresses are rejected (the server answers 404 and the Worker rejects the mail); the other
-errors are temporary. Set `"behind_cloudflare": true` so that the rate limits use the visitor address given by
-Cloudflare (`CF-Connecting-IP`, trusted only from the Cloudflare address ranges).
-
-With the Cloudflare proxy, a self-signed certificate is enough for the origin with the SSL/TLS mode **Full**
-(or use a Cloudflare Origin CA certificate for **Full (strict)**):
-
-```sh
-mkdir -p ssl && openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj "/CN=<host>" \
-  -addext "subjectAltName=DNS:<host>" -keyout ssl/server.key -out ssl/server.crt
-```
+errors are temporary. Without token, `/ingest` is disabled.
 
 ## Development
 

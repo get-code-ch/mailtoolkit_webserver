@@ -23,7 +23,7 @@ COPY --from=builder /out/mailtoolkit_webserver /app/mailtoolkit_webserver
 # Received mails (deleted after the retention delay)
 VOLUME /app/data
 # TLS certificate and key are not part of the image, mount them:
-# -v /etc/letsencrypt/live/<domain>:/app/ssl:ro
+# -v "$PWD/ssl:/app/ssl:ro" (see the Deployment section of the README)
 USER app
 # SMTP (MX, SMTPS, submission), HTTP, HTTPS. Docker lets unprivileged users
 # bind ports below 1024 inside the container.
