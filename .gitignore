@@ -21,6 +21,10 @@ mail/original_msg.eml
 /mailtoolkit_webserver
 /mail/ninja.txt
 
+# Received mails and ACME challenges
+/data/
+/acme/
+
 # TLS certificate and private key must never be committed
 /ssl/
 *.key

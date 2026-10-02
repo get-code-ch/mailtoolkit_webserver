@@ -1,53 +1,109 @@
 # mailtoolkit_webserver
 
-Demo web server for [mailtoolkit](https://github.com/get-code-ch/mailtoolkit): lists the mails of a folder and displays their contents and attachments.
+Mail analysis service built on [mailtoolkit](https://github.com/get-code-ch/mailtoolkit).
 
-Requires Go 1.24 or later.
+The server is the MX of a domain. A visitor clicks « Nouvelle analyse » and gets a random address
+(`k7f3q9x2m4@example.com`) and a private page. They forward the suspect mail **as an attachment** to that
+address; the attached mail (not the forwarding one) is displayed on the private page without running any of
+its code.
 
-## Run
+Everything uses the Go standard library, including the SMTP server. Requires Go 1.25 or later.
 
-```sh
-go run .
-```
+## How it works
 
-The server reads `./conf/configuration.json`:
+- **SMTP** on three ports, sharing the same rules: only the active random addresses of the configured
+  domains are accepted (`550` otherwise), so the server is never an open relay.
 
-| Field           | Description                                          |
-|-----------------|------------------------------------------------------|
-| `Server`/`Port` | listening address, `""` and `"80"` by default        |
-| `mail_folder`   | folder containing the mails (`.eml` files)           |
-| `ext`           | mail file extension, `.*` for every file             |
-| `static_folder` | CSS and other static files                           |
-| `ssl`           | serve HTTPS with the `Cert` and `Key` files          |
+  | Port | Mode |
+  |------|------|
+  | 25   | MX, STARTTLS offered |
+  | 587  | submission, STARTTLS required before `MAIL` |
+  | 465  | implicit TLS |
 
-Mails are parsed on first access and reparsed when their file changes.
+- **Extraction**: `message/rfc822` parts and `.eml` / `.msg` files attached to the received mail are kept byte
+  for byte (needed to verify their signatures). Outlook `.msg` files are stored but not analyzed yet.
+- **Privacy**: the page link contains a 128-bit secret token, distinct from the address. Mailboxes and mails
+  are deleted after the retention delay (24 h by default).
+- **Display**: mail contents are shown in a sandboxed iframe with a `Content-Security-Policy: sandbox` header:
+  no script runs and no remote image (tracking pixel) is loaded. Attachments are always downloaded, never
+  displayed.
 
-## Security
+## Configuration
 
-Mail contents come from third parties. They are displayed in a sandboxed iframe and served with a `Content-Security-Policy: sandbox` header: scripts do not run and remote images (tracking pixels) are not loaded. Attachments are always downloaded, never displayed.
+`./conf/configuration.json`, or the file given with `-config`:
 
-## TLS
+| Field              | Description |
+|--------------------|-------------|
+| `hostname`         | MX host name, used in the SMTP banner and `Received` headers |
+| `domains`          | accepted domains, the first one is used for new addresses |
+| `server`           | listening IP address, empty for all |
+| `smtp_ports`       | `mx`, `submission` and `smtps` ports, empty to disable one |
+| `http_port`        | HTTP port; redirects to HTTPS and serves ACME challenges when HTTPS is enabled |
+| `https_port`       | HTTPS port |
+| `cert`, `key`      | certificate files for HTTPS, STARTTLS and the submission ports, reloaded when they change |
+| `acme_webroot`     | folder served under `/.well-known/acme-challenge/` for `certbot --webroot` |
+| `data_folder`      | where the mailboxes are stored |
+| `retention`        | mailbox lifetime, e.g. `"24h"` |
+| `max_message_size` | in bytes, 25 MB by default |
+| `max_mailboxes`    | maximum number of active mailboxes |
 
-The certificate and private key are not stored in the repository. For a local self-signed certificate:
+Without `cert` and `key`, only the MX port (without STARTTLS) and plain HTTP are started.
+
+## Deployment
+
+1. DNS, for the domain `example.com` served by the host `mx.example.com`:
+
+   ```
+   mx.example.com.  A    203.0.113.10
+   example.com.     MX   10 mx.example.com.
+   ```
+
+2. Open the incoming ports 25, 465, 587, 80 and 443.
+
+3. Get a certificate covering `mx.example.com` (and the web site name), for example:
+
+   ```sh
+   certbot certonly --webroot -w ./acme -d mx.example.com
+   ```
+
+   The server must be running (port 80) for the webroot challenge. Renewals are picked up without restart.
+
+4. Run it:
+
+   ```sh
+   docker build -t mailtoolkit_webserver .
+   docker run -d --name mail-analyzer \
+     -p 25:25 -p 465:465 -p 587:587 -p 80:80 -p 443:443 \
+     -v "$PWD/conf:/app/conf:ro" \
+     -v /etc/letsencrypt:/etc/letsencrypt:ro \
+     -v "$PWD/acme:/app/acme" \
+     -v mail-analyzer-data:/app/data \
+     mailtoolkit_webserver
+   ```
+
+   with `"cert": "/etc/letsencrypt/live/mx.example.com/fullchain.pem"` and
+   `"key": "/etc/letsencrypt/live/mx.example.com/privkey.pem"` in the configuration.
+
+## Development
+
+Use non privileged ports (`2525`, `2587`, `2465`, `8080`, `8443`) and a self-signed certificate:
 
 ```sh
 mkdir -p ssl
-openssl req -x509 -newkey rsa:4096 -nodes -days 365 -subj "/CN=localhost" \
-  -keyout ssl/server.key -out ssl/server.crt
+openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj "/CN=localhost" \
+  -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" -keyout ssl/server.key -out ssl/server.crt
+go run . -config conf/dev.json
 ```
 
-## Docker
+Create a mailbox on `https://localhost:8443`, then send a mail with an attached `.eml`:
 
 ```sh
-docker build -t mailtoolkit_webserver .
-docker run -p 8080:80 mailtoolkit_webserver
-# with TLS ("ssl": true in the configuration)
-docker run -p 8443:80 -v "$PWD/ssl:/app/ssl:ro" mailtoolkit_webserver
+curl smtp://localhost:2525 --mail-from me@example.org --mail-rcpt <address> -T carrier.eml
 ```
 
-## Developing with a local mailtoolkit
+`carrier.eml` must use CRLF line endings: curl only escapes the lines starting with a dot after a CRLF.
 
-To work on both modules at once, create a `go.work` file in the parent folder:
+To work on mailtoolkit at the same time, create a `go.work` file in the parent folder:
 
 ```sh
 go work init ./mailtoolkit ./mailtoolkit_webserver

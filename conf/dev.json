@@ -1,0 +1,20 @@
+{
+  "hostname": "localhost",
+  "domains": ["analyzer.test"],
+  "server": "127.0.0.1",
+  "http_port": "8080",
+  "https_port": "8443",
+  "smtp_ports": {
+    "mx": "2525",
+    "submission": "2587",
+    "smtps": "2465"
+  },
+  "cert": "./ssl/server.crt",
+  "key": "./ssl/server.key",
+  "acme_webroot": "",
+  "data_folder": "./data/",
+  "static_folder": "./static/",
+  "retention": "24h",
+  "max_message_size": 26214400,
+  "max_mailboxes": 100
+}
