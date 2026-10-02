@@ -16,6 +16,11 @@
         <button type="submit">Nouvelle analyse</button>
     </form>
 
+    <h2>Ou envoyez directement un fichier</h2>
+    <p>Un mail enregistré depuis votre messagerie : <code>.eml</code> (Thunderbird, Apple Mail, Gmail « Télécharger le message »)
+        ou <code>.msg</code> (Outlook pour Windows, glisser le mail sur le bureau).</p>
+    {{template "upload-form" "/upload"}}
+
     <h2>Comment faire</h2>
     <ol>
         <li>Cliquez sur « Nouvelle analyse » : une adresse aléatoire et une page privée sont créées.</li>
@@ -28,6 +33,13 @@
 </main>
 </body>
 </html>
+
+{{define "upload-form"}}
+<form method="post" action="{{.}}" enctype="multipart/form-data" class="upload">
+    <input type="file" name="file" accept=".eml,.msg,message/rfc822,application/vnd.ms-outlook" required>
+    <button type="submit">Analyser le fichier</button>
+</form>
+{{end}}
 
 {{define "forward-help"}}
 <details>

@@ -337,3 +337,11 @@ ul.entries {
 a.download {
     color: var(--muted);
 }
+
+form.upload {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin: 8px 0;
+}

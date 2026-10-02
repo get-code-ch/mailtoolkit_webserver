@@ -165,7 +165,8 @@ func (s *Server) Serve(l net.Listener, mode Mode) error {
 	}
 }
 
-func newID() string {
+// NewID returns a random message identifier: 12 bytes in hex.
+func NewID() string {
 	b := make([]byte, 12)
 	rand.Read(b)
 	return hex.EncodeToString(b)

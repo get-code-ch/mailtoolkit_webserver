@@ -268,7 +268,7 @@ func (ss *session) data(arg string) bool {
 	}
 
 	env := Envelope{
-		ID:         newID(),
+		ID:         NewID(),
 		Mode:       ss.mode.String(),
 		RemoteAddr: ss.remoteIP,
 		Helo:       ss.helo,

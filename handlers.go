@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"html/template"
+	"io"
 	"log"
 	"mime"
 	"net"
@@ -44,6 +45,8 @@ type server struct {
 	templates *template.Template
 	limiter   *rateLimiter
 	resolver  mailauth.Resolver
+	// maxUploadSize bounds the uploaded files.
+	maxUploadSize int64
 	// auth keeps the header analyses: they need DNS queries and the inbox
 	// page reloads itself.
 	auth *boundedCache[headerAnalysis]
@@ -56,6 +59,8 @@ func (s *server) routes(staticFolder string) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /{$}", s.index)
 	mux.HandleFunc("POST /new", s.newMailbox)
+	mux.HandleFunc("POST /upload", s.upload)
+	mux.HandleFunc("POST /inbox/{token}/upload", s.upload)
 	mux.HandleFunc("GET /inbox/{token}", s.inbox)
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}", s.analysis)
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}/part/{content}", s.mailPart)
@@ -98,24 +103,99 @@ func (s *server) index(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) newMailbox(w http.ResponseWriter, r *http.Request) {
+	if mailbox, ok := s.createMailbox(w, r); ok {
+		http.Redirect(w, r, "/inbox/"+mailbox.Token, http.StatusSeeOther)
+	}
+}
+
+func clientIP(r *http.Request) string {
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		ip = r.RemoteAddr
+		return r.RemoteAddr
 	}
-	if !s.limiter.allow(ip) {
+	return ip
+}
+
+// createMailbox creates a mailbox, rate limited per IP, or writes the error
+// response.
+func (s *server) createMailbox(w http.ResponseWriter, r *http.Request) (Mailbox, bool) {
+	if !s.limiter.allow(clientIP(r)) {
 		http.Error(w, "Trop de demandes, réessayez plus tard.", http.StatusTooManyRequests)
-		return
+		return Mailbox{}, false
 	}
 	mailbox, err := s.store.Create()
 	if errors.Is(err, errTooManyMailboxes) {
 		http.Error(w, "Service saturé, réessayez plus tard.", http.StatusServiceUnavailable)
-		return
+		return mailbox, false
 	}
 	if err != nil {
 		serverError(w, "creating mailbox", err)
+		return mailbox, false
+	}
+	return mailbox, true
+}
+
+// upload receives an .eml or .msg file (form field "file") and shows its
+// analysis. POST /upload creates a mailbox, POST /inbox/{token}/upload adds
+// the file to an existing one.
+func (s *server) upload(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, s.maxUploadSize+1<<20)
+	reader, err := r.MultipartReader()
+	if err != nil {
+		http.Error(w, "Formulaire invalide.", http.StatusBadRequest)
 		return
 	}
-	http.Redirect(w, r, "/inbox/"+mailbox.Token, http.StatusSeeOther)
+	var filename string
+	var data []byte
+	for {
+		part, err := reader.NextPart()
+		if err != nil {
+			break
+		}
+		if part.FormName() == "file" {
+			filename = part.FileName()
+			data, err = io.ReadAll(io.LimitReader(part, s.maxUploadSize+1))
+			if err != nil {
+				http.Error(w, "Envoi interrompu.", http.StatusBadRequest)
+				return
+			}
+			break
+		}
+	}
+	switch {
+	case len(data) == 0:
+		http.Error(w, "Aucun fichier reçu.", http.StatusBadRequest)
+		return
+	case int64(len(data)) > s.maxUploadSize:
+		http.Error(w, "Fichier trop volumineux.", http.StatusRequestEntityTooLarge)
+		return
+	}
+	if _, err := uploadedMail(filename, data); err != nil {
+		http.Error(w, "Ce fichier n'est pas un mail : envoyez un fichier .eml ou .msg.", http.StatusUnprocessableEntity)
+		return
+	}
+
+	token := r.PathValue("token")
+	if token == "" {
+		mailbox, ok := s.createMailbox(w, r)
+		if !ok {
+			return
+		}
+		token = mailbox.Token
+	} else if !s.limiter.allow(clientIP(r)) {
+		http.Error(w, "Trop de demandes, réessayez plus tard.", http.StatusTooManyRequests)
+		return
+	}
+	id, err := s.store.AddUpload(token, filename, data, clientIP(r))
+	if errors.Is(err, errNotFound) {
+		http.NotFound(w, r)
+		return
+	}
+	if err != nil {
+		serverError(w, "storing upload", err)
+		return
+	}
+	http.Redirect(w, r, "/inbox/"+token+"/"+id+"/1", http.StatusSeeOther)
 }
 
 type inboxItem struct {
@@ -129,6 +209,7 @@ type inboxItem struct {
 
 type inboxSubmission struct {
 	Received string
+	Upload   bool
 	MailFrom string
 	Error    string
 	Items    []inboxItem
@@ -149,13 +230,15 @@ func (s *server) inbox(w http.ResponseWriter, r *http.Request) {
 
 	data := struct {
 		Title       string
+		Token       string
 		Address     string
 		Expires     string
 		Submissions []inboxSubmission
-	}{Title: "Boîte " + mailbox.Address, Address: mailbox.Address, Expires: formatTime(mailbox.Expires)}
+	}{Title: "Boîte " + mailbox.Address, Token: token, Address: mailbox.Address, Expires: formatTime(mailbox.Expires)}
 	for _, submission := range submissions {
 		item := inboxSubmission{
 			Received: formatTime(submission.Envelope.Received),
+			Upload:   submission.Envelope.Mode == modeUpload,
 			MailFrom: submission.Envelope.MailFrom,
 			Error:    submission.Error,
 		}
@@ -243,19 +326,18 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 			data.Warnings++
 		}
 	}
-	if info.Format == formatEML {
-		hop, err := strconv.Atoi(r.URL.Query().Get("hop"))
-		if err != nil {
-			hop = -1
-		}
-		auth, err := s.headerAnalysis(r, hop)
-		if err != nil {
-			serverError(w, "analyzing headers", err)
-			return
-		}
-		auth.Part = selected
-		data.Auth = &auth
+	hop, err := strconv.Atoi(r.URL.Query().Get("hop"))
+	if err != nil {
+		hop = -1
 	}
+	auth, err := s.headerAnalysis(r, hop)
+	if err != nil {
+		serverError(w, "analyzing headers", err)
+		return
+	}
+	auth.Part = selected
+	auth.Converted = info.Format == formatMSG
+	data.Auth = &auth
 	s.render(w, "mail.html", data)
 }
 
@@ -364,6 +446,11 @@ func (s *server) lookupAnalyzed(w http.ResponseWriter, r *http.Request) (mailtoo
 	mail, info, err := s.store.Analyzed(token, id, n)
 	if errors.Is(err, errNotFound) {
 		http.NotFound(w, r)
+		return mail, info, "", false
+	}
+	if errors.Is(err, errUnreadable) {
+		log.Printf("reading mail: %v", err)
+		http.Error(w, "Ce fichier Outlook .msg est endommagé ou dans un format non pris en charge.", http.StatusUnprocessableEntity)
 		return mail, info, "", false
 	}
 	if err != nil {

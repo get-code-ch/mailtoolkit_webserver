@@ -21,9 +21,11 @@ import (
 )
 
 var (
-	errNotFound          = errors.New("not found")
-	errTooManyMailboxes  = errors.New("too many active mailboxes")
-	errNoAttachedMail    = "no attached mail found"
+	errNotFound         = errors.New("not found")
+	errTooManyMailboxes = errors.New("too many active mailboxes")
+	errNoAttachedMail   = "no attached mail found"
+	// errUnreadable is returned for a .msg file that cannot be read.
+	errUnreadable        = errors.New("unreadable mail")
 	lowerBase32          = base32.NewEncoding("abcdefghijklmnopqrstuvwxyz234567").WithPadding(base32.NoPadding)
 	maxParsedCachedMails = 32
 )
@@ -228,22 +230,46 @@ func (s *mailboxStore) Deliver(env smtpd.Envelope, data []byte) error {
 }
 
 func (s *mailboxStore) deliverTo(token string, env smtpd.Envelope, carrier []byte) error {
+	mails, err := extractMails(carrier)
+	var problem string
+	if err != nil {
+		problem = "carrier mail partially read: " + err.Error()
+	}
+	return s.writeSubmission(token, env, carrier, mails, problem)
+}
+
+// AddUpload stores an uploaded .eml or .msg file as a new submission and
+// returns its id.
+func (s *mailboxStore) AddUpload(token, filename string, data []byte, remoteIP string) (string, error) {
+	if _, ok := s.ByToken(token); !ok {
+		return "", errNotFound
+	}
+	mail, err := uploadedMail(filename, data)
+	if err != nil {
+		return "", err
+	}
+	env := smtpd.Envelope{ID: smtpd.NewID(), Mode: modeUpload, RemoteAddr: remoteIP, Received: s.now().UTC()}
+	return env.ID, s.writeSubmission(token, env, nil, []extractedMail{mail}, "")
+}
+
+// writeSubmission stores a submission: the carrier mail (none for an
+// upload), its envelope and the mails to analyze. result.json is written
+// last, the submission is ignored until then.
+func (s *mailboxStore) writeSubmission(token string, env smtpd.Envelope, carrier []byte, mails []extractedMail, problem string) error {
 	dir := token + "/" + env.ID
 	if err := s.root.Mkdir(dir, 0o700); err != nil {
 		return err
 	}
-	if err := s.writeFile(dir+"/carrier.eml", carrier); err != nil {
-		return err
+	if carrier != nil {
+		if err := s.writeFile(dir+"/carrier.eml", carrier); err != nil {
+			return err
+		}
 	}
 	if err := s.writeJSON(dir+"/envelope.json", env); err != nil {
 		return err
 	}
 
-	submission := Submission{ID: env.ID, Analyzed: []AnalyzedInfo{}}
-	mails, err := extractMails(carrier)
-	if err != nil {
-		submission.Error = "carrier mail partially read: " + err.Error()
-	}
+	submission := Submission{ID: env.ID, Analyzed: []AnalyzedInfo{}, Error: problem}
 	for i, mail := range mails {
 		info := AnalyzedInfo{
 			N:        i + 1,
@@ -251,8 +277,8 @@ func (s *mailboxStore) deliverTo(token string, env smtpd.Envelope, carrier []byt
 			Format:   mail.Format,
 			File:     fmt.Sprintf("analyzed-%d.%s", i+1, mail.Format),
 		}
-		if mail.Format == formatEML {
-			if header, err := mailtoolkit.ParseHeader(mail.Data); err == nil {
+		if eml, err := toEML(mail.Format, mail.Data); err == nil {
+			if header, err := mailtoolkit.ParseHeader(eml); err == nil {
 				info.From, info.Subject, info.Date = header.From, header.Subject, header.Date
 			}
 		}
@@ -327,28 +353,32 @@ func (s *mailboxStore) analyzedInfo(token, id string, n int) (AnalyzedInfo, erro
 	return submission.Analyzed[n-1], nil
 }
 
-// AnalyzedRaw returns the n-th mail extracted from a carrier, as received.
+// AnalyzedRaw returns the n-th mail extracted from a carrier, in the eml
+// format: as received, or converted from Outlook .msg.
 func (s *mailboxStore) AnalyzedRaw(token, id string, n int) ([]byte, AnalyzedInfo, error) {
 	info, err := s.analyzedInfo(token, id, n)
 	if err != nil {
 		return nil, info, err
 	}
 	data, err := s.root.ReadFile(token + "/" + id + "/" + info.File)
-	return data, info, err
+	if err != nil {
+		return nil, info, err
+	}
+	eml, err := toEML(info.Format, data)
+	return eml, info, err
 }
 
-// Analyzed returns the n-th mail extracted from a carrier, parsed. Mails
-// which are not in the eml format are returned unparsed.
+// Analyzed returns the n-th mail extracted from a carrier, parsed.
 func (s *mailboxStore) Analyzed(token, id string, n int) (mailtoolkit.Mail, AnalyzedInfo, error) {
 	info, err := s.analyzedInfo(token, id, n)
-	if err != nil || info.Format != formatEML {
+	if err != nil {
 		return mailtoolkit.Mail{}, info, err
 	}
 	key := token + "/" + id + "/" + strconv.Itoa(n)
 	if mail, ok := s.parsed.get(key); ok {
 		return mail, info, nil
 	}
-	data, err := s.root.ReadFile(token + "/" + id + "/" + info.File)
+	data, _, err := s.AnalyzedRaw(token, id, n)
 	if err != nil {
 		return mailtoolkit.Mail{}, info, err
 	}

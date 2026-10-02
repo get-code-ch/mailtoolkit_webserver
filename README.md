@@ -22,7 +22,13 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
   | 465  | implicit TLS |
 
 - **Extraction**: `message/rfc822` parts and `.eml` / `.msg` files attached to the received mail are kept byte
-  for byte (needed to verify their signatures). Outlook `.msg` files are stored but not analyzed yet.
+  for byte (needed to verify their signatures).
+- **Upload**: a `.eml` or Outlook `.msg` file can also be uploaded from the home page (new mailbox) or from a
+  mailbox page; the file is recognized from its content, whatever its name.
+- **Outlook .msg** (package `msg`, on top of `cfb`): properties, recipients, attachments, embedded messages,
+  8-bit strings in their codepage, compressed RTF (LZFu) with the HTML it encapsulates. The message is
+  converted to an RFC 5322 mail for the analysis, keeping the original internet headers when Outlook saved
+  them; its body being rebuilt, DKIM signatures cannot verify, which the page explains.
 - **Privacy**: the page link contains a 128-bit secret token, distinct from the address. Mailboxes and mails
   are deleted after the retention delay (24 h by default).
 - **Display**: mail contents are shown in a sandboxed iframe with a `Content-Security-Policy: sandbox` header:

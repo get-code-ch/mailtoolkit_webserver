@@ -35,6 +35,8 @@
             SPF a pu changer depuis l'envoi. Choisissez un autre serveur dans le chemin ci-dessous si la détection s'est trompée.</p>
 
         <h3>DKIM : le mail est-il signé par le domaine, sans modification ?</h3>
+        {{if .Converted}}<p class="level-info">Mail converti depuis Outlook .msg : son corps est reconstruit, les signatures DKIM
+            ne peuvent donc pas être vérifiées. Fiez-vous aux résultats notés par les serveurs de réception ci-dessous.</p>{{end}}
         {{range .DKIM}}
         <p class="level-{{resultClass .Result}}"><strong>{{.Result}}</strong> : signature de <strong>{{.Domain}}</strong>
             (sélecteur {{.Selector}}, {{.Algorithm}}{{if .KeyBits}}, clé de {{.KeyBits}} bits{{end}}){{with .Reason}} : {{.}}{{end}}</p>

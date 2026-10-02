@@ -15,10 +15,15 @@
     <p>Transférez le mail suspect en pièce jointe à cette adresse. Cette page se met à jour toute seule.<br>
         Gardez son lien : c'est le seul moyen d'accéder aux résultats. Expiration : <strong>{{.Expires}}</strong>.</p>
 
+    <details>
+        <summary>Ou envoyer un fichier .eml ou .msg dans cette boîte</summary>
+        {{template "upload-form" (printf "/inbox/%s/upload" .Token)}}
+    </details>
+
     <h2>Mails reçus</h2>
     {{range .Submissions}}
     <section class="submission">
-        <p class="meta">Reçu le {{.Received}}{{with .MailFrom}} de <code>{{.}}</code>{{end}}</p>
+        <p class="meta">{{if .Upload}}Fichier envoyé le {{.Received}}{{else}}Reçu le {{.Received}}{{with .MailFrom}} de <code>{{.}}</code>{{end}}{{end}}</p>
         {{if .Items}}
         <table>
             <thead><tr><th>Mail analysé</th><th>Expéditeur</th><th>Sujet</th><th>Date</th></tr></thead>

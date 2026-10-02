@@ -29,6 +29,9 @@ type headerAnalysis struct {
 	// Part is the content part shown with the analysis, kept in the links
 	// choosing another hop.
 	Part string
+	// Converted is set for a mail converted from Outlook .msg: its body is
+	// rebuilt, so its DKIM signatures cannot verify.
+	Converted bool
 }
 
 type hopView struct {

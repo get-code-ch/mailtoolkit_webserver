@@ -13,8 +13,9 @@
     <h1>{{.Info.Filename}}</h1>
 
     {{if eq .Info.Format "msg"}}
-    <p class="warning">Format Outlook <code>.msg</code> : l'analyse de ce format sera disponible prochainement.</p>
-    {{else}}
+    <p class="note">Fichier Outlook <code>.msg</code> converti pour l'analyse : les en-têtes d'origine sont conservés quand Outlook
+        les a gardés, le contenu et les pièces jointes sont reconstruits.</p>
+    {{end}}
     <div class="analysis">
         <div class="analysis-main">
             <dl class="header">
@@ -120,7 +121,6 @@
             {{end}}
         </aside>
     </div>
-    {{end}}
 </main>
 </body>
 </html>

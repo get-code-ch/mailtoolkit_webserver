@@ -56,6 +56,8 @@ func main() {
 		limiter:   newRateLimiter(10, time.Hour),
 		resolver:  net.DefaultResolver,
 		auth:      newBoundedCache[headerAnalysis](64),
+
+		maxUploadSize: conf.MaxMessageSize,
 	}
 	go func() {
 		for range time.Tick(purgeInterval) {
