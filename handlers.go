@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"html/template"
 	"log"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/get-code-ch/mailtoolkit"
+	"github.com/get-code-ch/mailtoolkit_webserver/mailauth"
 )
 
 // Mail parts are sent by third parties: they are rendered sandboxed (no
@@ -40,7 +42,14 @@ type server struct {
 	store     *mailboxStore
 	templates *template.Template
 	limiter   *rateLimiter
+	resolver  mailauth.Resolver
+	// auth keeps the header analyses: they need DNS queries and the inbox
+	// page reloads itself.
+	auth *boundedCache[headerAnalysis]
 }
+
+// dnsTimeout bounds the DNS queries of a header analysis.
+const dnsTimeout = 15 * time.Second
 
 func (s *server) routes(staticFolder string) http.Handler {
 	mux := http.NewServeMux()
@@ -182,6 +191,8 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		Links       []Link
 		Dangers     int
 		Warnings    int
+		Auth        *headerAnalysis
+		Part        string
 	}{
 		Title: "Analyse : " + info.Filename,
 		Inbox: "/inbox/" + r.PathValue("token"),
@@ -195,6 +206,7 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 	if _, ok := mail.Contents[selected]; !ok {
 		selected = defaultPart(mail.Contents, keys)
 	}
+	data.Part = selected
 	for _, key := range keys {
 		ct := mail.Contents[key].ContentInfo.Type
 		data.Parts = append(data.Parts, Href{"?part=" + url.QueryEscape(key), ct.Type + "/" + ct.Subtype, key == selected})
@@ -220,7 +232,40 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 			data.Warnings++
 		}
 	}
+	if info.Format == formatEML {
+		hop, err := strconv.Atoi(r.URL.Query().Get("hop"))
+		if err != nil {
+			hop = -1
+		}
+		auth, err := s.headerAnalysis(r, hop)
+		if err != nil {
+			serverError(w, "analyzing headers", err)
+			return
+		}
+		auth.Part = selected
+		data.Auth = &auth
+	}
 	s.render(w, "mail.html", data)
+}
+
+// headerAnalysis returns the cached analysis of the headers of the mail of
+// /inbox/{token}/{id}/{n}, using the given Received hop for SPF.
+func (s *server) headerAnalysis(r *http.Request, hop int) (headerAnalysis, error) {
+	token, id, n := r.PathValue("token"), r.PathValue("id"), r.PathValue("n")
+	key := token + "/" + id + "/" + n + "/" + strconv.Itoa(hop)
+	if a, ok := s.auth.get(key); ok {
+		return a, nil
+	}
+	number, _ := strconv.Atoi(n)
+	raw, _, err := s.store.AnalyzedRaw(token, id, number)
+	if err != nil {
+		return headerAnalysis{}, err
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), dnsTimeout)
+	defer cancel()
+	a := analyzeHeaders(ctx, s.resolver, raw, hop)
+	s.auth.put(key, a)
+	return a, nil
 }
 
 // defaultPart prefers the HTML version of a mail, then the plain text one.

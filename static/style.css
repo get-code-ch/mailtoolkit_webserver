@@ -124,6 +124,73 @@ nav.parts a.active {
     background: var(--accent);
 }
 
+.level-ok {
+    --level: #1e8449;
+}
+
+section.auth {
+    margin: 12px 0 16px;
+}
+
+.auth-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.auth-badge {
+    flex: 1 1 160px;
+    padding: 6px 10px;
+    color: var(--level, var(--text));
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--level, var(--border));
+    border-radius: 4px;
+}
+
+.auth-badge span {
+    display: block;
+    font-size: 0.85em;
+    color: var(--muted);
+    overflow-wrap: anywhere;
+}
+
+ul.checks {
+    padding-left: 20px;
+}
+
+section.auth details {
+    margin-top: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+section.auth summary {
+    cursor: pointer;
+    font-weight: bold;
+}
+
+section.auth h3 {
+    font-size: 1em;
+    margin: 14px 0 4px;
+}
+
+section.auth code {
+    overflow-wrap: anywhere;
+}
+
+table.hops tr.selected td {
+    background: #eef0fb;
+}
+
+pre.raw-headers {
+    max-height: 400px;
+    overflow: auto;
+    font-size: 0.8em;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
 .analysis {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 380px;

@@ -34,7 +34,7 @@ func main() {
 	if err != nil {
 		log.Fatal("opening data folder: ", err)
 	}
-	templates, err := template.ParseFS(views, "view/*.html")
+	templates, err := template.New("").Funcs(template.FuncMap{"resultClass": resultClass}).ParseFS(views, "view/*.html")
 	if err != nil {
 		log.Fatal("parsing templates: ", err)
 	}
@@ -50,10 +50,17 @@ func main() {
 		log.Print("no certificate configured: HTTPS, STARTTLS and the submission ports are disabled")
 	}
 
-	s := &server{store: store, templates: templates, limiter: newRateLimiter(10, time.Hour)}
+	s := &server{
+		store:     store,
+		templates: templates,
+		limiter:   newRateLimiter(10, time.Hour),
+		resolver:  net.DefaultResolver,
+		auth:      newBoundedCache[headerAnalysis](64),
+	}
 	go func() {
 		for range time.Tick(purgeInterval) {
 			store.PurgeExpired()
+			s.auth.clear()
 			s.limiter.prune()
 		}
 	}()

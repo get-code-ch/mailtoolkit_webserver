@@ -1,0 +1,104 @@
+{{define "auth"}}
+<section class="auth" aria-label="Authentification">
+    <div class="auth-badges">
+        <div class="auth-badge level-{{resultClass .SPF.Result}}">
+            <strong>SPF</strong> {{.SPF.Result}}
+            <span>{{with .SPF.Domain}}{{.}}{{end}}{{if .SPF.IP.IsValid}} · IP {{.SPF.IP}}{{end}}</span>
+        </div>
+        <div class="auth-badge level-{{if .DKIM}}{{resultClass (index .DKIM 0).Result}}{{else}}info{{end}}">
+            <strong>DKIM</strong> {{if .DKIM}}{{(index .DKIM 0).Result}}{{else}}aucune signature{{end}}
+            <span>{{range $i, $d := .DKIM}}{{if $i}}, {{end}}{{$d.Domain}}{{end}}</span>
+        </div>
+        <div class="auth-badge level-{{resultClass .DMARC.Result}}">
+            <strong>DMARC</strong> {{.DMARC.Result}}
+            <span>{{.DMARC.Domain}}{{with .DMARC.Policy}} · politique {{.}}{{end}}</span>
+        </div>
+    </div>
+
+    {{if .Checks}}
+    <ul class="checks">
+        {{range .Checks}}<li class="level-{{.Level}}">{{.Message}}</li>{{end}}
+    </ul>
+    {{end}}
+
+    <details>
+        <summary>Détails de l'authentification</summary>
+        <h3>SPF : le serveur d'envoi est-il autorisé par le domaine ?</h3>
+        <p class="level-{{resultClass .SPF.Result}}"><strong>{{.SPF.Result}}</strong> : {{.SPF.Reason}}</p>
+        <dl class="header">
+            <dt>Domaine vérifié</dt><dd>{{.SPF.Domain}} {{if .MailFrom}}(Return-Path {{.MailFrom}}){{else}}(nom HELO, pas de Return-Path){{end}}</dd>
+            {{if .SPF.IP.IsValid}}<dt>IP du serveur</dt><dd>{{.SPF.IP}} {{if eq .Selected .Source}}(détectée automatiquement){{else}}(choisie manuellement){{end}}</dd>{{end}}
+            {{with .SPF.Record}}<dt>Enregistrement</dt><dd><code>{{.}}</code></dd>{{end}}
+            <dt>Requêtes DNS</dt><dd>{{.SPF.Lookups}} / 10</dd>
+        </dl>
+        <p class="note">Le SPF est recalculé maintenant, à partir de l'IP lue dans les en-têtes Received : c'est une estimation, l'enregistrement
+            SPF a pu changer depuis l'envoi. Choisissez un autre serveur dans le chemin ci-dessous si la détection s'est trompée.</p>
+
+        <h3>DKIM : le mail est-il signé par le domaine, sans modification ?</h3>
+        {{range .DKIM}}
+        <p class="level-{{resultClass .Result}}"><strong>{{.Result}}</strong> : signature de <strong>{{.Domain}}</strong>
+            (sélecteur {{.Selector}}, {{.Algorithm}}{{if .KeyBits}}, clé de {{.KeyBits}} bits{{end}}){{with .Reason}} : {{.}}{{end}}</p>
+        <p class="note">En-têtes signés : {{range $i, $h := .Headers}}{{if $i}}, {{end}}{{$h}}{{end}}</p>
+        {{if .BodyLimit}}<p class="level-warning">Seul le début du corps est signé (l=) : du contenu a pu être ajouté à la fin sans invalider la signature.</p>{{end}}
+        {{else}}
+        <p class="level-info">Aucune signature DKIM : l'origine et l'intégrité du mail ne peuvent pas être prouvées.</p>
+        {{end}}
+        <p class="note">Une signature peut échouer si le domaine a changé de clé depuis l'envoi, ou si le mail a été modifié
+            (par exemple par un transfert qui n'était pas « en tant que pièce jointe »).</p>
+
+        <h3>DMARC : l'expéditeur affiché est-il authentifié ?</h3>
+        <p class="level-{{resultClass .DMARC.Result}}"><strong>{{.DMARC.Result}}</strong> : {{.DMARC.Reason}}</p>
+        {{with .DMARC.Record}}
+        <dl class="header">
+            <dt>Enregistrement</dt><dd><code>{{.}}</code></dd>
+            <dt>Politique</dt><dd>{{$.DMARC.Policy}}{{if lt $.DMARC.Pct 100}} sur {{$.DMARC.Pct}} % des mails{{end}}</dd>
+            <dt>Domaine organisationnel</dt><dd>{{$.DMARC.OrgDomain}}</dd>
+        </dl>
+        {{end}}
+
+        {{if .Provider}}
+        <h3>Résultats notés par les serveurs de réception</h3>
+        <p class="note">Ces résultats sont écrits par les serveurs que le mail a traversés : seuls ceux de votre propre fournisseur sont fiables,
+            un expéditeur malveillant peut en ajouter de faux.</p>
+        <table>
+            <thead><tr><th>Serveur</th><th>Méthode</th><th>Résultat</th><th>Détails</th></tr></thead>
+            <tbody>
+            {{range .Provider}}
+            <tr>
+                <td>{{.Server}}</td><td>{{.Method}}</td>
+                <td class="level-{{resultClass .Result}}">{{.Result}}</td>
+                <td><code>{{range $i, $p := .Properties}}{{if $i}} {{end}}{{$p}}{{end}}</code></td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+        {{end}}
+    </details>
+
+    <details>
+        <summary>Chemin du mail ({{len .Hops}} serveur{{if gt (len .Hops) 1}}s{{end}})</summary>
+        <p class="note">Du plus ancien au plus récent. Chaque serveur ajoute une ligne, mais un expéditeur malveillant peut inventer
+            les premières : seules celles écrites par les serveurs de réception sont fiables.</p>
+        <table class="hops">
+            <thead><tr><th>#</th><th>Date</th><th>De</th><th>IP</th><th>Reçu par</th><th>SPF</th></tr></thead>
+            <tbody>
+            {{range .Hops}}
+            <tr{{if eq .Index $.Selected}} class="selected"{{end}}>
+                <td>{{.Index}}{{if eq .Index $.Source}} <span class="badge">source</span>{{end}}</td>
+                <td>{{.DateText}}<br><span class="note">{{.DelayText}}</span></td>
+                <td>{{.From}}{{with .FromHost}}<br><span class="note">{{.}}</span>{{end}}</td>
+                <td>{{if .IP.IsValid}}{{.IP}}{{if not .Public}} <span class="note">(privée)</span>{{end}}{{end}}</td>
+                <td>{{.By}}{{with .With}}<br><span class="note">{{.}}</span>{{end}}</td>
+                <td>{{if and .IP.IsValid .Public}}{{if eq .Index $.Selected}}utilisée{{else}}<a href="?part={{$.Part}}&amp;hop={{.Index}}">utiliser</a>{{end}}{{end}}</td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+    </details>
+
+    <details>
+        <summary>Tous les en-têtes ({{len .Fields}})</summary>
+        <pre class="raw-headers">{{range .Fields}}{{.Raw}}{{end}}</pre>
+    </details>
+</section>
+{{end}}

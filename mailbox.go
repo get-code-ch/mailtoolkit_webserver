@@ -11,6 +11,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -76,9 +77,9 @@ type mailboxStore struct {
 	byToken   map[string]Mailbox
 	byAddress map[string]string
 
-	cacheMu    sync.Mutex
-	cache      map[string]mailtoolkit.Mail
-	cacheOrder []string
+	// parsed keeps the last parsed mails: the analysis page and its frames
+	// parse the same mail several times.
+	parsed *boundedCache[mailtoolkit.Mail]
 }
 
 func newMailboxStore(folder string, domains []string, retention time.Duration, maxMailboxes int) (*mailboxStore, error) {
@@ -106,7 +107,7 @@ func newMailboxStoreClock(folder string, domains []string, retention time.Durati
 		now:          now,
 		byToken:      make(map[string]Mailbox),
 		byAddress:    make(map[string]string),
-		cache:        make(map[string]mailtoolkit.Mail),
+		parsed:       newBoundedCache[mailtoolkit.Mail](maxParsedCachedMails),
 	}
 	for _, d := range domains {
 		s.domains[strings.ToLower(d)] = true
@@ -311,37 +312,51 @@ func (s *mailboxStore) submission(token, id string) (Submission, error) {
 	return submission, nil
 }
 
-// Analyzed returns the n-th mail extracted from a carrier. Mails which are
-// not in the eml format are returned unparsed.
-func (s *mailboxStore) Analyzed(token, id string, n int) (mailtoolkit.Mail, AnalyzedInfo, error) {
+// analyzedInfo describes the n-th mail extracted from a carrier.
+func (s *mailboxStore) analyzedInfo(token, id string, n int) (AnalyzedInfo, error) {
 	submission, err := s.Submission(token, id)
 	if errors.Is(err, fs.ErrNotExist) {
 		err = errNotFound
 	}
 	if err != nil {
-		return mailtoolkit.Mail{}, AnalyzedInfo{}, err
+		return AnalyzedInfo{}, err
 	}
 	if n < 1 || n > len(submission.Analyzed) {
-		return mailtoolkit.Mail{}, AnalyzedInfo{}, errNotFound
+		return AnalyzedInfo{}, errNotFound
 	}
-	info := submission.Analyzed[n-1]
-	if info.Format != formatEML {
-		return mailtoolkit.Mail{}, info, nil
-	}
+	return submission.Analyzed[n-1], nil
+}
 
-	file := token + "/" + id + "/" + info.File
-	if mail, ok := s.cached(file); ok {
+// AnalyzedRaw returns the n-th mail extracted from a carrier, as received.
+func (s *mailboxStore) AnalyzedRaw(token, id string, n int) ([]byte, AnalyzedInfo, error) {
+	info, err := s.analyzedInfo(token, id, n)
+	if err != nil {
+		return nil, info, err
+	}
+	data, err := s.root.ReadFile(token + "/" + id + "/" + info.File)
+	return data, info, err
+}
+
+// Analyzed returns the n-th mail extracted from a carrier, parsed. Mails
+// which are not in the eml format are returned unparsed.
+func (s *mailboxStore) Analyzed(token, id string, n int) (mailtoolkit.Mail, AnalyzedInfo, error) {
+	info, err := s.analyzedInfo(token, id, n)
+	if err != nil || info.Format != formatEML {
+		return mailtoolkit.Mail{}, info, err
+	}
+	key := token + "/" + id + "/" + strconv.Itoa(n)
+	if mail, ok := s.parsed.get(key); ok {
 		return mail, info, nil
 	}
-	data, err := s.root.ReadFile(file)
+	data, err := s.root.ReadFile(token + "/" + id + "/" + info.File)
 	if err != nil {
 		return mailtoolkit.Mail{}, info, err
 	}
 	mail, err := mailtoolkit.Parse(data)
 	if err != nil {
-		log.Printf("%s: %v", file, err)
+		log.Printf("%s: %v", key, err)
 	}
-	s.store(file, mail)
+	s.parsed.put(key, mail)
 	return mail, info, nil
 }
 
@@ -363,9 +378,7 @@ func (s *mailboxStore) PurgeExpired() {
 		s.remove(token)
 	}
 	if len(expired) > 0 {
-		s.cacheMu.Lock()
-		s.cache, s.cacheOrder = make(map[string]mailtoolkit.Mail), nil
-		s.cacheMu.Unlock()
+		s.parsed.clear()
 		log.Printf("purged %d expired mailboxes", len(expired))
 	}
 }
@@ -374,29 +387,6 @@ func (s *mailboxStore) remove(token string) {
 	if err := s.root.RemoveAll(token); err != nil {
 		log.Printf("mailbox %s: %v", token, err)
 	}
-}
-
-// cached and store keep the last parsed mails: the analysis page and its
-// frames parse the same mail several times.
-func (s *mailboxStore) cached(file string) (mailtoolkit.Mail, bool) {
-	s.cacheMu.Lock()
-	defer s.cacheMu.Unlock()
-	mail, ok := s.cache[file]
-	return mail, ok
-}
-
-func (s *mailboxStore) store(file string, mail mailtoolkit.Mail) {
-	s.cacheMu.Lock()
-	defer s.cacheMu.Unlock()
-	if _, ok := s.cache[file]; ok {
-		return
-	}
-	if len(s.cacheOrder) >= maxParsedCachedMails {
-		delete(s.cache, s.cacheOrder[0])
-		s.cacheOrder = s.cacheOrder[1:]
-	}
-	s.cache[file] = mail
-	s.cacheOrder = append(s.cacheOrder, file)
 }
 
 // writeFile writes atomically: readers never see a partial file.

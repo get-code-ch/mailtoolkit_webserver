@@ -27,6 +27,8 @@
                 {{end}}
             </dl>
 
+            {{with .Auth}}{{template "auth" .}}{{end}}
+
             {{if .Parts}}
             <nav class="parts">
                 {{range .Parts}}<a href="{{.Link}}"{{if .Active}} class="active"{{end}}>{{.Text}}</a>{{end}}

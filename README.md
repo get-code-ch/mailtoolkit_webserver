@@ -33,6 +33,18 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
   `javascript:` / `data:` schemes, `user@` before the domain, IP addresses, unusual ports, URL shorteners,
   internationalized domains (homographs), forms, automatic redirections, tracking pixels, and the final
   destination of redirectors such as Outlook Safe Links.
+- **Header analysis** (package `mailauth`, standard library plus `golang.org/x/net/publicsuffix`):
+  - DKIM signatures verified (RSA, Ed25519, simple/relaxed canonicalization; `rsa-sha1` and keys shorter than
+    1024 bits refused, `l=` flagged); the attached mail is kept byte for byte for that purpose;
+  - SPF recomputed with the IP of the server that sent the mail, guessed from the `Received` headers (the user
+    can pick another hop), with the RFC 7208 limits and macros;
+  - DMARC policy and alignment of SPF and DKIM with the From domain;
+  - results written by the receiving servers (`Authentication-Results`, `ARC-Authentication-Results`,
+    `Received-SPF`), the `Received` path, and inconsistencies: address in the display name, Reply-To or
+    Return-Path on another domain, missing Message-ID, date far from the reception.
+
+  The checks run when the analysis page is first opened, with the current DNS records: a key rotated since
+  the mail was sent makes its DKIM signature fail.
 
 ## Configuration
 
