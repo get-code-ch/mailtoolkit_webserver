@@ -28,7 +28,11 @@ func main() {
 	if err != nil {
 		log.Fatal("getConfiguration: ", err)
 	}
-	log.Printf("Configuration %+v\n", conf)
+	logged := conf
+	if logged.IngestToken != "" {
+		logged.IngestToken = "(set)" // never write the secret in the logs
+	}
+	log.Printf("Configuration %+v\n", logged)
 
 	store, err := newMailboxStore(conf.DataFolder, conf.Domains, conf.Retention.Duration, conf.MaxMailboxes)
 	if err != nil {
@@ -57,7 +61,10 @@ func main() {
 		resolver:  net.DefaultResolver,
 		auth:      newBoundedCache[headerAnalysis](64),
 
-		maxUploadSize: conf.MaxMessageSize,
+		maxUploadSize:    conf.MaxMessageSize,
+		hostname:         conf.Hostname,
+		ingestToken:      conf.IngestToken,
+		behindCloudflare: conf.BehindCloudflare,
 	}
 	go func() {
 		for range time.Tick(purgeInterval) {

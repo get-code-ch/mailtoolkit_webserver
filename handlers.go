@@ -45,8 +45,13 @@ type server struct {
 	templates *template.Template
 	limiter   *rateLimiter
 	resolver  mailauth.Resolver
-	// maxUploadSize bounds the uploaded files.
+	// maxUploadSize bounds the uploaded files and the ingested mails.
 	maxUploadSize int64
+	hostname      string
+	// ingestToken enables POST /ingest, behindCloudflare trusts the visitor
+	// address given by Cloudflare.
+	ingestToken      string
+	behindCloudflare bool
 	// auth keeps the header analyses: they need DNS queries and the inbox
 	// page reloads itself.
 	auth *boundedCache[headerAnalysis]
@@ -60,6 +65,7 @@ func (s *server) routes(staticFolder string) http.Handler {
 	mux.HandleFunc("GET /{$}", s.index)
 	mux.HandleFunc("POST /new", s.newMailbox)
 	mux.HandleFunc("POST /upload", s.upload)
+	mux.HandleFunc("POST /ingest", s.ingest)
 	mux.HandleFunc("POST /inbox/{token}/upload", s.upload)
 	mux.HandleFunc("GET /inbox/{token}", s.inbox)
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}", s.analysis)
@@ -108,18 +114,10 @@ func (s *server) newMailbox(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func clientIP(r *http.Request) string {
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return ip
-}
-
 // createMailbox creates a mailbox, rate limited per IP, or writes the error
 // response.
 func (s *server) createMailbox(w http.ResponseWriter, r *http.Request) (Mailbox, bool) {
-	if !s.limiter.allow(clientIP(r)) {
+	if !s.limiter.allow(s.clientIP(r)) {
 		http.Error(w, "Trop de demandes, réessayez plus tard.", http.StatusTooManyRequests)
 		return Mailbox{}, false
 	}
@@ -182,11 +180,11 @@ func (s *server) upload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		token = mailbox.Token
-	} else if !s.limiter.allow(clientIP(r)) {
+	} else if !s.limiter.allow(s.clientIP(r)) {
 		http.Error(w, "Trop de demandes, réessayez plus tard.", http.StatusTooManyRequests)
 		return
 	}
-	id, err := s.store.AddUpload(token, filename, data, clientIP(r))
+	id, err := s.store.AddUpload(token, filename, data, s.clientIP(r))
 	if errors.Is(err, errNotFound) {
 		http.NotFound(w, r)
 		return

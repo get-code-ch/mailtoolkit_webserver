@@ -77,6 +77,8 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
 | `retention`        | mailbox lifetime, e.g. `"24h"` |
 | `max_message_size` | in bytes, 25 MB by default |
 | `max_mailboxes`    | maximum number of active mailboxes |
+| `ingest_token`     | enables `POST /ingest` (see below); overridden by the `MTK_INGEST_TOKEN` environment variable |
+| `behind_cloudflare`| trust the visitor address given by the Cloudflare proxies |
 
 Without `cert` and `key`, only the MX port (without STARTTLS) and plain HTTP are started.
 
@@ -114,6 +116,34 @@ Without `cert` and `key`, only the MX port (without STARTTLS) and plain HTTP are
 
    with `"cert": "/etc/letsencrypt/live/mx.example.com/fullchain.pem"` and
    `"key": "/etc/letsencrypt/live/mx.example.com/privkey.pem"` in the configuration.
+
+## Behind Cloudflare, without port 25
+
+Mail servers deliver to the MX on port 25 only. When the host blocks it, Cloudflare Email Routing can receive
+the mails and an Email Worker forwards them to the server over HTTPS (`POST /ingest`):
+
+1. Generate a secret and give it to the server, never in a committed file:
+
+   ```sh
+   export MTK_INGEST_TOKEN=$(openssl rand -hex 32)
+   ```
+
+2. In Cloudflare, enable **Email Routing** for the domain of the addresses (it publishes its own MX records).
+3. Create a Worker with `cloudflare/email-worker.js`, a variable `INGEST_URL`
+   (`https://<host>/ingest`) and a secret `INGEST_TOKEN` (the same value).
+4. Add a **catch-all** routing rule with the action *Send to a Worker*.
+
+Unknown or expired addresses are rejected (the server answers 404 and the Worker rejects the mail); the other
+errors are temporary. Set `"behind_cloudflare": true` so that the rate limits use the visitor address given by
+Cloudflare (`CF-Connecting-IP`, trusted only from the Cloudflare address ranges).
+
+With the Cloudflare proxy, a self-signed certificate is enough for the origin with the SSL/TLS mode **Full**
+(or use a Cloudflare Origin CA certificate for **Full (strict)**):
+
+```sh
+mkdir -p ssl && openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj "/CN=<host>" \
+  -addext "subjectAltName=DNS:<host>" -keyout ssl/server.key -out ssl/server.crt
+```
 
 ## Development
 

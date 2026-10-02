@@ -37,6 +37,13 @@ type Configuration struct {
 	Retention      Duration `json:"retention"`
 	MaxMessageSize int64    `json:"max_message_size"`
 	MaxMailboxes   int      `json:"max_mailboxes"`
+	// IngestToken enables POST /ingest, for relays that cannot reach the
+	// SMTP ports (Cloudflare Email Workers). The MTK_INGEST_TOKEN
+	// environment variable overrides it, to keep the secret out of files.
+	IngestToken string `json:"ingest_token"`
+	// BehindCloudflare trusts the CF-Connecting-IP header sent by the
+	// Cloudflare proxies for the visitor address.
+	BehindCloudflare bool `json:"behind_cloudflare"`
 }
 
 // Duration reads a duration written as "24h" in JSON.
@@ -78,6 +85,12 @@ func getConfiguration(file string) (Configuration, error) {
 	}
 	if configuration.Retention.Duration <= 0 {
 		return Configuration{}, errors.New("configuration: retention must be positive")
+	}
+	if token := os.Getenv("MTK_INGEST_TOKEN"); token != "" {
+		configuration.IngestToken = token
+	}
+	if configuration.IngestToken != "" && len(configuration.IngestToken) < 32 {
+		return Configuration{}, errors.New("configuration: ingest_token must be at least 32 characters")
 	}
 	if configuration.Hostname == "" {
 		configuration.Hostname, _ = os.Hostname()
