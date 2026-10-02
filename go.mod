@@ -6,5 +6,5 @@ require github.com/get-code-ch/mailtoolkit v1.0.0
 
 require (
 	golang.org/x/net v0.59.0
-	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/text v0.42.0
 )
