@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/get-code-ch/mailtoolkit"
+	"github.com/get-code-ch/mailtoolkit_webserver/mailauth"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"golang.org/x/net/idna"
@@ -404,4 +405,64 @@ func toUTF8(data []byte, charset string) []byte {
 var cp1252 = [32]rune{
 	'€', 0x81, '‚', 'ƒ', '„', '…', '†', '‡', 'ˆ', '‰', 'Š', '‹', 'Œ', 0x8d, 'Ž', 0x8f,
 	0x90, '‘', '’', '“', '”', '•', '–', '—', '˜', '™', 'š', '›', 'œ', 0x9d, 'ž', 'Ÿ',
+}
+
+// linkGroup gathers the links of one organizational domain.
+type linkGroup struct {
+	Domain string
+	Links  []Link
+	// Level is the most severe level of the links.
+	Level string
+}
+
+// Open tells whether the group is shown unfolded: when it holds a suspect
+// link.
+func (g linkGroup) Open() bool {
+	return g.Level == levelDanger || g.Level == levelWarning
+}
+
+// groupLinks groups the links by organizational domain (mail.bank.example
+// and www.bank.example together), domains in alphabetical order, links
+// without domain last. Inside a group, links are sorted by URL.
+func groupLinks(links []Link) []linkGroup {
+	index := map[string]int{}
+	var groups []linkGroup
+	for _, link := range links {
+		domain := linkDomain(link)
+		i, ok := index[domain]
+		if !ok {
+			i = len(groups)
+			index[domain] = i
+			groups = append(groups, linkGroup{Domain: domain})
+		}
+		g := &groups[i]
+		g.Links = append(g.Links, link)
+		if level := link.Level(); severity[level] < severity[g.Level] {
+			g.Level = level
+		}
+	}
+	for i := range groups {
+		sort.SliceStable(groups[i].Links, func(a, b int) bool { return groups[i].Links[a].URL < groups[i].Links[b].URL })
+	}
+	sort.SliceStable(groups, func(a, b int) bool {
+		if (groups[a].Domain == "") != (groups[b].Domain == "") {
+			return groups[b].Domain == ""
+		}
+		return groups[a].Domain < groups[b].Domain
+	})
+	return groups
+}
+
+func linkDomain(link Link) string {
+	host := strings.ToLower(link.Host)
+	if i := strings.LastIndexByte(host, '@'); i >= 0 { // mailto
+		host = host[i+1:]
+	}
+	if host == "" {
+		return ""
+	}
+	if net.ParseIP(strings.Trim(host, "[]")) != nil {
+		return host
+	}
+	return mailauth.OrgDomain(host)
 }

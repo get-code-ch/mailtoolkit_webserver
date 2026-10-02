@@ -117,3 +117,16 @@ func TestProviderResults(t *testing.T) {
 		t.Errorf("spf properties = %q", results[1].Properties)
 	}
 }
+
+func TestProviderResultsWithoutServer(t *testing.T) {
+	m := ParseMessage([]byte("Authentication-Results: spf=pass (sender IP is 203.0.113.10) smtp.mailfrom=shop.example; dkim=pass\r\n" +
+		" (signature was verified) header.d=shop.example;dmarc=pass action=none header.from=shop.example\r\n\r\n"))
+	results := ProviderResults(m)
+	var got []string
+	for _, r := range results {
+		got = append(got, r.Server+"|"+r.Method+"="+r.Result)
+	}
+	if strings.Join(got, " ") != "|spf=pass |dkim=pass |dmarc=pass" {
+		t.Errorf("results = %q", got)
+	}
+}

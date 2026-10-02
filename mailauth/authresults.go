@@ -45,8 +45,14 @@ func ProviderResults(m Message) []ProviderResult {
 func parseAuthResults(header, value string) []ProviderResult {
 	parts := strings.Split(removeComments(value), ";")
 	server := strings.Fields(parts[0])
+	if len(server) > 0 && strings.Contains(server[0], "=") {
+		// No authserv-id, as written by Microsoft 365: "spf=pass ...; dkim=..."
+		server = nil
+	} else {
+		parts = parts[1:]
+	}
 	var results []ProviderResult
-	for _, part := range parts[1:] {
+	for _, part := range parts {
 		fields := strings.Fields(part)
 		if len(fields) == 0 {
 			continue

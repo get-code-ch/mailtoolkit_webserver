@@ -35,7 +35,8 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
   no script runs and no remote image (tracking pixel) is loaded. Attachments are always downloaded, never
   displayed.
 - **Links panel**: every URL of the mail (links, images, forms, CSS, redirections, URLs written in the text)
-  is listed next to the content, never clickable, with alerts: displayed text pointing to another domain,
+  is listed next to the content, grouped by domain in folding sections (the suspect ones open), never
+  clickable, with alerts: displayed text pointing to another domain,
   `javascript:` / `data:` schemes, `user@` before the domain, IP addresses, unusual ports, URL shorteners,
   internationalized domains (homographs), forms, automatic redirections, tracking pixels, and the final
   destination of redirectors such as Outlook Safe Links.
@@ -49,8 +50,12 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
     `Received-SPF`), the `Received` path, and inconsistencies: address in the display name, Reply-To or
     Return-Path on another domain, missing Message-ID, date far from the reception.
 
-  The checks run when the analysis page is first opened, with the current DNS records: a key rotated since
-  the mail was sent makes its DKIM signature fail.
+  The result shown for SPF, DKIM and DMARC is first the one written by the receiving provider
+  (`Authentication-Results` of a server that received the mail: Proton Mail, Google, Microsoft 365…; results
+  added by the sender are displayed but not trusted). The internal verification runs on the mail as forwarded
+  or exported, which providers often rebuild: when it fails, a warning asks for caution instead of an error.
+  The internal checks use the current DNS records: a key rotated since the mail was sent makes its DKIM
+  signature fail.
 - **Attachments analysis** (package `filecheck`), without opening the files: real type from the content
   compared with the name, MD5/SHA-1/SHA-256 (with a VirusTotal search by hash), and alerts for executables,
   shortcuts, disk images, dangerous extensions, double extensions and right-to-left override characters,

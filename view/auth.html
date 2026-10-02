@@ -1,19 +1,18 @@
 {{define "auth"}}
 <section class="auth" aria-label="Authentification">
     <div class="auth-badges">
-        <div class="auth-badge level-{{resultClass .SPF.Result}}">
-            <strong>SPF</strong> {{.SPF.Result}}
-            <span>{{with .SPF.Domain}}{{.}}{{end}}{{if .SPF.IP.IsValid}} · IP {{.SPF.IP}}{{end}}</span>
+        {{range .Verdicts}}
+        <div class="auth-badge level-{{.Level}}">
+            <strong>{{.Name}}</strong> {{if .Result}}{{.Result}}{{else}}aucun résultat{{end}}
+            <span>{{.Source}}</span>
         </div>
-        <div class="auth-badge level-{{if .DKIM}}{{resultClass (index .DKIM 0).Result}}{{else}}info{{end}}">
-            <strong>DKIM</strong> {{if .DKIM}}{{(index .DKIM 0).Result}}{{else}}aucune signature{{end}}
-            <span>{{range $i, $d := .DKIM}}{{if $i}}, {{end}}{{$d.Domain}}{{end}}</span>
-        </div>
-        <div class="auth-badge level-{{resultClass .DMARC.Result}}">
-            <strong>DMARC</strong> {{.DMARC.Result}}
-            <span>{{.DMARC.Domain}}{{with .DMARC.Policy}} · politique {{.}}{{end}}</span>
-        </div>
+        {{end}}
     </div>
+    {{if .HasWarnings}}
+    <ul class="checks">
+        {{range .Verdicts}}{{if .Warning}}<li class="level-warning"><strong>{{.Name}}</strong> : {{.Warning}}</li>{{end}}{{end}}
+    </ul>
+    {{end}}
 
     {{if .Checks}}
     <ul class="checks">
@@ -60,15 +59,16 @@
 
         {{if .Provider}}
         <h3>Résultats notés par les serveurs de réception</h3>
-        <p class="note">Ces résultats sont écrits par les serveurs que le mail a traversés : seuls ceux de votre propre fournisseur sont fiables,
-            un expéditeur malveillant peut en ajouter de faux.</p>
+        <p class="note">Seuls les résultats écrits par un serveur qui a reçu le mail sont retenus : un expéditeur malveillant peut
+            ajouter de faux résultats dans son mail.</p>
         <table>
-            <thead><tr><th>Serveur</th><th>Méthode</th><th>Résultat</th><th>Détails</th></tr></thead>
+            <thead><tr><th>Serveur</th><th>Méthode</th><th>Résultat</th><th>Retenu</th><th>Détails</th></tr></thead>
             <tbody>
             {{range .Provider}}
             <tr>
                 <td>{{.Server}}</td><td>{{.Method}}</td>
                 <td class="level-{{resultClass .Result}}">{{.Result}}</td>
+                <td>{{if .Trusted}}oui{{else}}<span class="level-warning">non vérifiable</span>{{end}}</td>
                 <td><code>{{range $i, $p := .Properties}}{{if $i}} {{end}}{{$p}}{{end}}</code></td>
             </tr>
             {{end}}

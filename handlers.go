@@ -271,6 +271,7 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		Attachments []attachmentView
 		Frame       string
 		Links       []Link
+		LinkGroups  []linkGroup
 		Dangers     int
 		Warnings    int
 		Auth        *headerAnalysis
@@ -313,9 +314,7 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 
 	// Most suspicious links first, then in order of appearance.
 	data.Links = extractLinks(mail)
-	sort.SliceStable(data.Links, func(i, j int) bool {
-		return severity[data.Links[i].Level()] < severity[data.Links[j].Level()]
-	})
+	data.LinkGroups = groupLinks(data.Links)
 	for _, link := range data.Links {
 		switch link.Level() {
 		case levelDanger:

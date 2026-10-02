@@ -164,3 +164,37 @@ func TestDisplayedHost(t *testing.T) {
 		}
 	}
 }
+
+func TestGroupLinks(t *testing.T) {
+	links := []Link{
+		{URL: "https://www.shop.example/b", Host: "www.shop.example"},
+		{URL: "https://evil.example/login", Host: "evil.example", Warnings: []LinkWarning{{levelDanger, "x"}}},
+		{URL: "relative/path"},
+		{URL: "https://mail.shop.example/a", Host: "mail.shop.example", Warnings: []LinkWarning{{levelInfo, "http"}}},
+		{URL: "mailto:info@shop.example", Host: "info@shop.example"},
+		{URL: "http://192.0.2.1/x", Host: "192.0.2.1", Warnings: []LinkWarning{{levelWarning, "ip"}}},
+		{URL: "https://news.bank.co.uk/", Host: "news.bank.co.uk"},
+	}
+	groups := groupLinks(links)
+	var got []string
+	for _, g := range groups {
+		var urls []string
+		for _, l := range g.Links {
+			urls = append(urls, l.URL)
+		}
+		got = append(got, g.Domain+"["+g.Level+"]="+strings.Join(urls, ","))
+	}
+	want := []string{
+		"192.0.2.1[warning]=http://192.0.2.1/x",
+		"bank.co.uk[]=https://news.bank.co.uk/",
+		"evil.example[danger]=https://evil.example/login",
+		"shop.example[info]=https://mail.shop.example/a,https://www.shop.example/b,mailto:info@shop.example",
+		"[]=relative/path",
+	}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("groups:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	if !groups[0].Open() || !groups[2].Open() || groups[3].Open() {
+		t.Error("only suspect groups should be open")
+	}
+}

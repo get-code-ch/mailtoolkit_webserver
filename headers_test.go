@@ -118,3 +118,89 @@ func TestConsistencyChecksLegitimate(t *testing.T) {
 		t.Errorf("missing From: %+v", checks)
 	}
 }
+
+func verdictOf(a headerAnalysis, name string) authVerdict {
+	for _, v := range a.Verdicts {
+		if v.Name == name {
+			return v
+		}
+	}
+	return authVerdict{}
+}
+
+func TestVerdicts(t *testing.T) {
+	signature := "DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=shop.example; s=k3; h=from; bh=AAAA; b=BBBB\r\n"
+	tests := []struct {
+		name    string
+		headers string
+		want    map[string]string // verdict: result level
+		warning string            // verdict with a warning
+		trusted int
+	}{
+		{
+			name: "Proton validated, body rebuilt by the export",
+			headers: "Received: from mail82.sea91.rsgsv.net (mail82.sea91.rsgsv.net [148.105.15.82]) by mailin043.protonmail.ch (Postfix) with ESMTPS id 1; Fri, 11 Sep 2026 08:37:56 +0000\r\n" +
+				"Authentication-Results: mail.protonmail.ch; dmarc=pass (p=none dis=none) header.from=shop.example\r\n" +
+				"Authentication-Results: mail.protonmail.ch; spf=pass smtp.mailfrom=mail82.sea91.rsgsv.net\r\n" +
+				"Authentication-Results: mail.protonmail.ch; dkim=pass (2048-bit key) header.d=shop.example\r\n" + signature,
+			want:    map[string]string{"SPF": "pass ok", "DKIM": "pass ok", "DMARC": "pass ok"},
+			warning: "DKIM",
+			trusted: 3,
+		},
+		{
+			name: "Microsoft 365, no authserv-id",
+			headers: "Authentication-Results: spf=pass (sender IP is 203.0.113.10) smtp.mailfrom=shop.example; dkim=pass (signature was verified)\r\n" +
+				" header.d=shop.example;dmarc=pass action=none header.from=shop.example;compauth=pass reason=100\r\n" +
+				"Received: from mail.shop.example (203.0.113.10) by AM6EUR05FT012.mail.protection.outlook.com (10.233.240.1) with Microsoft SMTP Server id 15.20.1; Mon, 1 Oct 2018 10:00:01 +0000\r\n" + signature,
+			want:    map[string]string{"SPF": "pass ok", "DKIM": "pass ok", "DMARC": "pass ok"},
+			warning: "DKIM",
+			trusted: 4,
+		},
+		{
+			name: "results forged by the sender are ignored",
+			headers: "Received: from mail.evil.example (mail.evil.example [203.0.113.66]) by mx.google.com with ESMTPS id 1; Mon, 1 Oct 2018 10:00:01 +0000\r\n" +
+				"Authentication-Results: mx.evil.example; dkim=pass header.d=bank.example; spf=pass; dmarc=pass\r\n",
+			want:    map[string]string{"DKIM": "none info", "DMARC": "none info"},
+			trusted: 0,
+		},
+		{
+			name: "receiving provider failure",
+			headers: "Received: from mail.evil.example (mail.evil.example [203.0.113.66]) by mx.google.com with ESMTPS id 1; Mon, 1 Oct 2018 10:00:01 +0000\r\n" +
+				"Authentication-Results: mx.google.com; dkim=fail header.d=shop.example; dmarc=fail (p=REJECT) header.from=shop.example\r\n" + signature,
+			want:    map[string]string{"DKIM": "fail danger", "DMARC": "fail danger"},
+			trusted: 2,
+		},
+		{
+			name:    "internal failure without provider result",
+			headers: signature,
+			want:    map[string]string{"DKIM": "fail warning"},
+			warning: "DKIM",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			raw := tt.headers + "From: news@shop.example\r\nSubject: x\r\n\r\nbody\r\n"
+			a := analyzeHeaders(context.Background(), mapResolver{}, []byte(raw), -1)
+			for name, want := range tt.want {
+				v := verdictOf(a, name)
+				if got := v.Result + " " + v.Level; got != want {
+					t.Errorf("%s = %s (%s), want %s", name, got, v.Source, want)
+				}
+			}
+			for _, v := range a.Verdicts {
+				if (v.Warning != "") != (v.Name == tt.warning) {
+					t.Errorf("%s warning = %q", v.Name, v.Warning)
+				}
+			}
+			trusted := 0
+			for _, p := range a.Provider {
+				if p.Trusted {
+					trusted++
+				}
+			}
+			if trusted != tt.trusted {
+				t.Errorf("%d trusted provider results, want %d: %+v", trusted, tt.trusted, a.Provider)
+			}
+		})
+	}
+}

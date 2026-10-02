@@ -345,3 +345,25 @@ form.upload {
     align-items: center;
     margin: 8px 0;
 }
+
+details.link-group {
+    margin-bottom: 8px;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--level, var(--border));
+    border-radius: 4px;
+}
+
+details.link-group > summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: baseline;
+    padding: 6px 10px;
+    cursor: pointer;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+details.link-group > ol.link-list {
+    padding: 0 8px 4px;
+}

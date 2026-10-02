@@ -85,7 +85,7 @@
         </div>
 
         <aside class="links" aria-label="Liens du mail">
-            <h2>Liens ({{len .Links}})</h2>
+            <h2>Liens ({{len .Links}}, {{len .LinkGroups}} domaine{{if gt (len .LinkGroups) 1}}s{{end}})</h2>
             {{if .Links}}
             <p class="summary">
                 {{if .Dangers}}<span class="level-danger">{{.Dangers}} dangereux</span>{{end}}
@@ -93,29 +93,38 @@
                 {{if not (or .Dangers .Warnings)}}<span class="level-ok">Aucune alerte</span>{{end}}
             </p>
             <p class="note">Les liens ne sont pas cliquables : copiez-les seulement si vous êtes sûr de la destination.</p>
-            <ol class="link-list">
-                {{range .Links}}
-                <li class="link {{with .Level}}level-{{.}}{{end}}">
-                    <div class="link-head">
-                        <strong>{{if .Host}}{{.Host}}{{else}}(sans domaine){{end}}</strong>
-                        <span class="badge">{{.Source}}</span>
-                        {{if gt .Count 1}}<span class="badge">×{{.Count}}</span>{{end}}
-                    </div>
-                    {{with .Text}}<div class="link-text">Texte affiché : « {{.}} »</div>{{end}}
-                    <code class="link-url">{{.URL}}</code>
-                    {{with .Target}}<div class="link-target">Destination finale : <code>{{.}}</code></div>{{end}}
-                    {{if .Warnings}}
-                    <ul class="link-warnings">
-                        {{range .Warnings}}<li class="level-{{.Level}}">{{.Message}}</li>{{end}}
-                    </ul>
+            {{range .LinkGroups}}
+            <details class="link-group level-{{if .Level}}{{.Level}}{{else}}ok{{end}}"{{if .Open}} open{{end}}>
+                <summary>
+                    <strong>{{if .Domain}}{{.Domain}}{{else}}(sans domaine){{end}}</strong>
+                    <span class="badge">{{len .Links}}</span>
+                    {{if eq .Level "danger"}}<span class="level-danger">dangereux</span>{{else if eq .Level "warning"}}<span class="level-warning">suspect</span>{{end}}
+                </summary>
+                <ol class="link-list">
+                    {{range .Links}}
+                    <li class="link {{with .Level}}level-{{.}}{{end}}">
+                        <div class="link-head">
+                            <strong>{{if .Host}}{{.Host}}{{else}}(sans domaine){{end}}</strong>
+                            <span class="badge">{{.Source}}</span>
+                            {{if gt .Count 1}}<span class="badge">×{{.Count}}</span>{{end}}
+                        </div>
+                        {{with .Text}}<div class="link-text">Texte affiché : « {{.}} »</div>{{end}}
+                        <code class="link-url">{{.URL}}</code>
+                        {{with .Target}}<div class="link-target">Destination finale : <code>{{.}}</code></div>{{end}}
+                        {{if .Warnings}}
+                        <ul class="link-warnings">
+                            {{range .Warnings}}<li class="level-{{.Level}}">{{.Message}}</li>{{end}}
+                        </ul>
+                        {{end}}
+                        <div class="link-foot">
+                            <span class="note">{{.Part}}</span>
+                            <button type="button" class="copy" data-copy="{{.URL}}">Copier</button>
+                        </div>
+                    </li>
                     {{end}}
-                    <div class="link-foot">
-                        <span class="note">{{.Part}}</span>
-                        <button type="button" class="copy" data-copy="{{.URL}}">Copier</button>
-                    </div>
-                </li>
-                {{end}}
-            </ol>
+                </ol>
+            </details>
+            {{end}}
             {{else}}
             <p class="note">Aucun lien dans ce mail.</p>
             {{end}}
