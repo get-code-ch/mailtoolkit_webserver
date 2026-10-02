@@ -299,3 +299,41 @@ button.copy {
     border: none;
     background: #fff;
 }
+
+ol.attachment-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+li.attachment {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--level, var(--border));
+    border-radius: 4px;
+    color: var(--text);
+}
+
+dl.hashes {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 2px 10px;
+    margin: 8px 0 0;
+    font-size: 0.85em;
+}
+
+dl.hashes dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+ul.entries {
+    max-height: 200px;
+    overflow: auto;
+    font-size: 0.85em;
+}
+
+a.download {
+    color: var(--muted);
+}

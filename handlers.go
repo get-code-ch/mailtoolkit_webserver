@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/get-code-ch/mailtoolkit"
+	"github.com/get-code-ch/mailtoolkit_webserver/filecheck"
 	"github.com/get-code-ch/mailtoolkit_webserver/mailauth"
 )
 
@@ -186,7 +187,7 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		Info        AnalyzedInfo
 		Header      mailtoolkit.Header
 		Parts       []Href
-		Attachments []Href
+		Attachments []attachmentView
 		Frame       string
 		Links       []Link
 		Dangers     int
@@ -215,12 +216,22 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		data.Frame = base + "/part/" + url.PathEscape(selected)
 	}
 	for _, name := range sortedKeys(mail.Attachments) {
-		data.Attachments = append(data.Attachments, Href{Link: base + "/attachment/" + url.PathEscape(name), Text: name})
+		attachment := mail.Attachments[name]
+		view := attachmentView{Link: base + "/attachment/" + url.PathEscape(name)}
+		content, err := attachment.Decode()
+		if err != nil {
+			log.Printf("decoding attachment %s: %v", name, err)
+		}
+		ct := attachment.ContentInfo.Type
+		view.Report = filecheck.Analyze(name, ct.Type+"/"+ct.Subtype, content)
+		data.Attachments = append(data.Attachments, view)
 	}
+	sort.SliceStable(data.Attachments, func(i, j int) bool {
+		return severity[data.Attachments[i].Level()] < severity[data.Attachments[j].Level()]
+	})
 
 	// Most suspicious links first, then in order of appearance.
 	data.Links = extractLinks(mail)
-	severity := map[string]int{levelDanger: 0, levelWarning: 1, levelInfo: 2, "": 3}
 	sort.SliceStable(data.Links, func(i, j int) bool {
 		return severity[data.Links[i].Level()] < severity[data.Links[j].Level()]
 	})
@@ -266,6 +277,15 @@ func (s *server) headerAnalysis(r *http.Request, hop int) (headerAnalysis, error
 	a := analyzeHeaders(ctx, s.resolver, raw, hop)
 	s.auth.put(key, a)
 	return a, nil
+}
+
+// severity orders the alert levels, most severe first.
+var severity = map[string]int{levelDanger: 0, levelWarning: 1, levelInfo: 2, "": 3}
+
+// attachmentView is an analyzed attachment and its download link.
+type attachmentView struct {
+	filecheck.Report
+	Link string
 }
 
 // defaultPart prefers the HTML version of a mail, then the plain text one.

@@ -45,6 +45,13 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
 
   The checks run when the analysis page is first opened, with the current DNS records: a key rotated since
   the mail was sent makes its DKIM signature fail.
+- **Attachments analysis** (package `filecheck`), without opening the files: real type from the content
+  compared with the name, MD5/SHA-1/SHA-256 (with a VirusTotal search by hash), and alerts for executables,
+  shortcuts, disk images, dangerous extensions, double extensions and right-to-left override characters,
+  VBA macros and Excel 4.0 (XLM) macro sheets, embedded OLE objects, ActiveX, remote templates and other
+  external relationships, DDE fields, password protected documents and archives, ZIP content, PDF actions
+  (JavaScript, OpenAction, Launch, embedded files), RTF objects (Equation.3), HTML and SVG scripts, forms and
+  HTML smuggling. Office 97-2003 files are read with the `cfb` package, a defensive compound file reader.
 
 ## Configuration
 
