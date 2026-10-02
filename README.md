@@ -103,7 +103,7 @@ received directly on port 25, everything in one Docker container.
 3. **Code and configuration**, on the server:
 
    ```sh
-   git clone -b mail-analyzer https://github.com/get-code-ch/mailtoolkit_webserver.git
+   git clone https://github.com/get-code-ch/mailtoolkit_webserver.git
    cd mailtoolkit_webserver
    ```
 
