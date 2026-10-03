@@ -5,6 +5,7 @@ import (
 	"embed"
 	"flag"
 	"fmt"
+	"github.com/get-code-ch/mailtoolkit_webserver/smime"
 	"html/template"
 	"log"
 	"net"
@@ -67,6 +68,8 @@ func main() {
 		reputation:     newReputationChecker(conf.Reputation, net.DefaultResolver, conf.Domains),
 		repCache:       newBoundedCache[reputation](64),
 		trustedDomains: conf.TrustedDomains,
+		smime:          newSMIMEVerifier(conf.Reputation),
+		smimeCache:     newBoundedCache[smime.Result](64),
 
 		maxUploadSize:    conf.MaxMessageSize,
 		hostname:         conf.Hostname,
@@ -78,6 +81,7 @@ func main() {
 			store.PurgeExpired()
 			s.auth.clear()
 			s.repCache.clear()
+			s.smimeCache.clear()
 			s.limiter.prune()
 		}
 	}()
@@ -130,4 +134,15 @@ func newHTTPServer(addr string, handler http.Handler) *http.Server {
 		WriteTimeout:      60 * time.Second,
 		IdleTimeout:       120 * time.Second,
 	}
+}
+
+// newSMIMEVerifier verifies S/MIME signatures against the system
+// certification authorities, querying their revocation services unless
+// disabled.
+func newSMIMEVerifier(c ReputationConfig) *smime.Verifier {
+	v := &smime.Verifier{}
+	if !c.Disabled && !c.RevocationDisabled {
+		v.Revocation = smime.NewRevocationChecker()
+	}
+	return v
 }

@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"crypto/x509"
 	"encoding/binary"
+	"github.com/get-code-ch/mailtoolkit_webserver/smime"
 	"html/template"
 	"mime/multipart"
 	"net/http"
@@ -194,5 +196,38 @@ func TestModifiedFieldHighlighted(t *testing.T) {
 	page := get(handler, location).Body.String()
 	if !strings.Contains(page, `<tr class="modified">`) || !strings.Contains(page, "un préfixe a été ajouté au sujet") || !strings.Contains(page, "Is dinner ready? folded continuation") {
 		t.Error("modified subject not highlighted")
+	}
+}
+
+func TestSMIMEPage(t *testing.T) {
+	root, err := os.ReadFile("smime/testdata/root.pem")
+	if err != nil {
+		t.Fatal(err)
+	}
+	roots := x509.NewCertPool()
+	roots.AppendCertsFromPEM(root)
+	s := newTestServer(t)
+	s.smime = &smime.Verifier{Roots: roots}
+	s.smimeCache = newBoundedCache[smime.Result](4)
+	handler := s.routes(t.TempDir())
+
+	for name, want := range map[string][]string{
+		"detached.eml":  {"Signature S/MIME", "Example Org", "NTRCH-CHE-123.456.789", "organisation vérifiée", "Signé électroniquement par Example Org", "Test SMIME ICA"},
+		"encrypted.eml": {"Signature S/MIME", "chiffré"},
+	} {
+		raw, err := os.ReadFile("smime/testdata/" + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		location := postFile(t, handler, "/upload", name, raw).Header().Get("Location")
+		page := get(handler, location)
+		if page.Code != http.StatusOK {
+			t.Fatalf("%s: %d", name, page.Code)
+		}
+		for _, w := range want {
+			if !strings.Contains(page.Body.String(), w) {
+				t.Errorf("%s: %q missing", name, w)
+			}
+		}
 	}
 }

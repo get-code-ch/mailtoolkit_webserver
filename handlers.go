@@ -21,6 +21,7 @@ import (
 	"github.com/get-code-ch/mailtoolkit"
 	"github.com/get-code-ch/mailtoolkit_webserver/filecheck"
 	"github.com/get-code-ch/mailtoolkit_webserver/mailauth"
+	"github.com/get-code-ch/mailtoolkit_webserver/smime"
 )
 
 // Mail parts are sent by third parties: they are rendered sandboxed (no
@@ -62,6 +63,10 @@ type server struct {
 	repCache   *boundedCache[reputation]
 	// trustedDomains are the sender domains trusted when authenticated.
 	trustedDomains []string
+	// smime verifies the S/MIME signatures, smimeCache keeps the results
+	// per mail.
+	smime      *smime.Verifier
+	smimeCache *boundedCache[smime.Result]
 }
 
 // dnsTimeout bounds the DNS queries of a header analysis.
@@ -307,6 +312,7 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		Warnings    int
 		Auth        *headerAnalysis
 		Risk        riskReport
+		SMIME       smime.Result
 		Reputation  reputation
 		Lookalikes  []lookalike
 		Part        string
@@ -378,12 +384,37 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 	auth.Converted = info.Format == formatMSG
 	data.Auth = &auth
 
+	if !auth.Converted {
+		data.SMIME = s.smimeOf(r, auth.FromAddress)
+	}
 	linkDomains, linkHosts := linkSubjects(data.Links)
 	data.Lookalikes = findLookalikes(append(slices.Clone(auth.Senders), linkHosts...))
 	data.Reputation = s.reputationOf(r, &auth, linkDomains)
 	data.Risk = assessRisk(riskInput{Auth: &auth, Links: data.Links, Attachments: data.Attachments,
-		Reputation: data.Reputation, Lookalikes: data.Lookalikes, TrustedDomains: s.trustedDomains})
+		Reputation: data.Reputation, Lookalikes: data.Lookalikes, TrustedDomains: s.trustedDomains, SMIME: data.SMIME})
 	s.render(w, "mail.html", data)
+}
+
+// smimeOf verifies the S/MIME signature of the analyzed mail, cached per
+// mail (the revocation check queries the certification authority).
+func (s *server) smimeOf(r *http.Request, from string) smime.Result {
+	if s.smime == nil {
+		return smime.Result{Status: smime.StatusNone}
+	}
+	key := r.PathValue("token") + "/" + r.PathValue("id") + "/" + r.PathValue("n")
+	if result, ok := s.smimeCache.get(key); ok {
+		return result
+	}
+	n, _ := strconv.Atoi(r.PathValue("n"))
+	raw, _, err := s.store.AnalyzedRaw(r.PathValue("token"), r.PathValue("id"), n)
+	if err != nil {
+		return smime.Result{Status: smime.StatusNone}
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), reputationTimeout)
+	defer cancel()
+	result := s.smime.Verify(ctx, raw, from)
+	s.smimeCache.put(key, result)
+	return result
 }
 
 // reputationTimeout bounds the blocklist and RDAP queries of a mail.

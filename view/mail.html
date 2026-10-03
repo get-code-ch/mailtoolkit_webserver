@@ -26,6 +26,13 @@
             <span class="tile-note">{{.Source}}</span>
         </div>
         {{end}}{{end}}
+        {{with .SMIME}}{{if ne .Status "none"}}
+        <a class="tile level-{{smimeLevel .}}" href="#smime">
+            <span class="tile-label">S/MIME</span>
+            <span class="tile-value">{{smimeText .}}</span>
+            <span class="tile-note">{{with .Signer}}{{if .Organization}}{{.Organization}}{{else}}{{range .Emails}}{{.}} {{end}}{{end}}{{else}}signature{{end}}</span>
+        </a>
+        {{end}}{{end}}
         {{with .Auth}}{{if .Spam}}{{with .SpamVerdict}}
         <a class="tile level-{{.Level}}" href="#antispam">
             <span class="tile-label">{{.Name}}</span>
@@ -63,6 +70,7 @@
 
             {{with .Auth}}{{template "auth" .}}{{end}}
 
+            {{if ne .SMIME.Status "none"}}{{template "smime" .SMIME}}{{end}}
             {{template "reputation" .}}
 
             {{if .Parts}}
@@ -186,6 +194,7 @@
             <p class="risk-auth {{if .Risk.Authenticated}}level-ok{{else}}level-warning{{end}}">
                 {{if .Risk.Authenticated}}✓ Le message vient bien du domaine {{.Risk.Sender}}.
                 {{else}}⚠ Rien ne garantit que le message vient vraiment de {{with .Risk.Sender}}{{.}}{{else}}cet expéditeur{{end}}.{{end}}</p>
+            {{with .Risk.SignedBy}}<p class="risk-auth level-ok">✓ Signé électroniquement par {{.}}.</p>{{end}}
             <p class="risk-advice">{{.Risk.Advice}}</p>
         </div>
     </div>
@@ -290,6 +299,46 @@
         <p class="note">Dates fournies par les registres (RDAP). Un domaine de moins de 30 jours est un signal fort d'hameçonnage.</p>
         {{end}}
         {{if not .Reputation.Checked}}<p class="note">Consultation des listes noires et des registres désactivée sur ce serveur.</p>{{end}}
+    </details>
+</section>
+{{end}}
+
+{{define "smime"}}
+<section class="auth" id="smime" aria-label="Signature S/MIME">
+    <details class="panel"{{if not .Trusted}} open{{end}}>
+        <summary>Signature S/MIME <span class="badge level-{{smimeLevel .}}">{{smimeText .}}</span>
+            <span class="summary-note">le message est-il signé électroniquement par l'expéditeur ?</span></summary>
+        <p class="level-{{smimeLevel .}}"><strong>{{smimeText .}}</strong> : {{.Reason}}</p>
+        {{if .Opaque}}<p class="note">Signature « opaque » : le contenu est enfermé dans la signature, il n'est affiché que par les
+            messageries compatibles S/MIME.</p>{{end}}
+        {{with .Signer}}
+        <dl class="header">
+            <dt>Adresse certifiée</dt><dd>{{range $i, $e := .Emails}}{{if $i}}, {{end}}<code>{{$e}}</code>{{end}}
+                {{if $.FromMatch}}<span class="badge level-ok">= expéditeur</span>{{else}}<span class="badge level-warning">≠ expéditeur {{$.From}}</span>{{end}}</dd>
+            {{with .Subject}}<dt>Titulaire</dt><dd>{{.}}</dd>{{end}}
+            {{with .Organization}}<dt>Organisation</dt><dd>{{.}}{{with $.Signer.OrganizationID}} <code>{{.}}</code>{{end}}</dd>{{end}}
+            {{with .Pseudonym}}<dt>Pseudonyme</dt><dd>{{.}}</dd>{{end}}
+            <dt>Vérification</dt><dd class="{{if .IdentityVerified}}level-ok{{else}}level-info{{end}}">{{.ValidationText}}</dd>
+            <dt>Autorité</dt><dd>{{.Issuer}}</dd>
+            <dt>Validité</dt><dd>du {{.NotBefore.Local.Format "02.01.2006"}} au {{.NotAfter.Local.Format "02.01.2006"}}</dd>
+        </dl>
+        {{end}}
+        <dl class="header">
+            {{if not .SigningTime.IsZero}}<dt>Signé le</dt><dd>{{.SigningTime.Local.Format "02.01.2006 15:04:05"}}</dd>{{end}}
+            {{with .Integrity}}<dt>Contenu</dt><dd class="{{if eq . "ok"}}level-ok{{else}}level-danger{{end}}">{{if eq . "ok"}}inchangé depuis la signature{{else}}modifié depuis la signature{{end}}</dd>{{end}}
+            {{with .SignatureAlgorithm}}<dt>Algorithme</dt><dd>{{.}}</dd>{{end}}
+            {{with .Revocation.Status}}<dt>Révocation</dt><dd class="level-{{if eq . "good"}}ok{{else if eq . "revoked"}}danger{{else}}warning{{end}}">
+                {{if eq . "good"}}certificat non révoqué{{else if eq . "revoked"}}certificat révoqué{{$.Revocation.When}}{{with $.Revocation.Reason}} ({{.}}){{end}}{{else}}statut inconnu{{end}}
+                {{with $.Revocation.Method}}<span class="note">— {{.}} {{$.Revocation.Source}}</span>{{end}}
+                {{with $.Revocation.Error}}<br><span class="note">{{.}}</span>{{end}}</dd>{{end}}
+        </dl>
+        {{if .Chain}}
+        <h3>Chaîne de certification</h3>
+        <ol class="cert-chain">{{range .Chain}}<li><strong>{{.Subject}}</strong>{{with .Organization}} — {{.}}{{end}} <span class="note">émis par {{.Issuer}}, jusqu'au {{.NotAfter.Local.Format "02.01.2006"}}</span></li>{{end}}</ol>
+        {{end}}
+        <p class="note">Une signature S/MIME valide prouve que le message vient du titulaire du certificat et n'a pas été modifié. Un certificat
+            « adresse vérifiée seulement » s'obtient gratuitement pour n'importe quelle adresse, même celle d'un domaine sosie : seuls les
+            certificats d'organisation ou de personne garantissent une identité.</p>
     </details>
 </section>
 {{end}}

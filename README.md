@@ -77,6 +77,12 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
   external relationships, DDE fields, password protected documents and archives, ZIP content, PDF actions
   (JavaScript, OpenAction, Launch, embedded files), RTF objects (Equation.3), HTML and SVG scripts, forms and
   HTML smuggling. Office 97-2003 files are read with the `cfb` package, a defensive compound file reader.
+- **S/MIME signature** (package `smime`, standard library plus `golang.org/x/crypto/ocsp`): CMS reader (BER
+  included), integrity of the signed content, signature (RSA, RSA-PSS, ECDSA, Ed25519), certificate chain to the
+  system certification authorities at the signing time, revocation through OCSP then the CRL, certified address
+  compared with the sender, and identity level of the certificate (CA/Browser Forum S/MIME policies: mailbox,
+  organization, sponsor, individual). A valid signature for the sender proves who sent the mail even when DKIM
+  was broken by a forward or an export; encrypted messages are reported as such.
 - **Reputation**: DNS blocklists (Spamhaus ZEN and DBL, SpamCop, SURBL by default) for the sending server and the
   domains of the mail, registration date of these domains (RDAP), and lookalike domains of often impersonated
   brands (PayPal, Microsoft, PostFinance, TWINT, Swisscom…): letters swapped or replaced by lookalike characters,
@@ -132,7 +138,8 @@ these domains. These services receive the addresses and domains of the analyzed 
   "dnsbl_ip": ["zen.spamhaus.org", "bl.spamcop.net"],
   "dnsbl_domain": ["dbl.spamhaus.org", "multi.surbl.org"],
   "spamhaus_dqs_key": "",
-  "rdap_disabled": false
+  "rdap_disabled": false,
+  "revocation_disabled": false
 }
 ```
 
@@ -141,7 +148,8 @@ shared DNS resolvers (most cloud providers): the page then says the list did not
 [Data Query Service](https://www.spamhaus.com/free-trial/free-data-query-service/) key for non-commercial use
 solves it; pass it with the `MTK_SPAMHAUS_DQS_KEY` environment variable (`-e MTK_SPAMHAUS_DQS_KEY=...` with
 `docker run`) rather than in the file. Some registries publish no RDAP service (`.ch`, `.li`): the age of their
-domains is not shown.
+domains is not shown. `revocation_disabled` skips the OCSP and CRL queries sent to the certification authorities
+of S/MIME signatures (also skipped when `disabled` is set).
 
 ## Deployment
 

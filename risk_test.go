@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/get-code-ch/mailtoolkit_webserver/filecheck"
+	"github.com/get-code-ch/mailtoolkit_webserver/smime"
 )
 
 func TestAssessRisk(t *testing.T) {
@@ -178,5 +179,34 @@ func TestRelayService(t *testing.T) {
 	unauthenticated := strings.Replace(headers, "dmarc=pass", "dmarc=fail", 1)
 	if a = analyzeHeaders(context.Background(), mapResolver{}, []byte(unauthenticated), -1); a.Relay != nil {
 		t.Errorf("relay without DMARC")
+	}
+}
+
+func TestSMIMERisk(t *testing.T) {
+	exported := &headerAnalysis{FromDomain: "post.example", FromAddress: "office@post.example", Verdicts: []authVerdict{
+		{Name: "DMARC", Result: "fail", Level: levelWarning, Source: "vérification interne"},
+	}}
+	signer := &smime.Certificate{Organization: "Example Post AG", Issuer: "Test CA", Validation: "sponsor"}
+	valid := smime.Result{Status: smime.StatusValid, FromMatch: true, From: "office@post.example", Signer: signer,
+		Revocation: smime.Revocation{Status: smime.RevocationGood}}
+
+	r := assessRisk(riskInput{Auth: exported, SMIME: valid})
+	if r.Light != riskGreen || !r.Authenticated || r.SignedBy != "Example Post AG" {
+		t.Errorf("valid signature: light %s, signed by %q, reasons %+v", r.Light, r.SignedBy, r.Reasons)
+	}
+	revoked := valid
+	revoked.Revocation.Status = smime.RevocationRevoked
+	if r := assessRisk(riskInput{Auth: exported, SMIME: revoked}); r.Light != riskRed || r.Authenticated {
+		t.Errorf("revoked: light %s", r.Light)
+	}
+	other := valid
+	other.FromMatch = false
+	if r := assessRisk(riskInput{Auth: exported, SMIME: other}); r.Authenticated || r.Light != riskOrange {
+		t.Errorf("other address: light %s, authenticated %v", r.Light, r.Authenticated)
+	}
+	mailbox := valid
+	mailbox.Signer = &smime.Certificate{Validation: "mailbox"}
+	if r := assessRisk(riskInput{Auth: exported, SMIME: mailbox}); r.SignedBy != "office@post.example" || r.Light != riskGreen {
+		t.Errorf("mailbox certificate: signed by %q, light %s", r.SignedBy, r.Light)
 	}
 }

@@ -8,10 +8,12 @@ import (
 	"strings"
 
 	"github.com/get-code-ch/mailtoolkit_webserver/mailauth"
+	"github.com/get-code-ch/mailtoolkit_webserver/smime"
 )
 
 // templateFuncs are the functions available in the views.
-var templateFuncs = template.FuncMap{"resultClass": resultClass, "visibleSpace": visibleSpace, "dkimView": dkimView, "asset": asset, "brands": func() []brand { return brands }}
+var templateFuncs = template.FuncMap{"resultClass": resultClass, "visibleSpace": visibleSpace, "dkimView": dkimView, "asset": asset, "brands": func() []brand { return brands },
+	"smimeLevel": smimeLevel, "smimeText": smimeText}
 
 // dkimView passes a signature and its position to the dkim-signature
 // template.
@@ -196,4 +198,30 @@ func visibleSpace(s string) template.HTML {
 		}
 	}
 	return template.HTML(b.String())
+}
+
+// smimeLevel and smimeText show an S/MIME result.
+func smimeLevel(r smime.Result) string {
+	switch {
+	case r.Trusted():
+		return "ok"
+	case r.Revocation.Status == smime.RevocationRevoked:
+		return levelDanger
+	case r.Status == smime.StatusInvalid, r.Status == smime.StatusValid:
+		return levelWarning
+	}
+	return levelInfo
+}
+
+func smimeText(r smime.Result) string {
+	switch {
+	case r.Trusted():
+		return "valide"
+	case r.Revocation.Status == smime.RevocationRevoked:
+		return "révoquée"
+	}
+	return map[string]string{
+		smime.StatusValid: "autre adresse", smime.StatusInvalid: "invalide", smime.StatusUntrusted: "non reconnue",
+		smime.StatusEncrypted: "chiffré", smime.StatusError: "illisible",
+	}[r.Status]
 }

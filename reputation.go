@@ -31,6 +31,9 @@ type ReputationConfig struct {
 	// MTK_SPAMHAUS_DQS_KEY environment variable overrides it.
 	SpamhausDQSKey string `json:"spamhaus_dqs_key"`
 	RDAPDisabled   bool   `json:"rdap_disabled"`
+	// RevocationDisabled skips the OCSP and CRL queries of the S/MIME
+	// certificates.
+	RevocationDisabled bool `json:"revocation_disabled"`
 }
 
 var (

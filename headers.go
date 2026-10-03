@@ -36,8 +36,9 @@ type headerAnalysis struct {
 	Spam []spamReport
 	// FromDomain is the domain of the displayed sender, Senders the
 	// domains naming the sender (From, Reply-To, Return-Path, DKIM d=).
-	FromDomain string
-	Senders    []subject
+	FromDomain  string
+	FromAddress string
+	Senders     []subject
 	// Relay is the authenticated service that sent the mail on behalf of
 	// one of its users, nil if none.
 	Relay *relayService
@@ -103,6 +104,7 @@ func analyzeHeaders(ctx context.Context, resolver mailauth.Resolver, raw []byte,
 	fromDomain := ""
 	if from, err := (&mail.AddressParser{WordDecoder: wordDecoder}).ParseList(m.Get("From")); err == nil && len(from) == 1 {
 		fromDomain = domainOfAddress(from[0].Address)
+		a.FromAddress = from[0].Address
 	}
 	a.DMARC = mailauth.CheckDMARC(ctx, resolver, fromDomain, a.SPF, a.DKIM)
 	a.FromDomain = fromDomain

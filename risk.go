@@ -11,6 +11,7 @@ import (
 
 	"github.com/get-code-ch/mailtoolkit_webserver/filecheck"
 	"github.com/get-code-ch/mailtoolkit_webserver/mailauth"
+	"github.com/get-code-ch/mailtoolkit_webserver/smime"
 )
 
 // Traffic light colors of the risk assessment.
@@ -39,6 +40,8 @@ type riskReport struct {
 	// the matching entry, also set when the identity was not confirmed.
 	Trusted       bool
 	TrustedDomain string
+	// SignedBy names the verified signer of an S/MIME signature.
+	SignedBy string
 }
 
 // riskReason is one doubtful element of the mail.
@@ -73,6 +76,7 @@ type riskInput struct {
 	Lookalikes  []lookalike
 	// TrustedDomains are the sender domains trusted when authenticated.
 	TrustedDomains []string
+	SMIME          smime.Result
 }
 
 // assessRisk turns the analyses into a traffic light.
@@ -92,6 +96,7 @@ func assessRisk(in riskInput) riskReport {
 	}
 
 	if a := in.Auth; a != nil {
+		assessSMIME(&r, in.SMIME, add)
 		assessAuthentication(&r, a, add)
 		r.TrustedDomain = trustedDomain(a.FromDomain, in.TrustedDomains)
 		switch {
@@ -253,6 +258,38 @@ func trustedDomain(domain string, trusted []string) string {
 	return ""
 }
 
+// assessSMIME reads the S/MIME signature: a valid signature by a trusted
+// certificate issued for the sender proves who sent the mail, whatever
+// happened to DKIM.
+func assessSMIME(r *riskReport, s smime.Result, add func(level string, weight int, anchor, simple, detail string)) {
+	switch {
+	case s.Status == smime.StatusNone:
+	case s.Trusted():
+		r.Authenticated = true
+		signer := s.Signer
+		if signer.IdentityVerified() && signer.Organization != "" {
+			r.SignedBy = signer.Organization
+			r.Positives = append(r.Positives, fmt.Sprintf("Le message porte la signature électronique de %s (%s), dont l'identité a été vérifiée "+
+				"par l'autorité de certification %s, et il n'a pas été modifié depuis.", signer.Organization, s.From, signer.Issuer))
+		} else {
+			r.SignedBy = s.From
+			r.Positives = append(r.Positives, fmt.Sprintf("Le message porte la signature électronique de l'adresse %s et n'a pas été modifié depuis "+
+				"(le certificat ne garantit que l'adresse, pas l'identité de son titulaire).", s.From))
+		}
+	case s.Revocation.Status == smime.RevocationRevoked:
+		add(levelDanger, 3, "smime", "Le message est signé avec un certificat révoqué par son autorité : il a pu être volé ou utilisé frauduleusement.",
+			s.Reason+" ("+s.Revocation.Reason+")")
+	case s.Status == smime.StatusValid && !s.FromMatch:
+		add(levelWarning, 1, "smime", "Le message est signé, mais par une autre adresse que celle de l'expéditeur affiché.", s.Reason)
+	case s.Status == smime.StatusInvalid:
+		add(levelWarning, 2, "smime", "La signature électronique du message ne correspond plus à son contenu : il a été modifié depuis la signature.", s.Reason)
+	case s.Status == smime.StatusUntrusted:
+		add(levelInfo, 0, "smime", "Le message est signé avec un certificat qui n'est pas reconnu : cette signature ne garantit rien.", s.Reason)
+	case s.Status == smime.StatusEncrypted:
+		add(levelInfo, 0, "smime", "Le message est chiffré : seul son destinataire peut en lire le contenu, qui n'a donc pas pu être analysé.", s.Reason)
+	}
+}
+
 // assessAuthentication tells whether the mail really comes from the
 // displayed sender.
 func assessAuthentication(r *riskReport, a *headerAnalysis, add func(level string, weight int, anchor, simple, detail string)) {
@@ -272,6 +309,14 @@ func assessAuthentication(r *riskReport, a *headerAnalysis, add func(level strin
 	case dmarc.Result == mailauth.ResultPass:
 		r.Authenticated = true
 		r.Positives = append(r.Positives, fmt.Sprintf("Le message provient bien du domaine de l'expéditeur affiché (%s).", a.FromDomain))
+	case r.Authenticated && dmarc.Result == mailauth.ResultFail && dmarc.Source != "vérification interne":
+		// Proved by the S/MIME signature, yet refused by the receiving
+		// server: worth a look, not a spoofing.
+		add(levelWarning, 1, "dmarc", fmt.Sprintf("Le message est signé par %s, mais votre messagerie n'a pas reconnu le domaine d'envoi.", a.FromAddress),
+			"DMARC fail ("+dmarc.Source+")")
+	case r.Authenticated:
+		// The S/MIME signature proves the sender, DKIM broken by an export
+		// does not matter.
 	case dmarc.Result == mailauth.ResultFail && dmarc.Source != "vérification interne":
 		add(levelDanger, 4, "dmarc", fmt.Sprintf("Votre messagerie a constaté que ce message ne vient pas vraiment de %s, l'expéditeur affiché.", a.FromDomain),
 			"DMARC fail ("+dmarc.Source+")")
