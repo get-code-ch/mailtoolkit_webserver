@@ -1465,22 +1465,71 @@ table.signed-fields tr.modified pre.field-raw {
     display: none;
 }
 
+/* View switch, in the header of every page: the choice applies to the
+   analysis pages. */
 button.view-toggle {
-    display: none;
-    padding: 4px 10px;
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+    padding: 4px 6px;
+    color: var(--muted);
     font-family: var(--mono);
     font-size: 0.8em;
     font-weight: 500;
+    background: none;
+    border: none;
+    box-shadow: none;
 }
 
-:root:has(.simple-view) button.view-toggle {
-    display: inline-flex;
+button.view-toggle:hover {
+    background: none;
+    box-shadow: none;
 }
 
-/* The button names the view shown. */
-:root[data-view="detailed"] .view-toggle .label-simple,
-:root:not([data-view="detailed"]) .view-toggle .label-detailed {
-    display: none;
+.switch-track {
+    position: relative;
+    width: 38px;
+    height: 20px;
+    background: var(--surface-3);
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.switch-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: transform 0.15s, background 0.15s;
+}
+
+button.view-toggle:hover .switch-track {
+    border-color: var(--accent);
+}
+
+/* The label of the active view is highlighted. */
+:root:not([data-view="detailed"]) .view-toggle .switch-label:first-child,
+:root[data-view="detailed"] .view-toggle .switch-label:last-child {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+:root[data-view="detailed"] .switch-track {
+    background: color-mix(in srgb, var(--accent) 25%, transparent);
+    border-color: var(--accent);
+}
+
+:root[data-view="detailed"] .switch-thumb {
+    background: var(--accent);
+    transform: translateX(18px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .switch-track, .switch-thumb { transition: none; }
 }
 
 .risk {

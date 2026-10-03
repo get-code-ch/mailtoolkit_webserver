@@ -21,8 +21,10 @@
     </a>
     <span class="header-tools">
         <span class="status"><span class="pulse" aria-hidden="true"></span> sandbox active · aucun code exécuté</span>
-        <button type="button" class="view-toggle" title="Basculer entre la vue simplifiée et l'analyse détaillée">
-            <span class="label-simple">Vue simple</span><span class="label-detailed">Vue détaillée</span>
+        <button type="button" class="view-toggle" role="switch" aria-checked="false" title="Basculer entre la vue simplifiée et l'analyse détaillée">
+            <span class="switch-label">Simple</span>
+            <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
+            <span class="switch-label">Détaillée</span>
         </button>
         <button type="button" class="theme-toggle" title="Basculer entre thème clair et sombre">
             <span class="icon-dark" aria-hidden="true">☾</span><span class="icon-light" aria-hidden="true">☀</span>

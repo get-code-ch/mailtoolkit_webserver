@@ -125,7 +125,7 @@ document.addEventListener("click", function (event) {
     }
 });
 
-// View switch of the analysis page: simplified (default) or detailed.
+// View switch: simplified (default) or detailed analysis pages.
 document.addEventListener("click", function (event) {
     var button = event.target.closest("button.view-toggle, button[data-view]");
     if (!button) {
@@ -139,5 +139,17 @@ document.addEventListener("click", function (event) {
     } catch (e) {
         // Storage blocked: the choice lasts for this page only.
     }
-    window.scrollTo(0, 0);
+    updateViewSwitch();
+    if (document.querySelector(".simple-view")) {
+        window.scrollTo(0, 0);
+    }
 });
+
+// The view switch tells its state to assistive technologies.
+function updateViewSwitch() {
+    var detailed = document.documentElement.dataset.view === "detailed";
+    document.querySelectorAll("button.view-toggle").forEach(function (button) {
+        button.setAttribute("aria-checked", detailed ? "true" : "false");
+    });
+}
+updateViewSwitch();
