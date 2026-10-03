@@ -1397,3 +1397,42 @@ dl.help-list dd {
         margin-bottom: 10px;
     }
 }
+
+/* Antispam */
+
+article.spam {
+    background: var(--surface-2);
+}
+
+table.spam-items th {
+    width: 1%;
+    white-space: nowrap;
+}
+
+ul.rules {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 4px 12px;
+    margin: 8px 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.88em;
+}
+
+ul.rules li {
+    overflow-wrap: anywhere;
+}
+
+ul.rules .badge {
+    min-width: 3.2em;
+    margin-right: 6px;
+    text-align: center;
+}
+
+a.tile {
+    text-decoration: none;
+}
+
+a.tile:hover {
+    border-color: var(--level, var(--accent));
+}

@@ -52,8 +52,13 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
   - results written by the receiving servers (`Authentication-Results`, `ARC-Authentication-Results`,
     `Received-SPF`), the `Received` path, and inconsistencies: address in the display name, Reply-To or
     Return-Path on another domain, missing Message-ID, date far from the reception;
+  - verdicts of the antispam filters the mail went through, decoded: Microsoft 365 / Exchange Online
+    Protection (SCL, BCL, SFV, CAT, delivery folder…), SpamAssassin and Rspamd (score, threshold, rules sorted
+    by weight), Proofpoint, Gmail (`X-Gm-Spam`, `X-Gm-Phishy`), Barracuda, Mimecast, and the other filtering
+    fields as they are; only the fields added by a receiving server are trusted (the sender can forge them),
+    the worst trusted verdict is shown in the summary;
   - all the header fields sorted by category (sender and recipients, authentication, path, content, lists,
-    provider extensions), with RFC 2047 values decoded, DKIM, ARC, `Authentication-Results` and
+    antispam filtering, provider extensions), with RFC 2047 values decoded, DKIM, ARC, `Authentication-Results` and
     `Content-Type` parameters split, and a badge on each field covered by a DKIM signature; the raw source
     stays available.
 

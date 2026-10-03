@@ -31,6 +31,8 @@ type headerAnalysis struct {
 	Checks   []LinkWarning
 	Fields   []mailauth.Field
 	Groups   []headerGroup
+	// Spam are the verdicts of the antispam filters.
+	Spam []spamReport
 	// Part is the content part shown with the analysis, kept in the links
 	// choosing another hop.
 	Part string
@@ -98,6 +100,7 @@ func analyzeHeaders(ctx context.Context, resolver mailauth.Resolver, raw []byte,
 	a.Groups = headerGroups(m, a.DKIM)
 
 	receivers := receivingProviders(hops, a.Source)
+	a.Spam = spamReports(m, a.Source, receivers)
 	for _, r := range mailauth.ProviderResults(m) {
 		a.Provider = append(a.Provider, providerView{ProviderResult: r, Trusted: trustedResult(r, receivers)})
 	}

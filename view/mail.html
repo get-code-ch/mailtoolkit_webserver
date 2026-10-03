@@ -18,6 +18,13 @@
             <span class="tile-note">{{.Source}}</span>
         </div>
         {{end}}{{end}}
+        {{with .Auth}}{{if .Spam}}{{with .SpamVerdict}}
+        <a class="tile level-{{.Level}}" href="#antispam">
+            <span class="tile-label">{{.Name}}</span>
+            <span class="tile-value">{{.Result}}</span>
+            <span class="tile-note">{{.Source}}</span>
+        </a>
+        {{end}}{{end}}{{end}}
         <div class="tile level-{{if .Dangers}}danger{{else if .Warnings}}warning{{else}}ok{{end}}">
             <span class="tile-label">Liens</span>
             <span class="tile-value">{{len .Links}}</span>

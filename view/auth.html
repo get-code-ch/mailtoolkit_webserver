@@ -51,6 +51,52 @@
         {{end}}
     </details>
 
+    {{if .Spam}}{{$spam := .SpamVerdict}}
+    <details class="panel" id="antispam">
+        <summary>Antispam <span class="badge level-{{$spam.Level}}">{{$spam.Result}}</span>
+            <span class="summary-note">qu'en ont pensé les filtres traversés ?</span></summary>
+        <p class="note">Verdicts écrits par les filtres antispam dans les en-têtes. Seuls ceux ajoutés par un serveur de réception sont
+            fiables : un expéditeur peut glisser de faux en-têtes « pas de spam » dans son mail. Un filtre peut aussi se tromper,
+            dans les deux sens.</p>
+        {{range .Spam}}
+        <article class="card spam level-{{if .Trusted}}{{.Level}}{{else}}info{{end}}">
+            <header class="dkim-head">
+                <span class="badge level-{{.Level}}">{{.Verdict}}</span>
+                <strong>{{.Filter}}</strong>
+                {{with .Score}}<span class="note">score {{.}}</span>{{end}}
+                {{if .Outbound}}<span class="badge level-info">analyse de l'expéditeur</span>{{end}}
+                {{if .Trusted}}<span class="level-ok">✓ ajouté à la réception</span>{{else}}<span class="level-warning">⚠ non vérifiable : ajouté avant la réception</span>{{end}}
+            </header>
+            {{if .Items}}
+            <div class="table-scroll">
+            <table class="spam-items">
+                <tbody>
+                {{range .Items}}
+                <tr>
+                    <th scope="row"><code>{{.Name}}</code></th>
+                    <td><code>{{.Value}}</code></td>
+                    <td{{with .Level}} class="level-{{.}}"{{end}}>{{.Meaning}}</td>
+                </tr>
+                {{end}}
+                </tbody>
+            </table>
+            </div>
+            {{end}}
+            {{if .Rules}}
+            <details>
+                <summary>Règles déclenchées ({{len .Rules}})</summary>
+                <ul class="rules">
+                    {{range .Rules}}<li><span class="badge{{with .Level}} level-{{.}}{{end}}">{{with .ScoreText}}{{.}}{{else}}·{{end}}</span>
+                        <code>{{.Name}}</code>{{with .Detail}} <span class="note">{{.}}</span>{{end}}</li>{{end}}
+                </ul>
+            </details>
+            {{end}}
+            <p class="note">En-têtes : {{range $i, $f := .Fields}}{{if $i}}, {{end}}<a href="#h-{{$f.Index}}"><code>{{$f.Name}}</code></a>{{end}}</p>
+        </article>
+        {{end}}
+    </details>
+    {{end}}
+
     {{if .Provider}}
     <details class="panel">
         <summary>Résultats des serveurs de réception <span class="badge">{{len .Provider}}</span></summary>

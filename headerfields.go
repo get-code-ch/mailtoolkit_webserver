@@ -80,6 +80,7 @@ var headerCategories = []struct {
 	{"Chemin", false, []string{"received", "x-received", "delivered-to", "x-original-to", "envelope-to"}, nil},
 	{"Contenu", false, []string{"mime-version"}, []string{"content-"}},
 	{"Listes et désabonnement", false, []string{"precedence", "feedback-id"}, []string{"list-"}},
+	{spamCategory, false, nil, nil},
 	{"Extensions des fournisseurs", false, nil, []string{"x-"}},
 	{"Autres", false, nil, []string{""}},
 }
@@ -115,9 +116,15 @@ func headerGroups(m mailauth.Message, dkim []mailauth.DKIMResult) []headerGroup 
 	return slices.DeleteFunc(groups, func(g headerGroup) bool { return len(g.Fields) == 0 })
 }
 
+// spamCategory gathers the fields of the antispam filters (isSpamField).
+const spamCategory = "Filtrage antispam"
+
 func headerCategory(name string) int {
 	name = strings.ToLower(name)
 	for i, c := range headerCategories {
+		if c.title == spamCategory && isSpamField(name) {
+			return i
+		}
 		if slices.Contains(c.names, name) {
 			return i
 		}
