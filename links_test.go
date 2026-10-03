@@ -198,3 +198,27 @@ func TestGroupLinks(t *testing.T) {
 		t.Error("only suspect groups should be open")
 	}
 }
+
+func TestClickTrackers(t *testing.T) {
+	dynamics := "https://7cb5723be1894fa9ac5ab12e8bd664b8.105.eu.prod.marketingusercontent.com/api/orgs/7cb5723b-e189-4fa9-ac5a-b12e8bd664b8/r/d8jaLotkQUaRbEl7PewAAA4AAAA" +
+		"?msdynmkt_target=%7B%22TargetUrl%22%3A%22https%253A%252F%252Ftdh.org%252F%22%2C%22RedirectOptions%22%3A%7B%226%22%3A%22mktprf%22%7D%7D&msdynmkt_digest=jWv"
+	tests := []struct {
+		url, text, level, warning, target string
+	}{
+		{dynamics, "tdh.org", levelInfo, "Lien de suivi des clics (Microsoft Dynamics 365 Customer Insights)", "https://tdh.org/"},
+		{"https://abc.list-manage.com/track/click?u=1&id=2&e=3", "shop.example", levelWarning, "sans indiquer sa destination finale", ""},
+		{"https://eur01.safelinks.protection.outlook.com/?url=https%3A%2F%2Fpaypal.com.evil.example%2F&data=1", "paypal.com", levelDanger, "mais le lien pointe vers", "https://paypal.com.evil.example/"},
+		{"https://evil.example/go?url=https%3A%2F%2Fpaypal.com%2F", "paypal.com", levelDanger, "un service inconnu qui annonce rediriger vers paypal.com", "https://paypal.com/"},
+		{"https://urldefense.com/v3/__https://bank.example/login__;!!abc$", "bank.example", levelInfo, "Proofpoint URL Defense", "https://bank.example/login"},
+		{"https://links.iterable.com/u/click?_t=x&_m=y", "", levelInfo, "Lien de suivi des clics (Iterable)", ""},
+	}
+	for _, tt := range tests {
+		l := analyzeLink(tt.url, tt.text, "lien", "text/html")
+		if l.Level() != tt.level || !hasWarning(l, tt.level, tt.warning) || l.Target != tt.target {
+			t.Errorf("%s (%q): level %q, target %q, warnings %+v", tt.url, tt.text, l.Level(), l.Target, l.Warnings)
+		}
+	}
+	if trackerOf("marketingusercontent.com.evil.example") != "" || trackerOf("x.105.eu.prod.marketingusercontent.com") == "" {
+		t.Error("trackerOf suffix matching")
+	}
+}

@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"maps"
 	"net"
 	"net/url"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"unicode/utf8"
@@ -320,30 +322,148 @@ func analyzeLink(raw, text, source, part string) Link {
 	if shorteners[strings.TrimPrefix(host, "www.")] {
 		warn(levelWarning, "Lien raccourci : la destination réelle est masquée")
 	}
+	targetHost := ""
 	if target := redirectTarget(u); target != "" {
 		link.Target = target
 		if t, err := url.Parse(target); err == nil {
-			warn(levelInfo, "Redirige vers "+displayHost(strings.ToLower(t.Hostname())))
+			targetHost = strings.ToLower(t.Hostname())
+			warn(levelInfo, "Redirige vers "+displayHost(targetHost))
 		}
 	}
+	platform := trackerOf(host)
 	if shown := displayedHost(text); shown != "" && !sameSite(shown, host) {
-		warn(levelDanger, "Le texte affiché mène en apparence à "+displayHost(shown)+", mais le lien pointe vers "+link.Host)
+		switch {
+		case platform != "" && targetHost != "" && sameSite(shown, targetHost):
+			// Click tracking of a mailing platform: the link goes through
+			// its server, then to the domain shown.
+			warn(levelInfo, "Lien de suivi des clics ("+platform+") : passe par "+link.Host+" puis mène à "+displayHost(targetHost)+", comme le texte affiché")
+		case platform != "" && targetHost == "":
+			warn(levelWarning, "Le texte affiché mène en apparence à "+displayHost(shown)+", mais le lien passe par le suivi des clics de "+
+				platform+" ("+link.Host+") sans indiquer sa destination finale")
+		case targetHost != "" && sameSite(shown, targetHost):
+			warn(levelDanger, "Le texte affiché mène en apparence à "+displayHost(shown)+", mais le lien pointe vers "+link.Host+
+				", un service inconnu qui annonce rediriger vers "+displayHost(targetHost)+" sans garantie")
+		default:
+			warn(levelDanger, "Le texte affiché mène en apparence à "+displayHost(shown)+", mais le lien pointe vers "+link.Host)
+		}
+	} else if platform != "" {
+		warn(levelInfo, "Lien de suivi des clics ("+platform+")")
 	}
 	return link
 }
 
-// redirectTarget returns an absolute URL passed as a query parameter, as
-// used by redirectors, trackers and Outlook Safe Links.
+// clickTrackers are the link rewriting services of mailing platforms and
+// security gateways, by host suffix. Their links lead to the destination
+// written in a parameter (or hidden, for some gateways).
+var clickTrackers = map[string]string{
+	"marketingusercontent.com":         "Microsoft Dynamics 365 Customer Insights",
+	"safelinks.protection.outlook.com": "Microsoft Safe Links",
+	"exct.net":                         "Salesforce Marketing Cloud",
+	"exacttarget.com":                  "Salesforce Marketing Cloud",
+	"pardot.com":                       "Salesforce Pardot",
+	"list-manage.com":                  "Mailchimp",
+	"mailchi.mp":                       "Mailchimp",
+	"sendgrid.net":                     "SendGrid",
+	"hubspotlinks.com":                 "HubSpot",
+	"hubspotlinksfree.com":             "HubSpot",
+	"hubspotemail.net":                 "HubSpot",
+	"hubspotstarter.net":               "HubSpot",
+	"sendibt2.com":                     "Brevo",
+	"sendibt3.com":                     "Brevo",
+	"sendibm1.com":                     "Brevo",
+	"rs6.net":                          "Constant Contact",
+	"createsend1.com":                  "Campaign Monitor",
+	"cmail19.com":                      "Campaign Monitor",
+	"cmail20.com":                      "Campaign Monitor",
+	"mjt.lu":                           "Mailjet",
+	"klclick.com":                      "Klaviyo",
+	"klclick1.com":                     "Klaviyo",
+	"klclick3.com":                     "Klaviyo",
+	"en25.com":                         "Oracle Eloqua",
+	"awstrack.me":                      "Amazon SES",
+	"pstmrk.it":                        "Postmark",
+	"links.iterable.com":               "Iterable",
+	"customeriomail.com":               "Customer.io",
+	"spgo.io":                          "SparkPost",
+	"urldefense.com":                   "Proofpoint URL Defense",
+	"urldefense.proofpoint.com":        "Proofpoint URL Defense",
+	"mimecastprotect.com":              "Mimecast",
+	"linkprotect.cudasvc.com":          "Barracuda",
+}
+
+// trackerOf returns the click tracking platform of a host, "" if none.
+func trackerOf(host string) string {
+	host = strings.TrimSuffix(strings.ToLower(host), ".")
+	for {
+		if name, ok := clickTrackers[host]; ok {
+			return name
+		}
+		_, parent, ok := strings.Cut(host, ".")
+		if !ok || !strings.Contains(parent, ".") {
+			return ""
+		}
+		host = parent
+	}
+}
+
+// redirectTarget returns the absolute URL a redirector leads to: a query
+// parameter (Outlook Safe Links, most trackers), possibly encoded several
+// times or inside JSON (Dynamics 365), or written in the path (Proofpoint).
 func redirectTarget(u *url.URL) string {
-	for _, values := range u.Query() {
-		for _, v := range values {
-			lower := strings.ToLower(v)
-			if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
-				return v
+	query := u.Query()
+	keys := slices.Sorted(maps.Keys(query))
+	// The parameters usually holding the destination come first.
+	slices.SortStableFunc(keys, func(a, b string) int {
+		return boolInt(!targetParams.MatchString(a)) - boolInt(!targetParams.MatchString(b))
+	})
+	for _, key := range keys {
+		for _, v := range query[key] {
+			if target := embeddedURL(v); target != "" {
+				return target
+			}
+		}
+	}
+	if path, err := url.PathUnescape(u.EscapedPath()); err == nil {
+		// Proofpoint v3: /v3/__https://target.example/page__;...
+		if _, rest, ok := strings.Cut(path, "__"); ok {
+			if target, _, _ := strings.Cut(rest, "__"); embeddedURL(target) == target {
+				return target
 			}
 		}
 	}
 	return ""
+}
+
+var (
+	targetParams = regexp.MustCompile(`(?i)^(url|u|target|redirect|redirect_?url|dest|destination|link|goto|to|r|q|msdynmkt_target)$`)
+	urlInText    = regexp.MustCompile(`(?i)https?://[^\s"'<>\\{}|^]+`)
+)
+
+// embeddedURL finds an absolute URL in a parameter value, decoding it up
+// to three times.
+func embeddedURL(v string) string {
+	for range 3 {
+		lower := strings.ToLower(v)
+		if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
+			return v
+		}
+		if m := urlInText.FindString(v); m != "" {
+			return m
+		}
+		decoded, err := url.QueryUnescape(v)
+		if err != nil || decoded == v {
+			return ""
+		}
+		v = decoded
+	}
+	return ""
+}
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 var domainLike = regexp.MustCompile(`(?i)^(?:https?://)?(?:www\.)?((?:[\p{L}\p{N}-]+\.)+[\p{L}]{2,})(?:[/:?#].*)?$`)
