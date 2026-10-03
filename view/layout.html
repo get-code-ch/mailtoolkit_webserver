@@ -1,9 +1,10 @@
 {{define "head"}}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="dark">
+    <meta name="color-scheme" content="dark light">
     <title>{{.}}</title>
     <link rel="icon" href="{{asset "favicon.svg"}}" type="image/svg+xml">
+    <script src="{{asset "theme.js"}}"></script>
     <link rel="stylesheet" href="{{asset "style.css"}}">
     <script src="{{asset "app.js"}}" defer></script>
 {{end}}
@@ -18,7 +19,13 @@
         </svg>
         <span>Mail<strong>Analyzer</strong></span>
     </a>
-    <span class="status"><span class="pulse" aria-hidden="true"></span> sandbox active · aucun code exécuté</span>
+    <span class="header-tools">
+        <span class="status"><span class="pulse" aria-hidden="true"></span> sandbox active · aucun code exécuté</span>
+        <button type="button" class="theme-toggle" title="Basculer entre thème clair et sombre">
+            <span class="icon-dark" aria-hidden="true">☾</span><span class="icon-light" aria-hidden="true">☀</span>
+            <span>Thème</span>
+        </button>
+    </span>
 </header>
 {{end}}
 

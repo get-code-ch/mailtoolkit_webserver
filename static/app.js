@@ -70,3 +70,19 @@ document.querySelectorAll(".dropzone").forEach(function (zone) {
         zone.addEventListener(type, function () { zone.classList.remove("dragover"); });
     });
 });
+
+// Theme switch: flips the theme shown and remembers the choice.
+document.addEventListener("click", function (event) {
+    if (!event.target.closest("button.theme-toggle")) {
+        return;
+    }
+    var root = document.documentElement;
+    var current = root.dataset.theme || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    var next = current === "light" ? "dark" : "light";
+    root.dataset.theme = next;
+    try {
+        localStorage.setItem("theme", next);
+    } catch (e) {
+        // Storage blocked: the choice lasts for this page only.
+    }
+});

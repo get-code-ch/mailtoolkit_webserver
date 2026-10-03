@@ -18,9 +18,66 @@
     --warning: #fbbf24;
     --danger: #f87171;
     --info: #60a5fa;
+    --code: #b8f3ff;
+    --canon: #c7f9e4;
+    --header-bg: rgb(11 16 22 / 0.85);
+    --grid: rgb(255 255 255 / 0.015);
+    --params-bg: rgb(0 0 0 / 0.2);
     --radius: 10px;
     --mono: ui-monospace, "JetBrains Mono", "Cascadia Code", "SFMono-Regular", Menlo, Consolas, monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+/* Light theme: chosen with the header button, or by the system when the
+   visitor has not chosen. */
+:root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f3f6f9;
+    --surface: #ffffff;
+    --surface-2: #f6f8fb;
+    --surface-3: #eef2f6;
+    --border: #d6dee7;
+    --border-strong: #b6c3d1;
+    --text: #17212b;
+    --muted: #5a6b7d;
+    --accent: #0e7490;
+    --accent-2: #047857;
+    --accent-ink: #ffffff;
+    --ok: #047857;
+    --warning: #b45309;
+    --danger: #c81e1e;
+    --info: #1d4ed8;
+    --code: #0b5f75;
+    --canon: #065f46;
+    --header-bg: rgb(255 255 255 / 0.85);
+    --grid: rgb(15 40 70 / 0.03);
+    --params-bg: rgb(15 40 70 / 0.05);
+}
+
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+        color-scheme: light;
+        --bg: #f3f6f9;
+        --surface: #ffffff;
+        --surface-2: #f6f8fb;
+        --surface-3: #eef2f6;
+        --border: #d6dee7;
+        --border-strong: #b6c3d1;
+        --text: #17212b;
+        --muted: #5a6b7d;
+        --accent: #0e7490;
+        --accent-2: #047857;
+        --accent-ink: #ffffff;
+        --ok: #047857;
+        --warning: #b45309;
+        --danger: #c81e1e;
+        --info: #1d4ed8;
+        --code: #0b5f75;
+        --canon: #065f46;
+        --header-bg: rgb(255 255 255 / 0.85);
+        --grid: rgb(15 40 70 / 0.03);
+        --params-bg: rgb(15 40 70 / 0.05);
+    }
 }
 
 *, *::before, *::after {
@@ -38,9 +95,9 @@ body {
     flex-direction: column;
     color: var(--text);
     background:
-        radial-gradient(1200px 500px at 85% -10%, rgba(34, 211, 238, 0.08), transparent 60%),
-        radial-gradient(900px 400px at -10% 0%, rgba(52, 211, 153, 0.06), transparent 60%),
-        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px) 0 0 / 100% 28px,
+        radial-gradient(1200px 500px at 85% -10%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%),
+        radial-gradient(900px 400px at -10% 0%, color-mix(in srgb, var(--accent-2) 6%, transparent), transparent 60%),
+        linear-gradient(var(--grid) 1px, transparent 1px) 0 0 / 100% 28px,
         var(--bg);
     font-family: var(--sans);
     font-size: 15px;
@@ -61,7 +118,7 @@ main.wide {
 
 a {
     color: var(--accent);
-    text-decoration-color: rgba(34, 211, 238, 0.4);
+    text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
     text-underline-offset: 3px;
 }
 
@@ -94,7 +151,7 @@ code, kbd, pre {
 }
 
 code {
-    color: #b8f3ff;
+    color: var(--code);
     overflow-wrap: anywhere;
 }
 
@@ -138,7 +195,7 @@ pre {
     align-items: center;
     justify-content: space-between;
     padding: 12px 20px;
-    background: rgba(11, 16, 22, 0.85);
+    background: var(--header-bg);
     border-bottom: 1px solid var(--border);
     backdrop-filter: blur(8px);
 }
@@ -161,7 +218,7 @@ pre {
     width: 28px;
     height: 28px;
     color: var(--accent);
-    filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.45));
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 45%, transparent));
 }
 
 .status {
@@ -179,13 +236,13 @@ pre {
     height: 8px;
     background: var(--ok);
     border-radius: 50%;
-    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-2) 60%, transparent);
     animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
-    70% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+    70% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent-2) 0%, transparent); }
+    100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-2) 0%, transparent); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -266,16 +323,16 @@ button {
     color: var(--accent);
     font: inherit;
     font-weight: 600;
-    background: rgba(34, 211, 238, 0.08);
-    border: 1px solid rgba(34, 211, 238, 0.5);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
     border-radius: 8px;
     cursor: pointer;
     transition: background 0.15s, box-shadow 0.15s;
 }
 
 button:hover {
-    background: rgba(34, 211, 238, 0.16);
-    box-shadow: 0 0 16px rgba(34, 211, 238, 0.25);
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 button:disabled {
@@ -289,11 +346,11 @@ button.primary {
     font-size: 1.05em;
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
     border: none;
-    box-shadow: 0 6px 24px rgba(34, 211, 238, 0.25);
+    box-shadow: 0 6px 24px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 button.primary:hover {
-    box-shadow: 0 8px 30px rgba(34, 211, 238, 0.45);
+    box-shadow: 0 8px 30px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
 button.copy {
@@ -374,11 +431,11 @@ thead th {
 }
 
 tbody tr:nth-child(even) {
-    background: rgba(255, 255, 255, 0.015);
+    background: var(--grid);
 }
 
 tbody tr:hover {
-    background: rgba(34, 211, 238, 0.04);
+    background: color-mix(in srgb, var(--accent) 4%, transparent);
 }
 
 dl.header {
@@ -407,7 +464,7 @@ dl.header dd {
     margin: 12px 0 28px;
     padding: 32px 28px;
     background:
-        linear-gradient(135deg, rgba(34, 211, 238, 0.10), rgba(52, 211, 153, 0.04) 60%, transparent),
+        linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), color-mix(in srgb, var(--accent-2) 4%, transparent) 60%, transparent),
         var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -502,7 +559,7 @@ form.upload {
 }
 
 .dropzone:hover, .dropzone:focus-within, .dropzone.dragover {
-    background: rgba(34, 211, 238, 0.05);
+    background: color-mix(in srgb, var(--accent) 5%, transparent);
     border-color: var(--accent);
 }
 
@@ -535,9 +592,9 @@ form.upload {
     color: var(--accent);
     font-size: 1.35em;
     background: var(--surface-3);
-    border: 1px solid rgba(34, 211, 238, 0.35);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
     border-radius: 8px;
-    box-shadow: 0 0 20px rgba(34, 211, 238, 0.12) inset;
+    box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 12%, transparent) inset;
     user-select: all;
     word-break: break-all;
 }
@@ -936,7 +993,7 @@ table.fields th code {
 }
 
 table.fields tr:target, table.signed-fields tr:target {
-    background: rgba(34, 211, 238, 0.12);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
     box-shadow: inset 3px 0 var(--accent);
 }
 
@@ -951,7 +1008,7 @@ dl.params {
     margin: 6px 0 0;
     padding: 6px 10px;
     font-size: 0.88em;
-    background: rgba(0, 0, 0, 0.2);
+    background: var(--params-bg);
     border-radius: 6px;
 }
 
@@ -1054,7 +1111,7 @@ pre.field-raw, pre.field-canon {
 }
 
 pre.field-canon {
-    color: #c7f9e4;
+    color: var(--canon);
     border-color: color-mix(in srgb, var(--ok) 30%, var(--border));
 }
 
@@ -1063,7 +1120,7 @@ tr.absent th, tr.absent td {
 }
 
 tr.signature-input {
-    background: rgba(34, 211, 238, 0.04);
+    background: color-mix(in srgb, var(--accent) 4%, transparent);
 }
 
 /* Links panel */
@@ -1189,4 +1246,51 @@ ul.entries {
 
 a.download {
     font-weight: 600;
+}
+
+/* Theme switch and whitespace markers */
+
+.header-tools {
+    display: inline-flex;
+    gap: 14px;
+    align-items: center;
+}
+
+button.theme-toggle {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    padding: 4px 10px;
+    font-family: var(--mono);
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.theme-toggle .icon-light, :root[data-theme="light"] .theme-toggle .icon-dark {
+    display: none;
+}
+
+:root[data-theme="light"] .theme-toggle .icon-light {
+    display: inline;
+}
+
+@media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) .theme-toggle .icon-dark {
+        display: none;
+    }
+
+    :root:not([data-theme="dark"]) .theme-toggle .icon-light {
+        display: inline;
+    }
+}
+
+.ws {
+    margin: 0 1px;
+    padding: 0 3px;
+    color: var(--muted);
+    font-size: 0.75em;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    user-select: none;
 }

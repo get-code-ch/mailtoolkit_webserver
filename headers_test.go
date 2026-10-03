@@ -256,7 +256,8 @@ func TestHeaderGroups(t *testing.T) {
 }
 
 func TestVisibleSpace(t *testing.T) {
-	if got := visibleSpace("subject:a\tb  \r\n"); got != "subject:a⇥b··␍␊\n" {
+	want := `subject:&lt;a<span class="ws">TAB</span>b<span class="ws">··</span><span class="ws">CRLF</span>` + "\n"
+	if got := string(visibleSpace("subject:<a\tb  \r\n")); got != want {
 		t.Errorf("visibleSpace = %q", got)
 	}
 }

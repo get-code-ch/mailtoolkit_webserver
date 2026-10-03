@@ -168,17 +168,25 @@ func fieldParams(f mailauth.Field) []mailauth.Tag {
 }
 
 // visibleSpace shows the characters that matter in a canonicalized field:
-// line ends, tabulations and trailing spaces.
-func visibleSpace(s string) string {
+// line ends, tabulations and trailing spaces, as marked HTML.
+func visibleSpace(s string) template.HTML {
+	mark := func(text string) string { return `<span class="ws">` + text + `</span>` }
+	var b strings.Builder
 	lines := strings.Split(s, "\r\n")
 	for i, line := range lines {
 		trimmed := strings.TrimRight(line, " ")
-		line = trimmed + strings.Repeat("·", len(line)-len(trimmed))
-		line = strings.ReplaceAll(line, "\t", "⇥")
-		if i < len(lines)-1 {
-			line += "␍␊"
+		for j, part := range strings.Split(trimmed, "\t") {
+			if j > 0 {
+				b.WriteString(mark("TAB"))
+			}
+			b.WriteString(template.HTMLEscapeString(part))
 		}
-		lines[i] = line
+		if spaces := len(line) - len(trimmed); spaces > 0 {
+			b.WriteString(mark(strings.Repeat("·", spaces)))
+		}
+		if i < len(lines)-1 {
+			b.WriteString(mark("CRLF") + "\n")
+		}
 	}
-	return strings.Join(lines, "\n")
+	return template.HTML(b.String())
 }

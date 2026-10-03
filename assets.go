@@ -14,7 +14,7 @@ var assetVersion string
 // staticVersion hashes the files linked by every page.
 func staticVersion(folder string) string {
 	h := sha256.New()
-	for _, name := range []string{"style.css", "app.js", "favicon.svg"} {
+	for _, name := range []string{"style.css", "app.js", "theme.js", "favicon.svg"} {
 		data, err := os.ReadFile(filepath.Join(folder, name))
 		if err == nil {
 			h.Write(data)

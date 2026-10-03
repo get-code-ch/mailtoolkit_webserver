@@ -50,6 +50,13 @@ type DKIMResult struct {
 	// BodyHash is "ok" when the body matches bh=, "différent" when it was
 	// modified, empty when it was not computed.
 	BodyHash string
+	// BodyHashComputed is the hash of the body as received (base64), and
+	// BodyLength the length of the canonicalized body hashed.
+	BodyHashComputed string
+	BodyLength       int
+	// BodyHint explains a body hash mismatch when a variant of the body
+	// matches bh=.
+	BodyHint string
 	// SignatureInput is the DKIM-Signature field as hashed last, with an
 	// empty b= and without its final CRLF.
 	SignatureInput string
@@ -216,9 +223,13 @@ func verifySignature(ctx context.Context, resolver Resolver, m Message, index in
 	if err != nil {
 		return fail(ResultPermError, "empreinte bh= illisible")
 	}
+	computed := bodyHash.Sum(nil)
+	result.BodyHashComputed = base64.StdEncoding.EncodeToString(computed)
+	result.BodyLength = len(body)
 	result.BodyHash = "ok"
-	if !bytes.Equal(bodyHash.Sum(nil), expected) {
+	if !bytes.Equal(computed, expected) {
 		result.BodyHash = "différent"
+		result.BodyHint = bodyHint(m.Body, bodyCanon, expected, newHash)
 		return fail(ResultFail, "le corps du mail a été modifié depuis la signature")
 	}
 
@@ -274,6 +285,24 @@ func verifySignature(ctx context.Context, resolver Resolver, m Message, index in
 		result.Reason = "clé publiée en mode test (t=y)"
 	}
 	return result
+}
+
+// bodyHint looks for the change that explains a body hash mismatch, by
+// hashing variants of the body.
+func bodyHint(body []byte, canon string, expected []byte, newHash func() hash.Hash) string {
+	matches := func(b []byte) bool {
+		h := newHash()
+		h.Write(b)
+		return bytes.Equal(h.Sum(nil), expected)
+	}
+	other := map[string]string{"simple": "relaxed", "relaxed": "simple"}[canon]
+	switch {
+	case matches(bytes.ReplaceAll(canonicalBody(body, canon), []byte("\r\n"), []byte("\n"))):
+		return "l'empreinte correspond au corps avec des fins de ligne LF au lieu de CRLF : le signataire n'a pas respecté la RFC 6376, le contenu n'a pas été modifié"
+	case matches(canonicalBody(body, other)):
+		return "l'empreinte correspond à la canonicalisation " + other + " au lieu de " + canon + " : erreur du signataire, le contenu n'a pas été modifié"
+	}
+	return ""
 }
 
 type dkimKey struct {

@@ -152,13 +152,26 @@
             <strong>Corps</strong> :
             {{if eq $d.BodyHash "ok"}}empreinte conforme (bh=), le corps n'a pas été modifié depuis la signature
             {{else if $d.BodyHash}}empreinte différente (bh=), le corps a été modifié depuis la signature
-            {{else}}non vérifié{{end}}</li>
+            {{else}}non vérifié{{end}}
+            {{if $d.BodyHash}}<dl class="params">
+                <dt>bh= signé</dt><dd><code>{{range $d.Tags}}{{if eq .Name "bh"}}{{.Value}}{{end}}{{end}}</code></dd>
+                <dt>calculé</dt><dd><code>{{$d.BodyHashComputed}}</code></dd>
+                <dt>corps haché</dt><dd>{{$d.BodyLength}} octets ({{$d.BodyCanon}}){{if $d.BodyLimit}}, limité par l={{end}}</dd>
+            </dl>{{end}}</li>
+        {{with $d.BodyHint}}<li class="level-info"><strong>Diagnostic</strong> : {{.}}</li>{{end}}
         {{if $d.BodyLimit}}<li class="level-warning"><strong>l=</strong> : seul le début du corps est signé, du contenu a pu être ajouté à la fin sans invalider la signature.</li>{{end}}
         <li class="{{if eq $d.Result "pass"}}level-ok{{else if and (eq $d.BodyHash "ok") (eq $d.Result "fail")}}level-danger{{else}}note{{end}}">
             <strong>En-têtes</strong> : {{len $d.Fields}} champs signés
             {{- if eq $d.Result "pass"}}, inchangés depuis la signature
             {{- else if and (eq $d.BodyHash "ok") (eq $d.Result "fail")}}, au moins un a été modifié (ou la clé a changé){{end}}</li>
     </ul>
+    {{if and (eq $d.BodyHash "différent") (not $d.BodyHint)}}
+    <p class="callout level-info">Les fins de ligne ne sont pas en cause : la signature est toujours calculée sur des lignes terminées
+        par CRLF (RFC 6376), et le mail est normalisé de la même façon avant la vérification. Une empreinte différente signifie que le
+        contenu du corps a changé : c'est fréquent quand le mail a été transféré ou exporté par Outlook ou Exchange (le message est
+        reconstruit, avec un autre encodage), par une passerelle de sécurité qui réécrit les liens (Safe Links, Mimecast…) ou qui
+        ajoute une mention « mail externe ». Le résultat noté par votre fournisseur à la réception reste la référence.</p>
+    {{end}}
     {{if and (eq $d.BodyHash "ok") (eq $d.Result "fail")}}
     <p class="callout level-info">Le corps est intact mais la signature des en-têtes échoue. Causes fréquentes : un préfixe ajouté au sujet
         (<code>[EXT]</code>, <code>RE:</code>), un From réécrit par une liste de diffusion, une Date ou un Message-ID régénérés lors

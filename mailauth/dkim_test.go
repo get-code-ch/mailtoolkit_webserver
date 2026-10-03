@@ -232,3 +232,19 @@ func TestDKIMSignedFields(t *testing.T) {
 	})
 	t.Run("no key", func(t *testing.T) { check(t, verifyOne(t, &fakeResolver{}, relaxed), "ok") })
 }
+
+func TestBodyHint(t *testing.T) {
+	body := []byte("Hello  \r\nworld\r\n")
+	lf := sha256.Sum256([]byte("Hello\nworld\n"))
+	if hint := bodyHint(body, "relaxed", lf[:], sha256.New); !strings.Contains(hint, "LF") {
+		t.Errorf("LF hint = %q", hint)
+	}
+	simple := sha256.Sum256(body)
+	if hint := bodyHint(body, "relaxed", simple[:], sha256.New); !strings.Contains(hint, "simple") {
+		t.Errorf("canonicalization hint = %q", hint)
+	}
+	other := sha256.Sum256([]byte("changed\r\n"))
+	if hint := bodyHint(body, "relaxed", other[:], sha256.New); hint != "" {
+		t.Errorf("unexpected hint %q", hint)
+	}
+}
