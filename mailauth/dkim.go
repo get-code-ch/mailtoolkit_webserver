@@ -121,6 +121,13 @@ func VerifyDKIM(ctx context.Context, resolver Resolver, m Message) []DKIMResult 
 }
 
 func verifySignature(ctx context.Context, resolver Resolver, m Message, index int) DKIMResult {
+	return verifyMessageSignature(ctx, resolver, m, index, false)
+}
+
+// verifyMessageSignature verifies a DKIM-Signature, or an
+// ARC-Message-Signature when arc is set: same tags and hashing, but i= is
+// the ARC instance, there is no v= and From does not have to be signed.
+func verifyMessageSignature(ctx context.Context, resolver Resolver, m Message, index int, arc bool) DKIMResult {
 	field := m.Fields[index]
 	result := DKIMResult{SignatureField: index, Tags: ParseTags(field.Value)}
 	fail := func(status, format string, args ...any) DKIMResult {
@@ -135,12 +142,16 @@ func verifySignature(ctx context.Context, resolver Resolver, m Message, index in
 	result.Domain = strings.ToLower(tags["d"])
 	result.Selector = tags["s"]
 	result.Algorithm = strings.ToLower(tags["a"])
-	for _, required := range []string{"v", "a", "b", "bh", "d", "h", "s"} {
-		if _, ok := tags[required]; !ok {
-			return fail(ResultPermError, "paramètre %s= manquant", required)
+	required := []string{"v", "a", "b", "bh", "d", "h", "s"}
+	if arc {
+		required[0] = "i"
+	}
+	for _, name := range required {
+		if _, ok := tags[name]; !ok {
+			return fail(ResultPermError, "paramètre %s= manquant", name)
 		}
 	}
-	if tags["v"] != "1" {
+	if !arc && tags["v"] != "1" {
 		return fail(ResultPermError, "version %q non supportée", tags["v"])
 	}
 	for _, name := range strings.Split(tags["h"], ":") {
@@ -184,10 +195,10 @@ func verifySignature(ctx context.Context, resolver Resolver, m Message, index in
 	for _, name := range result.Headers {
 		signsFrom = signsFrom || strings.EqualFold(name, "from")
 	}
-	if !signsFrom {
+	if !signsFrom && !arc {
 		return fail(ResultPermError, "l'en-tête From n'est pas signé")
 	}
-	if identity, ok := tags["i"]; ok {
+	if identity, ok := tags["i"]; ok && !arc {
 		if d := domainOf(identity); d != result.Domain && !strings.HasSuffix(d, "."+result.Domain) {
 			return fail(ResultPermError, "identité i=%s hors du domaine d=%s", identity, result.Domain)
 		}

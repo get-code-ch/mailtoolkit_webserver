@@ -1,0 +1,53 @@
+ARC-Authentication-Results: i=2; forward.example.com;
+ dkim=fail header.d=example.com;
+ arc=pass
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed;
+ d=example.com; s=test; t=1790940700; h=from : to : subject : date :
+ message-id : from; bh=UrA8rmgY3eNBotmDWtzAmHyn5RyZv8Gea45sNGsP0zw=;
+ b=Il1HmcXuATpWg7W/4h3XWr3qMgXd7TMnlPIFfeZHUuouc7byy9ZmvRl6C773lrgNOsvVg
+ O0VFmJ/oWWpnasDLv8cAOsBTGCdUkNQz0pRenqKqP1renIXXMMSrj58i36gZn3vmlzUYliq
+ LK5wvIzPuyvtssg6eu51uImgakc6eqIc+lnV34/8259g1Kv4SN6uNEIkocPTO+TgttQOCni
+ HyEiIC7SIngs9wmkhOdAjIgMFcZ1X3zpTj+5DiAVvVYXhWfZZkJQ/X2En0T07FN7sJRGnLT
+ Zv/+z8lDEn9THl+cb3lN1Ue7ltaI/t0Z6RXkpRvYRxgL5Rt3afLcIiUELh+w==
+ARC-Seal: i=2; cv=pass; a=rsa-sha256; d=example.com; s=test;
+ t=1790940700;
+ b=EHkZnfyv0gyYDP4MDSzE6NgDzbS/BAg+GiLA/NhvQ01gvyScegrNb27NCKvv7DqKNq2Kk
+ xk59ksv+JPgu2i3mUmSOjtoPxoKXk06wAECMzNdQ5Mq0Zg+n3QX/gAD7hwHH7lDHfIXnipL
+ q7WZA8pVQSsqVwgdH4DaHu19ZjQHHSp003nmlAELjpwT0CcgA9P9IhVsnM9CFA0hrSxhomN
+ x2hOmHsckOpYg/ZTemU93vo+iUEi/tAriWWYVq5dRx8lFU2JXDZNsr9sKSI7XpfWDSf9ez9
+ n73/io0EQxba682/nsEgQexpp1jyZtDHmneJS5iTJ+AmEkyc7soM4FKVwkbQ==
+Authentication-Results: forward.example.com; dkim=fail header.d=example.com; arc=pass
+ARC-Authentication-Results: i=1; lists.example.com;
+ dkim=pass header.d=example.com;
+ spf=pass smtp.mailfrom=example.com
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed;
+ d=example.com; s=test; t=1790940692; h=from : to : subject : date :
+ message-id : from; bh=UrA8rmgY3eNBotmDWtzAmHyn5RyZv8Gea45sNGsP0zw=;
+ b=S3D3PSA+KFxtTrSID04+dSKBv1YakI2xGE2ZjkVYF9ew0shJyXb1geXuoXtocFAtWgqv3
+ pta+5na2y6wFf5SWYp8oCyrcMtMTUrnFVj1KpwL4vajyYDuXg8YJNeXzanV8Vb1DJgC3nPN
+ 6BmzLNdygvQQE3G+LkOwzxBHqFjtq7fxEaZOryCPwPMwT/qriJCwMGbFf8RQQJ72L2lgSbQ
+ Lx8R5In/0KWAVXU3+UlM6xl2kHipbFwEpUsnCL1h685Q7NqcgZh5tFiAjKKBQP9E8brE22W
+ fHWXIdUtd2nDAB6yjceEOevKB+napAPho4n9RHVcYMuYOMKbAWbMJVAmxi3g==
+ARC-Seal: i=1; cv=none; a=rsa-sha256; d=example.com; s=test;
+ t=1790940692;
+ b=f4GreNknpH4FGenDqYLvT14ynqA6H1tVXF1Wlh8qr43NHRH/BR31cRwBnrdLSl2hGkXB/
+ W9RpTk6lsoMSG8saAPL8j2dL2dlAu/szRXd6WuRk87ylijv9ptyvlh9CxfYR38ft8uAg1oR
+ qLgt1wxDRdex1JmID04iXLWzywM4VOxEU61xq1/8pVorruigLjVW/UqTAfMqWdjRkcY6FXV
+ Hx8RbSbufF3dXALhpTcR1Izx9xdWhnmdsYg6qnIWnmGmXfPCtNxfqRvm/dvNaHpeUZDkE70
+ +nFqEAmo2CtWVkmhwMJmLhgl2swDmtIy/FFMF1yFZJ4w+lYqInc+FISITd4Q==
+Authentication-Results: lists.example.com; dkim=pass header.d=example.com; spf=pass smtp.mailfrom=example.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/simple; d=example.com;
+ i=@example.com; q=dns/txt; s=test; t=1791043593; h=from : to : subject
+ : date; bh=UrA8rmgY3eNBotmDWtzAmHyn5RyZv8Gea45sNGsP0zw=;
+ b=Znl1DQA8XwHC58n681YdteJpxdS7cp+54k7K9BgdhYer3fefzwufWK1vLy9ujEQl8XvLj
+ W7Pho+uNUhWz8QBTyNUpagSsbY66JKImifZCfUzokwRT/fmyRnfAsaFJvVve8FwdYhoSY3p
+ X9PfE5p74hgMKUERrCq706pLAMuRDFK+pmtYJtNgMIpTVb3JXfYs4fY4cKi3SJNbMH/BieX
+ 8MzuZgI0MGpzNAZuPQ9GGGJyJpSFIhKv6MyZKlpOwvH4R+dSYfqPzR6oinQln0XBwmyBGwY
+ 1YBsotXRvfCgczPZH1osVbTgE8wIHLmLmPyRrTQkdEOHx/SmfTtFEGfMMI+g==
+From: Joe SixPack <joe@example.com>
+To: list@lists.example.com
+Subject: [list] Is dinner ready?
+Date: Fri, 11 Jul 2003 21:00:37 -0700 (PDT)
+Message-ID: <20030712040037.46341.5F8J@example.com>
+
+Hi.
