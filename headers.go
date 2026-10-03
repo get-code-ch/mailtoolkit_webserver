@@ -38,6 +38,9 @@ type headerAnalysis struct {
 	// domains naming the sender (From, Reply-To, Return-Path, DKIM d=).
 	FromDomain string
 	Senders    []subject
+	// Relay is the authenticated service that sent the mail on behalf of
+	// one of its users, nil if none.
+	Relay *relayService
 	// Part is the content part shown with the analysis, kept in the links
 	// choosing another hop.
 	Part string
@@ -104,7 +107,6 @@ func analyzeHeaders(ctx context.Context, resolver mailauth.Resolver, raw []byte,
 	a.DMARC = mailauth.CheckDMARC(ctx, resolver, fromDomain, a.SPF, a.DKIM)
 	a.FromDomain = fromDomain
 	a.Senders = senderDomains(m, fromDomain, a.MailFrom, a.DKIM)
-	a.Checks = consistencyChecks(m, hops)
 	a.Groups = headerGroups(m, a.DKIM)
 
 	receivers := receivingProviders(hops, a.Source)
@@ -135,6 +137,12 @@ func analyzeHeaders(ctx context.Context, resolver mailauth.Resolver, raw []byte,
 		verdict("DKIM", "dkim", dkim, provider),
 		verdict("DMARC", "dmarc", a.DMARC.Result, provider),
 	}
+	// A relay service authenticated by the receiving server sends on behalf
+	// of its users: their address in the display name is expected.
+	if dmarc := a.Verdicts[2]; dmarc.Result == mailauth.ResultPass && dmarc.Source != "vérification interne" {
+		a.Relay = relayOf(fromDomain)
+	}
+	a.Checks = consistencyChecks(m, hops, a.Relay)
 	return a
 }
 
@@ -263,7 +271,9 @@ var wordDecoder = &mime.WordDecoder{}
 var emailInText = regexp.MustCompile(`[^\s<>"',;:()@]+@([A-Za-z0-9.-]+\.[A-Za-z]{2,})`)
 
 // consistencyChecks lists what in the headers may deceive the reader.
-func consistencyChecks(m mailauth.Message, hops []mailauth.Hop) []LinkWarning {
+// relay is the authenticated service sending on behalf of a user, whose
+// address then appears in the display name and the Reply-To.
+func consistencyChecks(m mailauth.Message, hops []mailauth.Hop, relay *relayService) []LinkWarning {
 	var checks []LinkWarning
 	add := func(level, format string, args ...any) {
 		checks = append(checks, LinkWarning{level, fmt.Sprintf(format, args...)})
@@ -283,8 +293,13 @@ func consistencyChecks(m mailauth.Message, hops []mailauth.Hop) []LinkWarning {
 	senderOrg := mailauth.OrgDomain(senderDomain)
 
 	// "support@bank.com" <x@evil.example>
+	onBehalf := map[string]bool{}
 	for _, match := range emailInText.FindAllStringSubmatch(sender.Name, -1) {
-		if mailauth.OrgDomain(match[1]) != senderOrg {
+		if mailauth.OrgDomain(match[1]) != senderOrg && relay != nil {
+			add(levelInfo, "Envoyé par %s pour le compte de %s : le service est authentifié, l'adresse %s est celle déclarée à ce service",
+				relay.Name, match[0], match[0])
+			onBehalf[strings.ToLower(match[0])] = true
+		} else if mailauth.OrgDomain(match[1]) != senderOrg {
 			add(levelDanger, "Le nom affiché « %s » contient l'adresse %s, mais l'expéditeur réel est %s", sender.Name, match[0], sender.Address)
 		}
 	}
@@ -298,7 +313,11 @@ func consistencyChecks(m mailauth.Message, hops []mailauth.Hop) []LinkWarning {
 
 	if replyTo, err := parser.ParseList(m.Get("Reply-To")); err == nil {
 		for _, address := range replyTo {
-			if d := domainOfAddress(address.Address); mailauth.OrgDomain(d) != senderOrg {
+			switch d := domainOfAddress(address.Address); {
+			case mailauth.OrgDomain(d) == senderOrg:
+			case onBehalf[strings.ToLower(address.Address)]:
+				add(levelInfo, "Les réponses partiront vers %s (Reply-To), le compte pour lequel %s a envoyé le message", address.Address, relay.Name)
+			default:
 				add(levelWarning, "Les réponses partiront vers %s (Reply-To), un autre domaine que l'expéditeur", address.Address)
 			}
 		}

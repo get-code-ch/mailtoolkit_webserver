@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -124,5 +125,58 @@ func TestLinkSubjects(t *testing.T) {
 	}
 	if strings.Join(h, " ") != "evil.example www.shop.example cdn.shop.example contact.example xn--bcher-kva.example" {
 		t.Errorf("hosts %v", h)
+	}
+}
+
+// IncaMail (Swiss Post secure mail) sends on behalf of its users: their
+// address in the display name and the Reply-To, and an HTML page whose form
+// opens the message on incamail.com.
+func TestRelayService(t *testing.T) {
+	headers := "Received: from DU2PR04CA0204.eurprd04.prod.outlook.com (2603:10a6:10:28d::29)\r\n" +
+		" by ZR2P278MB1098.CHEP278.PROD.OUTLOOK.COM (2603:10a6:910:5e::11) with Microsoft SMTP Server; Tue, 15 Sep 2026 12:41:06 +0000\r\n" +
+		"Authentication-Results: spf=pass (sender IP is 194.41.147.13)\r\n smtp.mailfrom=im.post.ch; dkim=pass (signature was verified)\r\n" +
+		" header.d=im.post.ch;dmarc=pass action=none header.from=im.post.ch;\r\n" +
+		"Received: from gw1.incamail.com (194.41.147.13) by\r\n DB5PEPF00014B9E.mail.protection.outlook.com (10.167.8.171) with Microsoft\r\n" +
+		" SMTP Server; Tue, 15 Sep 2026 12:41:06 +0000\r\n" +
+		"Date: Tue, 15 Sep 2026 12:41:05 +0000 (UTC)\r\n" +
+		"From: \"office@canton.example mittels IncaMail\" <swisspost@im.post.ch>\r\n" +
+		"Reply-To: office@canton.example\r\n" +
+		"To: user@ngo.example\r\n" +
+		"Message-ID: <119b5907@im.post.ch>\r\n" +
+		"Subject: Unsere Zusammenarbeit (Secured by IncaMail)\r\n" +
+		"Return-Path: swisspost+3431ce5b@im.post.ch\r\n\r\nbody\r\n"
+	page := []byte(`<!DOCTYPE html><html><body><form onsubmit="" target="_self" method="post" action="https://incamail.com/" name="Sendform">` +
+		`<input type="hidden" name="secmail" value="MIAG"/><button type="submit">Öffnen</button></form></body></html>`)
+
+	a := analyzeHeaders(context.Background(), mapResolver{}, []byte(headers), -1)
+	if a.Relay == nil || a.Relay.Name != "IncaMail (La Poste suisse)" {
+		t.Fatalf("relay = %+v, verdicts %+v", a.Relay, a.Verdicts)
+	}
+	for _, c := range a.Checks {
+		if c.Level != levelInfo {
+			t.Errorf("check %s: %s", c.Level, c.Message)
+		}
+	}
+	report := filecheck.Analyze("IncaMail.html", "application/xhtml+xml", page)
+	for _, alert := range report.Alerts {
+		if strings.Contains(alert.Message, "événements") || alert.Level == filecheck.LevelDanger {
+			t.Errorf("IncaMail page alert: %s %s", alert.Level, alert.Message)
+		}
+	}
+	r := assessRisk(riskInput{Auth: &a, Attachments: []attachmentView{{Report: report}}})
+	if r.Light != riskGreen || !strings.Contains(strings.Join(r.Positives, " "), "page d'ouverture de IncaMail") {
+		t.Errorf("light %s (score %d), reasons %+v, positives %q", r.Light, r.Score, r.Reasons, r.Positives)
+	}
+
+	// The same mail from an unknown service, or not authenticated, stays
+	// dangerous.
+	spoofed := strings.ReplaceAll(headers, "im.post.ch", "im-post.example")
+	a = analyzeHeaders(context.Background(), mapResolver{}, []byte(spoofed), -1)
+	if a.Relay != nil || assessRisk(riskInput{Auth: &a, Attachments: []attachmentView{{Report: report}}}).Light != riskRed {
+		t.Errorf("unknown relay accepted")
+	}
+	unauthenticated := strings.Replace(headers, "dmarc=pass", "dmarc=fail", 1)
+	if a = analyzeHeaders(context.Background(), mapResolver{}, []byte(unauthenticated), -1); a.Relay != nil {
+		t.Errorf("relay without DMARC")
 	}
 }

@@ -3,7 +3,9 @@ package filecheck
 import (
 	"bytes"
 	"encoding/hex"
+	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -94,19 +96,48 @@ var htmlPatterns = []struct {
 	message string
 }{
 	{regexp.MustCompile(`(?i)<script`), LevelDanger, "Contient du JavaScript, exécuté à l'ouverture dans le navigateur"},
-	{regexp.MustCompile(`(?i)\son[a-z]+\s*=`), LevelDanger, "Contient du code exécuté sur des événements (onload, onclick...)"},
-	{regexp.MustCompile(`(?i)<form|<input[^>]+type\s*=\s*["']?password`), LevelDanger, "Contient un formulaire : typique des fausses pages de connexion"},
+	// Empty handlers (onsubmit="") run nothing.
+	{regexp.MustCompile(`(?i)\son[a-z]+\s*=\s*(?:"[^"]*[^"\s][^"]*"|'[^']*[^'\s][^']*'|[^\s"'>]+)`), LevelDanger, "Contient du code exécuté sur des événements (onload, onclick...)"},
+	{regexp.MustCompile(`(?i)<input[^>]+type\s*=\s*["']?password`), LevelDanger, "Demande un mot de passe : typique des fausses pages de connexion"},
 	{regexp.MustCompile(`(?i)atob\s*\(|new\s+Blob|msSaveOrOpenBlob|createObjectURL|\.download\s*=`), LevelDanger, "Fabrique un fichier dans le navigateur (HTML smuggling) pour contourner les filtres"},
 	{regexp.MustCompile(`(?i)http-equiv\s*=\s*["']?refresh|window\.location|location\.href|location\.replace`), LevelWarning, "Redirige vers un autre site"},
 	{regexp.MustCompile(`(?i)<foreignobject|<iframe|<embed|<object`), LevelWarning, "Embarque d'autres contenus"},
 	{regexp.MustCompile(`(?i)javascript:`), LevelDanger, "Contient des liens javascript:"},
 }
 
+var (
+	formTag    = regexp.MustCompile(`(?i)<form[\s>]`)
+	formAction = regexp.MustCompile(`(?i)<form[^>]+action\s*=\s*["']?([^"'\s>]+)`)
+)
+
+// Messages of the HTML alerts, recognized by the risk assessment.
+const (
+	MessageHTMLPage = "Page web jointe : elle s'ouvre dans le navigateur, hors de la protection de la messagerie"
+	MessageForm     = "Contient un formulaire qui envoie des données"
+)
+
 // inspectHTML inspects an HTML page or an SVG image: both open in the
 // browser and run their scripts locally.
 func inspectHTML(r *Report, data []byte) {
 	if r.family == familyHTML {
-		r.alert(LevelWarning, "Page web jointe : elle s'ouvre dans le navigateur, hors de la protection de la messagerie")
+		r.alert(LevelWarning, "%s", MessageHTMLPage)
+	}
+	// A form without password field still sends what it holds: say where.
+	for _, m := range formAction.FindAllSubmatch(data, -1) {
+		host := ""
+		if u, err := url.Parse(string(m[1])); err == nil {
+			host = strings.ToLower(u.Hostname())
+		}
+		if host != "" && !slices.Contains(r.FormHosts, host) {
+			r.FormHosts = append(r.FormHosts, host)
+		}
+	}
+	if formTag.Match(data) {
+		if len(r.FormHosts) > 0 {
+			r.alert(LevelWarning, "%s : %s", MessageForm, strings.Join(r.FormHosts, ", "))
+		} else {
+			r.alert(LevelWarning, "%s", MessageForm)
+		}
 	}
 	seen := map[string]bool{}
 	for _, p := range htmlPatterns {

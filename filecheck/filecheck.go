@@ -41,7 +41,9 @@ type Report struct {
 	Alerts []Alert
 	// Entries lists the content of an archive (first maxEntries).
 	Entries []string
-	family  string
+	// FormHosts are the hosts the forms of an HTML page send to.
+	FormHosts []string
+	family    string
 }
 
 // Level returns the most severe alert level, "" if none.

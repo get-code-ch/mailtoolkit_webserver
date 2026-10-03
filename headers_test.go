@@ -112,10 +112,10 @@ func TestConsistencyChecksLegitimate(t *testing.T) {
 		"Reply-To: support@shop.example\r\n" +
 		"Message-ID: <123@mail.shop.example>\r\n" +
 		"Date: Mon, 1 Oct 2018 10:00:00 +0000\r\n\r\nbody\r\n"
-	if checks := consistencyChecks(mailauth.ParseMessage([]byte(raw)), nil); len(checks) != 0 {
+	if checks := consistencyChecks(mailauth.ParseMessage([]byte(raw)), nil, nil); len(checks) != 0 {
 		t.Errorf("legitimate headers flagged: %+v", checks)
 	}
-	if checks := consistencyChecks(mailauth.ParseMessage([]byte("Subject: x\r\n\r\n")), nil); len(checks) != 1 || checks[0].Level != levelWarning {
+	if checks := consistencyChecks(mailauth.ParseMessage([]byte("Subject: x\r\n\r\n")), nil, nil); len(checks) != 1 || checks[0].Level != levelWarning {
 		t.Errorf("missing From: %+v", checks)
 	}
 }

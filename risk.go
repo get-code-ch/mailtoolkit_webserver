@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/net/idna"
 
+	"github.com/get-code-ch/mailtoolkit_webserver/filecheck"
 	"github.com/get-code-ch/mailtoolkit_webserver/mailauth"
 )
 
@@ -102,6 +103,14 @@ func assessRisk(in riskInput) riskReport {
 			add(levelInfo, 0, "dmarc", fmt.Sprintf("%s fait partie des domaines de confiance, mais son identité n'a pas été confirmée par "+
 				"votre messagerie : la confiance ne s'applique pas.", a.FromDomain), "DMARC non validé par un serveur de réception")
 		}
+		if a.Relay != nil {
+			for _, check := range a.Checks {
+				if check.Level == levelInfo && strings.HasPrefix(check.Message, "Envoyé par") {
+					add(levelInfo, 0, "headers", "Ce message a été envoyé par le service "+a.Relay.Name+
+						" pour le compte d'une autre personne : le service est authentique, mais assurez-vous d'attendre un message de cette personne.", check.Message)
+				}
+			}
+		}
 		for _, check := range a.Checks {
 			switch check.Level {
 			case levelDanger:
@@ -130,7 +139,11 @@ func assessRisk(in riskInput) riskReport {
 	if !r.Trusted {
 		assessLinks(&r, in.Links, add)
 	}
-	assessAttachments(&r, in.Attachments, add)
+	var relay *relayService
+	if in.Auth != nil {
+		relay = in.Auth.Relay
+	}
+	assessAttachments(&r, in.Attachments, relay, add)
 
 	// An authenticated mail from a brand links to its other domains:
 	// only real lookalikes count then.
@@ -307,9 +320,14 @@ func assessLinks(r *riskReport, links []Link, add func(level string, weight int,
 }
 
 // assessAttachments reports the dangerous attachments.
-func assessAttachments(r *riskReport, attachments []attachmentView, add func(level string, weight int, anchor, simple, detail string)) {
+func assessAttachments(r *riskReport, attachments []attachmentView, relay *relayService, add func(level string, weight int, anchor, simple, detail string)) {
 	clean := true
 	for _, a := range attachments {
+		if relayPage(a, relay) {
+			r.Positives = append(r.Positives, fmt.Sprintf("La pièce jointe « %s » est la page d'ouverture de %s : son formulaire envoie vers %s.",
+				a.Name, relay.Name, strings.Join(a.FormHosts, ", ")))
+			continue
+		}
 		var first string
 		for _, alert := range a.Alerts {
 			if alert.Level == a.Level() {
@@ -329,6 +347,26 @@ func assessAttachments(r *riskReport, attachments []attachmentView, add func(lev
 	if len(attachments) > 0 && clean {
 		r.Positives = append(r.Positives, "Les pièces jointes ne contiennent rien de dangereux détectable.")
 	}
+}
+
+// relayPage reports whether an attachment is the HTML page of a relay
+// service (IncaMail.html): a web page whose only alert is a form sending to
+// the service.
+func relayPage(a attachmentView, relay *relayService) bool {
+	if relay == nil || len(a.FormHosts) == 0 {
+		return false
+	}
+	for _, host := range a.FormHosts {
+		if !relay.site(host) {
+			return false
+		}
+	}
+	for _, alert := range a.Alerts {
+		if alert.Message != filecheck.MessageHTMLPage && !strings.HasPrefix(alert.Message, filecheck.MessageForm) {
+			return false
+		}
+	}
+	return true
 }
 
 func lowerFirst(s string) string {
