@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/netip"
 	"strings"
@@ -202,5 +203,60 @@ func TestVerdicts(t *testing.T) {
 				t.Errorf("%d trusted provider results, want %d: %+v", trusted, tt.trusted, a.Provider)
 			}
 		})
+	}
+}
+
+func TestHeaderGroups(t *testing.T) {
+	raw := "DKIM-Signature: v=1; a=rsa-sha256; d=example.com; s=sel; h=from:subject:reply-to; bh=YQ==; b=Yg==\r\n" +
+		"Received: from a by b; Fri, 11 Jul 2003 21:00:37 -0700\r\n" +
+		"Authentication-Results: mx.example.net; spf=pass smtp.mailfrom=example.com; dkim=fail header.d=example.com\r\n" +
+		"From: =?utf-8?q?Caf=C3=A9?= <joe@example.com>\r\n" +
+		"Subject: hello\r\n" +
+		"X-Mailer: test\r\n" +
+		"Content-Type: text/plain; charset=utf-8\r\n" +
+		"Foo: bar\r\n\r\nbody\r\n"
+	m := mailauth.ParseMessage([]byte(raw))
+	dkim := []mailauth.DKIMResult{{Result: mailauth.ResultFail, Domain: "example.com", SignatureField: 0,
+		Fields: []mailauth.SignedField{{Name: "from", Index: 3}, {Name: "subject", Index: 4}, {Name: "reply-to", Index: -1}}}}
+	groups := headerGroups(m, dkim)
+
+	var got []string
+	fields := map[string]fieldView{}
+	for _, g := range groups {
+		var names []string
+		for _, f := range g.Fields {
+			names = append(names, f.Name)
+			fields[f.Name] = f
+		}
+		got = append(got, g.Title+"="+strings.Join(names, ","))
+	}
+	want := "Expéditeur et destinataires=From,Subject|Authentification=DKIM-Signature,Authentication-Results|Chemin=Received|" +
+		"Contenu=Content-Type|Extensions des fournisseurs=X-Mailer|Autres=Foo"
+	if strings.Join(got, "|") != want {
+		t.Errorf("groups %s\nwant %s", strings.Join(got, "|"), want)
+	}
+	if !groups[0].Open || groups[1].Open {
+		t.Error("only the sender group should be open")
+	}
+	if from := fields["From"]; from.Value != "Café <joe@example.com>" || !from.Decoded || len(from.Signed) != 1 || from.Signed[0].Domain != "example.com" {
+		t.Errorf("From = %+v", from)
+	}
+	if sig := fields["DKIM-Signature"]; len(sig.Signed) != 1 || !sig.Signed[0].Signature || len(sig.Params) != 7 || sig.Params[2] != (mailauth.Tag{Name: "d", Value: "example.com"}) {
+		t.Errorf("DKIM-Signature = %+v", sig)
+	}
+	if ar := fields["Authentication-Results"]; fmt.Sprint(ar.Params) != "[{serveur mx.example.net} {spf pass smtp.mailfrom=example.com} {dkim fail header.d=example.com}]" {
+		t.Errorf("Authentication-Results params %v", ar.Params)
+	}
+	if ct := fields["Content-Type"]; fmt.Sprint(ct.Params) != "[{type text/plain} {charset utf-8}]" {
+		t.Errorf("Content-Type params %v", ct.Params)
+	}
+	if len(fields["X-Mailer"].Signed) != 0 {
+		t.Error("X-Mailer is not signed")
+	}
+}
+
+func TestVisibleSpace(t *testing.T) {
+	if got := visibleSpace("subject:a\tb  \r\n"); got != "subject:a⇥b··␍␊\n" {
+		t.Errorf("visibleSpace = %q", got)
 	}
 }

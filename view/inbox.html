@@ -1,54 +1,53 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {{template "head" .Title}}
     <noscript><meta http-equiv="refresh" content="10"></noscript>
-    <title>{{.Title}}</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="/static/app.js" defer></script>
 </head>
 <body data-autorefresh="5">
+{{template "site-header"}}
 <main>
-    <p><a href="/">← Accueil</a></p>
-    <h1>Votre adresse d'analyse</h1>
-    <p class="address"><code>{{.Address}}</code></p>
-    <p>Transférez le mail suspect en pièce jointe à cette adresse. Cette page se met à jour toute seule.<br>
-        Gardez son lien : c'est le seul moyen d'accéder aux résultats. Expiration : <strong>{{.Expires}}</strong>.</p>
+    <section class="hero compact">
+        <p class="eyebrow">// votre adresse d'analyse</p>
+        <div class="address">
+            <code>{{.Address}}</code>
+            <button type="button" class="copy" data-copy="{{.Address}}">Copier</button>
+        </div>
+        <p class="lead">Transférez le mail suspect en pièce jointe à cette adresse : cette page se met à jour toute seule.
+            Gardez son lien, c'est le seul moyen d'accéder aux résultats.</p>
+        <p class="expires">Expiration : <strong>{{.Expires}}</strong>
+            <span class="countdown" data-expires="{{.ExpiresISO}}"></span></p>
+    </section>
 
-    <details>
-        <summary>Ou envoyer un fichier .eml ou .msg dans cette boîte</summary>
+    <details class="panel">
+        <summary>Ou déposer un fichier .eml ou .msg dans cette boîte</summary>
         {{template "upload-form" (printf "/inbox/%s/upload" .Token)}}
     </details>
 
-    <h2>Mails reçus</h2>
+    <h2>Mails reçus <span class="badge">{{len .Submissions}}</span></h2>
     {{range .Submissions}}
-    <section class="submission">
+    <section class="card submission">
         <p class="meta">{{if .Upload}}Fichier envoyé le {{.Received}}{{else}}Reçu le {{.Received}}{{with .MailFrom}} de <code>{{.}}</code>{{end}}{{end}}</p>
-        {{if .Items}}
-        <table>
-            <thead><tr><th>Mail analysé</th><th>Expéditeur</th><th>Sujet</th><th>Date</th></tr></thead>
-            <tbody>
-            {{range .Items}}
-            <tr>
-                <td><a href="{{.Link}}">{{.Filename}}</a>{{if eq .Format "msg"}} <span class="badge">Outlook .msg</span>{{end}}</td>
-                <td>{{.From}}</td>
-                <td>{{.Subject}}</td>
-                <td>{{.Date}}</td>
-            </tr>
-            {{end}}
-            </tbody>
-        </table>
+        {{range .Items}}
+        <a class="mail-item" href="{{.Link}}">
+            <span class="mail-subject">{{if .Subject}}{{.Subject}}{{else}}(sans sujet){{end}}{{if eq .Format "msg"}} <span class="badge">Outlook .msg</span>{{end}}</span>
+            <span class="mail-from">{{.From}}</span>
+            <span class="mail-date">{{.Date}}</span>
+            <span class="mail-file">{{.Filename}}</span>
+        </a>
         {{end}}
         {{if .Error}}
-        <p class="warning">{{if .Items}}{{.Error}}{{else}}Aucun mail en pièce jointe n'a été trouvé dans cet envoi.
+        <p class="callout level-warning">{{if .Items}}{{.Error}}{{else}}Aucun mail en pièce jointe n'a été trouvé dans cet envoi.
             Le mail suspect doit être transféré <strong>en tant que pièce jointe</strong>.{{end}}</p>
         {{if not .Items}}{{template "forward-help"}}{{end}}
         {{end}}
     </section>
     {{else}}
-    <p class="note">Aucun mail reçu pour l'instant.</p>
+    <div class="card empty">
+        <span class="pulse" aria-hidden="true"></span> En attente d'un mail…
+    </div>
     {{end}}
 </main>
+{{template "site-footer"}}
 </body>
 </html>

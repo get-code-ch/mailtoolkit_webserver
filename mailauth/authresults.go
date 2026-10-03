@@ -22,14 +22,14 @@ func ProviderResults(m Message) []ProviderResult {
 	for _, f := range m.Fields {
 		switch strings.ToLower(f.Name) {
 		case "authentication-results":
-			results = append(results, parseAuthResults(f.Name, f.Value)...)
+			results = append(results, ParseAuthResults(f.Name, f.Value)...)
 		case "arc-authentication-results":
 			// "i=1; server; method=result ..."
 			value := f.Value
 			if instance, rest, ok := strings.Cut(value, ";"); ok && strings.HasPrefix(strings.TrimSpace(instance), "i=") {
 				value = rest
 			}
-			results = append(results, parseAuthResults(f.Name, value)...)
+			results = append(results, ParseAuthResults(f.Name, value)...)
 		case "received-spf":
 			result := strings.ToLower(firstWord(f.Value))
 			if result != "" {
@@ -41,8 +41,8 @@ func ProviderResults(m Message) []ProviderResult {
 	return results
 }
 
-// parseAuthResults parses an Authentication-Results value (RFC 8601).
-func parseAuthResults(header, value string) []ProviderResult {
+// ParseAuthResults parses an Authentication-Results value (RFC 8601).
+func ParseAuthResults(header, value string) []ProviderResult {
 	parts := strings.Split(removeComments(value), ";")
 	server := strings.Fields(parts[0])
 	if len(server) > 0 && strings.Contains(server[0], "=") {

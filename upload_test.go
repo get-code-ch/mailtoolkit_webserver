@@ -32,7 +32,7 @@ func testMsg(subject string) []byte {
 func newTestServer(t *testing.T) *server {
 	t.Helper()
 	store := newTestStore(t, t.TempDir(), &testClock{time.Now()})
-	templates, err := template.New("").Funcs(template.FuncMap{"resultClass": resultClass}).ParseFS(views, "view/*.html")
+	templates, err := template.New("").Funcs(templateFuncs).ParseFS(views, "view/*.html")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -36,6 +36,56 @@ type DKIMResult struct {
 	// content can be appended without breaking the signature.
 	BodyLimit bool
 	Signed    time.Time
+
+	// SignatureField is the index of the DKIM-Signature field in the
+	// message.
+	SignatureField int
+	HeaderCanon    string
+	BodyCanon      string
+	// Tags are the tags of the signature, in order.
+	Tags []Tag
+	// Fields are the fields named in h=, in order, with the exact text
+	// hashed for each of them.
+	Fields []SignedField
+	// BodyHash is "ok" when the body matches bh=, "différent" when it was
+	// modified, empty when it was not computed.
+	BodyHash string
+	// SignatureInput is the DKIM-Signature field as hashed last, with an
+	// empty b= and without its final CRLF.
+	SignatureInput string
+}
+
+// SignedField is a header field named in the h= tag of a signature.
+type SignedField struct {
+	// Name is the name as written in h=.
+	Name string
+	// Index is the field of the message hashed for this name (the lowest
+	// one not used yet), -1 when the message has none: signing an absent
+	// field prevents adding it without breaking the signature.
+	Index int
+	Raw   string
+	// Canonical is the text hashed, after canonicalization.
+	Canonical string
+}
+
+// Tag is a tag=value pair of a DKIM or ARC tag-list.
+type Tag struct {
+	Name  string
+	Value string
+}
+
+// ParseTags returns the tags of a tag-list in order, ignoring malformed
+// parts, for display. Whitespace is removed from the values.
+func ParseTags(s string) []Tag {
+	var tags []Tag
+	for _, part := range strings.Split(s, ";") {
+		name, value, ok := strings.Cut(part, "=")
+		if name = strings.TrimSpace(name); !ok || name == "" {
+			continue
+		}
+		tags = append(tags, Tag{name, strings.Join(strings.Fields(value), "")})
+	}
+	return tags
 }
 
 // VerifyDKIM verifies the DKIM signatures of a message, top to bottom.
@@ -55,7 +105,7 @@ func VerifyDKIM(ctx context.Context, resolver Resolver, m Message) []DKIMResult 
 
 func verifySignature(ctx context.Context, resolver Resolver, m Message, index int) DKIMResult {
 	field := m.Fields[index]
-	var result DKIMResult
+	result := DKIMResult{SignatureField: index, Tags: ParseTags(field.Value)}
 	fail := func(status, format string, args ...any) DKIMResult {
 		result.Result, result.Reason = status, fmt.Sprintf(format, args...)
 		return result
@@ -81,6 +131,38 @@ func verifySignature(ctx context.Context, resolver Resolver, m Message, index in
 			result.Headers = append(result.Headers, name)
 		}
 	}
+	headerCanon, bodyCanon := "simple", "simple"
+	if c, ok := tags["c"]; ok {
+		headerCanon, bodyCanon, _ = strings.Cut(strings.ToLower(c), "/")
+		if bodyCanon == "" {
+			bodyCanon = "simple"
+		}
+	}
+	canonOK := (headerCanon == "simple" || headerCanon == "relaxed") && (bodyCanon == "simple" || bodyCanon == "relaxed")
+	if canonOK {
+		result.HeaderCanon, result.BodyCanon = headerCanon, bodyCanon
+	}
+	// Fields hashed, selected from the bottom (RFC 6376 §5.4.2); filled
+	// before any check so that the details are shown whatever the result.
+	used := map[int]bool{}
+	for _, name := range result.Headers {
+		signed := SignedField{Name: name, Index: -1}
+		for i := len(m.Fields) - 1; i >= 0; i-- {
+			if !used[i] && strings.EqualFold(m.Fields[i].Name, name) {
+				used[i] = true
+				signed.Index, signed.Raw = i, m.Fields[i].Raw
+				if canonOK {
+					signed.Canonical = canonicalHeader(signed.Raw, headerCanon)
+				}
+				break
+			}
+		}
+		result.Fields = append(result.Fields, signed)
+	}
+	if canonOK {
+		result.SignatureInput = strings.TrimSuffix(canonicalHeader(removeSignatureValue(field.Raw), headerCanon), "\r\n")
+	}
+
 	signsFrom := false
 	for _, name := range result.Headers {
 		signsFrom = signsFrom || strings.EqualFold(name, "from")
@@ -111,14 +193,7 @@ func verifySignature(ctx context.Context, resolver Resolver, m Message, index in
 		return fail(ResultPermError, "algorithme %q non supporté", result.Algorithm)
 	}
 
-	headerCanon, bodyCanon := "simple", "simple"
-	if c, ok := tags["c"]; ok {
-		headerCanon, bodyCanon, _ = strings.Cut(strings.ToLower(c), "/")
-		if bodyCanon == "" {
-			bodyCanon = "simple"
-		}
-	}
-	if (headerCanon != "simple" && headerCanon != "relaxed") || (bodyCanon != "simple" && bodyCanon != "relaxed") {
+	if !canonOK {
 		return fail(ResultPermError, "canonicalisation %q non supportée", tags["c"])
 	}
 
@@ -141,7 +216,9 @@ func verifySignature(ctx context.Context, resolver Resolver, m Message, index in
 	if err != nil {
 		return fail(ResultPermError, "empreinte bh= illisible")
 	}
+	result.BodyHash = "ok"
 	if !bytes.Equal(bodyHash.Sum(nil), expected) {
+		result.BodyHash = "différent"
 		return fail(ResultFail, "le corps du mail a été modifié depuis la signature")
 	}
 
@@ -163,18 +240,10 @@ func verifySignature(ctx context.Context, resolver Resolver, m Message, index in
 
 	// Header hash
 	headerHash := newHash()
-	used := map[int]bool{}
-	for _, name := range result.Headers {
-		for i := len(m.Fields) - 1; i >= 0; i-- {
-			if !used[i] && strings.EqualFold(m.Fields[i].Name, name) {
-				used[i] = true
-				headerHash.Write([]byte(canonicalHeader(m.Fields[i].Raw, headerCanon)))
-				break
-			}
-		}
+	for _, signed := range result.Fields {
+		headerHash.Write([]byte(signed.Canonical))
 	}
-	signatureField := strings.TrimSuffix(canonicalHeader(removeSignatureValue(field.Raw), headerCanon), "\r\n")
-	headerHash.Write([]byte(signatureField))
+	headerHash.Write([]byte(result.SignatureInput))
 	digest := headerHash.Sum(nil)
 
 	signature, err := base64.StdEncoding.DecodeString(tags["b"])

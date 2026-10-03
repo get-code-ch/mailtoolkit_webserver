@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -197,4 +198,37 @@ func TestCanonicalBody(t *testing.T) {
 			t.Errorf("relaxed(%q) = %q, want %q", tt.body, got, tt.relaxed)
 		}
 	}
+}
+
+func TestDKIMSignedFields(t *testing.T) {
+	resolver := dkimResolver(t)
+	relaxed := readVector(t, "dkim-relaxed-relaxed.eml")
+	check := func(t *testing.T, got DKIMResult, bodyHash string) {
+		t.Helper()
+		var names []string
+		var indexes []int
+		for _, f := range got.Fields {
+			names, indexes = append(names, f.Name), append(indexes, f.Index)
+		}
+		if strings.Join(names, ",") != "from,to,subject,date,message-id,from,reply-to" || fmt.Sprint(indexes) != "[1 2 3 4 5 -1 -1]" {
+			t.Errorf("fields %v %v", names, indexes)
+		}
+		if subject := got.Fields[2]; subject.Canonical != "subject:Is dinner ready? folded continuation\r\n" || !strings.HasPrefix(subject.Raw, "Subject:   Is dinner\t") {
+			t.Errorf("subject = %q / %q", subject.Raw, subject.Canonical)
+		}
+		if got.HeaderCanon != "relaxed" || got.BodyCanon != "relaxed" || got.SignatureField != 0 || got.BodyHash != bodyHash {
+			t.Errorf("canon %s/%s, field %d, body hash %q", got.HeaderCanon, got.BodyCanon, got.SignatureField, got.BodyHash)
+		}
+		if !strings.HasPrefix(got.SignatureInput, "dkim-signature:v=1; a=rsa-sha256;") || !strings.HasSuffix(got.SignatureInput, "b=") {
+			t.Errorf("signature input %q", got.SignatureInput)
+		}
+		if len(got.Tags) == 0 || got.Tags[0] != (Tag{"v", "1"}) {
+			t.Errorf("tags %v", got.Tags)
+		}
+	}
+	t.Run("pass", func(t *testing.T) { check(t, verifyOne(t, resolver, relaxed), "ok") })
+	t.Run("body changed", func(t *testing.T) {
+		check(t, verifyOne(t, resolver, bytes.Replace(relaxed, []byte("We lost"), []byte("We won"), 1)), "différent")
+	})
+	t.Run("no key", func(t *testing.T) { check(t, verifyOne(t, &fakeResolver{}, relaxed), "ok") })
 }

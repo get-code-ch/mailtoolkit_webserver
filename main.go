@@ -38,7 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal("opening data folder: ", err)
 	}
-	templates, err := template.New("").Funcs(template.FuncMap{"resultClass": resultClass}).ParseFS(views, "view/*.html")
+	templates, err := template.New("").Funcs(templateFuncs).ParseFS(views, "view/*.html")
 	if err != nil {
 		log.Fatal("parsing templates: ", err)
 	}

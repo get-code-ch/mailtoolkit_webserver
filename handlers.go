@@ -231,8 +231,10 @@ func (s *server) inbox(w http.ResponseWriter, r *http.Request) {
 		Token       string
 		Address     string
 		Expires     string
+		ExpiresISO  string
 		Submissions []inboxSubmission
-	}{Title: "Boîte " + mailbox.Address, Token: token, Address: mailbox.Address, Expires: formatTime(mailbox.Expires)}
+	}{Title: "Boîte " + mailbox.Address, Token: token, Address: mailbox.Address, Expires: formatTime(mailbox.Expires),
+		ExpiresISO: mailbox.Expires.UTC().Format(time.RFC3339)}
 	for _, submission := range submissions {
 		item := inboxSubmission{
 			Received: formatTime(submission.Envelope.Received),
@@ -276,6 +278,8 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		Warnings    int
 		Auth        *headerAnalysis
 		Part        string
+		// Risky counts the attachments with a warning or a danger.
+		Risky int
 	}{
 		Title: "Analyse : " + info.Filename,
 		Inbox: "/inbox/" + r.PathValue("token"),
@@ -307,6 +311,11 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		ct := attachment.ContentInfo.Type
 		view.Report = filecheck.Analyze(name, ct.Type+"/"+ct.Subtype, content)
 		data.Attachments = append(data.Attachments, view)
+	}
+	for _, a := range data.Attachments {
+		if l := a.Level(); l == levelDanger || l == levelWarning {
+			data.Risky++
+		}
 	}
 	sort.SliceStable(data.Attachments, func(i, j int) bool {
 		return severity[data.Attachments[i].Level()] < severity[data.Attachments[j].Level()]

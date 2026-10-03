@@ -1,13 +1,5 @@
 {{define "auth"}}
 <section class="auth" aria-label="Authentification">
-    <div class="auth-badges">
-        {{range .Verdicts}}
-        <div class="auth-badge level-{{.Level}}">
-            <strong>{{.Name}}</strong> {{if .Result}}{{.Result}}{{else}}aucun résultat{{end}}
-            <span>{{.Source}}</span>
-        </div>
-        {{end}}
-    </div>
     {{if .HasWarnings}}
     <ul class="checks">
         {{range .Verdicts}}{{if .Warning}}<li class="level-warning"><strong>{{.Name}}</strong> : {{.Warning}}</li>{{end}}{{end}}
@@ -20,34 +12,35 @@
     </ul>
     {{end}}
 
-    <details>
-        <summary>Détails de l'authentification</summary>
-        <h3>SPF : le serveur d'envoi est-il autorisé par le domaine ?</h3>
+    <details class="panel">
+        <summary>SPF <span class="badge level-{{resultClass .SPF.Result}}">{{.SPF.Result}}</span>
+            <span class="summary-note">le serveur d'envoi est-il autorisé par le domaine ?</span></summary>
         <p class="level-{{resultClass .SPF.Result}}"><strong>{{.SPF.Result}}</strong> : {{.SPF.Reason}}</p>
         <dl class="header">
             <dt>Domaine vérifié</dt><dd>{{.SPF.Domain}} {{if .MailFrom}}(Return-Path {{.MailFrom}}){{else}}(nom HELO, pas de Return-Path){{end}}</dd>
-            {{if .SPF.IP.IsValid}}<dt>IP du serveur</dt><dd>{{.SPF.IP}} {{if eq .Selected .Source}}(détectée automatiquement){{else}}(choisie manuellement){{end}}</dd>{{end}}
+            {{if .SPF.IP.IsValid}}<dt>IP du serveur</dt><dd><code>{{.SPF.IP}}</code> {{if eq .Selected .Source}}(détectée automatiquement){{else}}(choisie manuellement){{end}}</dd>{{end}}
             {{with .SPF.Record}}<dt>Enregistrement</dt><dd><code>{{.}}</code></dd>{{end}}
             <dt>Requêtes DNS</dt><dd>{{.SPF.Lookups}} / 10</dd>
         </dl>
         <p class="note">Le SPF est recalculé maintenant, à partir de l'IP lue dans les en-têtes Received : c'est une estimation, l'enregistrement
-            SPF a pu changer depuis l'envoi. Choisissez un autre serveur dans le chemin ci-dessous si la détection s'est trompée.</p>
+            SPF a pu changer depuis l'envoi. Choisissez un autre serveur dans le chemin du mail si la détection s'est trompée.</p>
+    </details>
 
-        <h3>DKIM : le mail est-il signé par le domaine, sans modification ?</h3>
-        {{if .Converted}}<p class="level-info">Mail converti depuis Outlook .msg : son corps est reconstruit, les signatures DKIM
-            ne peuvent donc pas être vérifiées. Fiez-vous aux résultats notés par les serveurs de réception ci-dessous.</p>{{end}}
-        {{range .DKIM}}
-        <p class="level-{{resultClass .Result}}"><strong>{{.Result}}</strong> : signature de <strong>{{.Domain}}</strong>
-            (sélecteur {{.Selector}}, {{.Algorithm}}{{if .KeyBits}}, clé de {{.KeyBits}} bits{{end}}){{with .Reason}} : {{.}}{{end}}</p>
-        <p class="note">En-têtes signés : {{range $i, $h := .Headers}}{{if $i}}, {{end}}{{$h}}{{end}}</p>
-        {{if .BodyLimit}}<p class="level-warning">Seul le début du corps est signé (l=) : du contenu a pu être ajouté à la fin sans invalider la signature.</p>{{end}}
-        {{else}}
+    <details class="panel" id="dkim"{{if .DKIMFailed}} open{{end}}>
+        <summary>DKIM {{range .DKIM}}<span class="badge level-{{resultClass .Result}}">{{.Result}} · {{.Domain}}</span> {{else}}<span class="badge">aucune signature</span>{{end}}
+            <span class="summary-note">le mail est-il signé par le domaine, sans modification ?</span></summary>
+        {{if .Converted}}<p class="callout level-info">Mail converti depuis Outlook .msg : son corps est reconstruit, les signatures DKIM
+            ne peuvent donc pas être vérifiées. Fiez-vous aux résultats notés par les serveurs de réception.</p>{{end}}
+        {{range $i, $d := .DKIM}}{{template "dkim-signature" (dkimView $i $d)}}{{else}}
         <p class="level-info">Aucune signature DKIM : l'origine et l'intégrité du mail ne peuvent pas être prouvées.</p>
         {{end}}
         <p class="note">Une signature peut échouer si le domaine a changé de clé depuis l'envoi, ou si le mail a été modifié
-            (par exemple par un transfert qui n'était pas « en tant que pièce jointe »).</p>
+            (par exemple par un transfert qui n'était pas « en tant que pièce jointe », ou par l'export du fournisseur).</p>
+    </details>
 
-        <h3>DMARC : l'expéditeur affiché est-il authentifié ?</h3>
+    <details class="panel">
+        <summary>DMARC <span class="badge level-{{resultClass .DMARC.Result}}">{{.DMARC.Result}}</span>
+            <span class="summary-note">l'expéditeur affiché est-il authentifié ?</span></summary>
         <p class="level-{{resultClass .DMARC.Result}}"><strong>{{.DMARC.Result}}</strong> : {{.DMARC.Reason}}</p>
         {{with .DMARC.Record}}
         <dl class="header">
@@ -56,51 +49,159 @@
             <dt>Domaine organisationnel</dt><dd>{{$.DMARC.OrgDomain}}</dd>
         </dl>
         {{end}}
+    </details>
 
-        {{if .Provider}}
-        <h3>Résultats notés par les serveurs de réception</h3>
+    {{if .Provider}}
+    <details class="panel">
+        <summary>Résultats des serveurs de réception <span class="badge">{{len .Provider}}</span></summary>
         <p class="note">Seuls les résultats écrits par un serveur qui a reçu le mail sont retenus : un expéditeur malveillant peut
             ajouter de faux résultats dans son mail.</p>
+        <div class="table-scroll">
         <table>
             <thead><tr><th>Serveur</th><th>Méthode</th><th>Résultat</th><th>Retenu</th><th>Détails</th></tr></thead>
             <tbody>
             {{range .Provider}}
             <tr>
-                <td>{{.Server}}</td><td>{{.Method}}</td>
-                <td class="level-{{resultClass .Result}}">{{.Result}}</td>
-                <td>{{if .Trusted}}oui{{else}}<span class="level-warning">non vérifiable</span>{{end}}</td>
+                <td><code>{{.Server}}</code></td><td>{{.Method}}</td>
+                <td><span class="badge level-{{resultClass .Result}}">{{.Result}}</span></td>
+                <td>{{if .Trusted}}<span class="level-ok">✓ oui</span>{{else}}<span class="level-warning">non vérifiable</span>{{end}}</td>
                 <td><code>{{range $i, $p := .Properties}}{{if $i}} {{end}}{{$p}}{{end}}</code></td>
             </tr>
             {{end}}
             </tbody>
         </table>
-        {{end}}
+        </div>
+    </details>
+    {{end}}
+
+    <details class="panel">
+        <summary>Chemin du mail <span class="badge">{{len .Hops}} serveur{{if gt (len .Hops) 1}}s{{end}}</span></summary>
+        <p class="note">Du plus ancien au plus récent. Chaque serveur ajoute une étape, mais un expéditeur malveillant peut inventer
+            les premières : seules celles écrites par les serveurs de réception sont fiables.</p>
+        <ol class="timeline">
+            {{range .Hops}}
+            <li class="hop{{if eq .Index $.Selected}} selected{{end}}{{if eq .Index $.Source}} source{{end}}">
+                <div class="hop-head">
+                    <span class="hop-index">#{{.Index}}</span>
+                    {{if eq .Index $.Source}}<span class="badge level-info">source</span>{{end}}
+                    {{if eq .Index $.Selected}}<span class="badge level-ok">IP utilisée pour SPF</span>{{end}}
+                    <span class="hop-date">{{.DateText}}</span>
+                    {{with .DelayText}}<span class="badge">{{.}}</span>{{end}}
+                </div>
+                <div class="hop-route">
+                    <span class="hop-host"><span class="note">de</span> <code>{{if .From}}{{.From}}{{else}}?{{end}}</code>{{with .FromHost}} <span class="note">{{.}}</span>{{end}}</span>
+                    <span class="hop-arrow" aria-hidden="true">→</span>
+                    <span class="hop-host"><span class="note">par</span> <code>{{if .By}}{{.By}}{{else}}?{{end}}</code>{{with .With}} <span class="note">{{.}}</span>{{end}}</span>
+                </div>
+                {{if .IP.IsValid}}
+                <div class="hop-ip"><code>{{.IP}}</code> {{if .Public}}<span class="note">publique</span>{{else}}<span class="note">privée</span>{{end}}
+                    {{if and .Public (ne .Index $.Selected)}}<a href="?part={{$.Part}}&amp;hop={{.Index}}">utiliser pour SPF</a>{{end}}</div>
+                {{end}}
+            </li>
+            {{end}}
+        </ol>
     </details>
 
-    <details>
-        <summary>Chemin du mail ({{len .Hops}} serveur{{if gt (len .Hops) 1}}s{{end}})</summary>
-        <p class="note">Du plus ancien au plus récent. Chaque serveur ajoute une ligne, mais un expéditeur malveillant peut inventer
-            les premières : seules celles écrites par les serveurs de réception sont fiables.</p>
-        <table class="hops">
-            <thead><tr><th>#</th><th>Date</th><th>De</th><th>IP</th><th>Reçu par</th><th>SPF</th></tr></thead>
+    <details class="panel" id="headers">
+        <summary>En-têtes <span class="badge">{{len .Fields}}</span></summary>
+        {{range .Groups}}
+        <details class="header-group"{{if .Open}} open{{end}}>
+            <summary>{{.Title}} <span class="badge">{{len .Fields}}</span></summary>
+            <div class="table-scroll">
+            <table class="fields">
+                <tbody>
+                {{range .Fields}}
+                <tr id="h-{{.Index}}">
+                    <th scope="row"><code>{{.Name}}</code></th>
+                    <td>
+                        <div class="field-value">{{.Value}}</div>
+                        {{if .Decoded}}<div class="note">décodé depuis : <code>{{.Raw}}</code></div>{{end}}
+                        {{if .Params}}
+                        <dl class="params">{{range .Params}}<dt>{{.Name}}</dt><dd><code>{{.Value}}</code></dd>{{end}}</dl>
+                        {{end}}
+                        {{if .Signed}}<div class="signed">{{range .Signed}}
+                            <a href="#dkim-{{.Sig}}" class="badge level-{{resultClass .Result}}">{{if .Signature}}signature{{else}}signé{{end}} · d={{.Domain}} · {{.Result}}</a>
+                        {{end}}</div>{{end}}
+                    </td>
+                </tr>
+                {{end}}
+                </tbody>
+            </table>
+            </div>
+        </details>
+        {{end}}
+        <details class="header-group">
+            <summary>Source des en-têtes</summary>
+            <pre class="raw-headers">{{range .Fields}}{{.Raw}}{{end}}</pre>
+        </details>
+    </details>
+</section>
+{{end}}
+
+{{define "dkim-signature"}}{{$d := .D}}
+<article class="card dkim level-{{resultClass $d.Result}}" id="dkim-{{.I}}">
+    <header class="dkim-head">
+        <span class="badge level-{{resultClass $d.Result}}">{{$d.Result}}</span>
+        <strong>d={{$d.Domain}}</strong>
+        <span class="note">s={{$d.Selector}} · {{$d.Algorithm}}{{if $d.KeyBits}} · clé {{$d.KeyBits}} bits{{end}}{{with $d.HeaderCanon}} · c={{.}}/{{$d.BodyCanon}}{{end}}{{if not $d.Signed.IsZero}} · signé le {{$d.Signed.Local.Format "02.01.2006 15:04"}}{{end}}</span>
+    </header>
+    {{with $d.Reason}}<p class="level-{{resultClass $d.Result}}">{{.}}</p>{{end}}
+
+    <ul class="dkim-steps">
+        <li class="{{if eq $d.BodyHash "ok"}}level-ok{{else if $d.BodyHash}}level-danger{{else}}note{{end}}">
+            <strong>Corps</strong> :
+            {{if eq $d.BodyHash "ok"}}empreinte conforme (bh=), le corps n'a pas été modifié depuis la signature
+            {{else if $d.BodyHash}}empreinte différente (bh=), le corps a été modifié depuis la signature
+            {{else}}non vérifié{{end}}</li>
+        {{if $d.BodyLimit}}<li class="level-warning"><strong>l=</strong> : seul le début du corps est signé, du contenu a pu être ajouté à la fin sans invalider la signature.</li>{{end}}
+        <li class="{{if eq $d.Result "pass"}}level-ok{{else if and (eq $d.BodyHash "ok") (eq $d.Result "fail")}}level-danger{{else}}note{{end}}">
+            <strong>En-têtes</strong> : {{len $d.Fields}} champs signés
+            {{- if eq $d.Result "pass"}}, inchangés depuis la signature
+            {{- else if and (eq $d.BodyHash "ok") (eq $d.Result "fail")}}, au moins un a été modifié (ou la clé a changé){{end}}</li>
+    </ul>
+    {{if and (eq $d.BodyHash "ok") (eq $d.Result "fail")}}
+    <p class="callout level-info">Le corps est intact mais la signature des en-têtes échoue. Causes fréquentes : un préfixe ajouté au sujet
+        (<code>[EXT]</code>, <code>RE:</code>), un From réécrit par une liste de diffusion, une Date ou un Message-ID régénérés lors
+        de l'export, ou une clé changée par le domaine depuis l'envoi. Comparez ci-dessous les valeurs actuelles et les valeurs signées.</p>
+    {{end}}
+
+    <details{{if ne $d.Result "pass"}} open{{end}}>
+        <summary>Champs signés (h=) et valeurs utilisées pour la signature</summary>
+        <div class="table-scroll">
+        <table class="signed-fields">
+            <thead><tr><th>Champ</th><th>Valeur dans le mail</th><th>Valeur hachée{{with $d.HeaderCanon}} ({{.}}){{end}}</th></tr></thead>
             <tbody>
-            {{range .Hops}}
-            <tr{{if eq .Index $.Selected}} class="selected"{{end}}>
-                <td>{{.Index}}{{if eq .Index $.Source}} <span class="badge">source</span>{{end}}</td>
-                <td>{{.DateText}}<br><span class="note">{{.DelayText}}</span></td>
-                <td>{{.From}}{{with .FromHost}}<br><span class="note">{{.}}</span>{{end}}</td>
-                <td>{{if .IP.IsValid}}{{.IP}}{{if not .Public}} <span class="note">(privée)</span>{{end}}{{end}}</td>
-                <td>{{.By}}{{with .With}}<br><span class="note">{{.}}</span>{{end}}</td>
-                <td>{{if and .IP.IsValid .Public}}{{if eq .Index $.Selected}}utilisée{{else}}<a href="?part={{$.Part}}&amp;hop={{.Index}}">utiliser</a>{{end}}{{end}}</td>
+            {{range $d.Fields}}
+            {{if lt .Index 0}}
+            <tr class="absent">
+                <th scope="row"><code>{{.Name}}</code></th>
+                <td colspan="2" class="note">absent du mail : signé « vide », ce champ ne peut pas être ajouté sans invalider la signature</td>
+            </tr>
+            {{else}}
+            <tr>
+                <th scope="row"><a href="#h-{{.Index}}"><code>{{.Name}}</code></a></th>
+                <td><pre class="field-raw">{{.Raw}}</pre></td>
+                <td>{{if eq .Raw .Canonical}}<span class="note">identique</span>{{else}}<pre class="field-canon">{{visibleSpace .Canonical}}</pre>{{end}}</td>
+            </tr>
+            {{end}}
+            {{end}}
+            {{with $d.SignatureInput}}
+            <tr class="signature-input">
+                <th scope="row"><a href="#h-{{$d.SignatureField}}"><code>DKIM-Signature</code></a></th>
+                <td class="note">haché en dernier, avec la valeur de <code>b=</code> vidée et sans fin de ligne</td>
+                <td><pre class="field-canon">{{visibleSpace .}}</pre></td>
             </tr>
             {{end}}
             </tbody>
         </table>
+        </div>
+        <p class="note">Les champs sont pris du bas vers le haut quand un nom est répété. Symboles : <code>␍␊</code> fin de ligne,
+            <code>⇥</code> tabulation, <code>·</code> espace en fin de ligne.</p>
     </details>
 
     <details>
-        <summary>Tous les en-têtes ({{len .Fields}})</summary>
-        <pre class="raw-headers">{{range .Fields}}{{.Raw}}{{end}}</pre>
+        <summary>Paramètres de la signature</summary>
+        <dl class="params">{{range $d.Tags}}<dt>{{.Name}}</dt><dd><code>{{.Value}}</code></dd>{{end}}</dl>
     </details>
-</section>
+</article>
 {{end}}

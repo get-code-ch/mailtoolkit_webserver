@@ -1,16 +1,31 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{.Title}}</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="/static/app.js" defer></script>
-</head>
+<head>{{template "head" .Title}}</head>
 <body>
+{{template "site-header"}}
 <main class="wide">
-    <p><a href="{{.Inbox}}">← Retour à la boîte</a></p>
-    <h1>{{.Info.Filename}}</h1>
+    <p class="crumbs"><a href="{{.Inbox}}">← Retour à la boîte</a> <span class="note">/ {{.Info.Filename}}</span></p>
+    <h1 class="subject">{{with .Header.Subject}}{{.}}{{else}}{{$.Info.Filename}}{{end}}</h1>
+
+    <div class="verdict" aria-label="Synthèse">
+        {{with .Auth}}{{range .Verdicts}}
+        <div class="tile level-{{.Level}}">
+            <span class="tile-label">{{.Name}}{{if .Warning}} <span class="level-warning" title="{{.Warning}}">⚠</span>{{end}}</span>
+            <span class="tile-value">{{if .Result}}{{.Result}}{{else}}aucun{{end}}</span>
+            <span class="tile-note">{{.Source}}</span>
+        </div>
+        {{end}}{{end}}
+        <div class="tile level-{{if .Dangers}}danger{{else if .Warnings}}warning{{else}}ok{{end}}">
+            <span class="tile-label">Liens</span>
+            <span class="tile-value">{{len .Links}}</span>
+            <span class="tile-note">{{if .Dangers}}{{.Dangers}} dangereux{{end}}{{if and .Dangers .Warnings}}, {{end}}{{if .Warnings}}{{.Warnings}} suspect{{if gt .Warnings 1}}s{{end}}{{end}}{{if not (or .Dangers .Warnings)}}aucune alerte{{end}}</span>
+        </div>
+        <div class="tile level-{{if .Risky}}warning{{else}}ok{{end}}">
+            <span class="tile-label">Pièces jointes</span>
+            <span class="tile-value">{{len .Attachments}}</span>
+            <span class="tile-note">{{if .Risky}}{{.Risky}} à risque{{else}}aucune alerte{{end}}</span>
+        </div>
+    </div>
 
     {{if eq .Info.Format "msg"}}
     <p class="note">Fichier Outlook <code>.msg</code> converti pour l'analyse : les en-têtes d'origine sont conservés quand Outlook
@@ -18,7 +33,7 @@
     {{end}}
     <div class="analysis">
         <div class="analysis-main">
-            <dl class="header">
+            <dl class="header card">
                 {{with .Header}}
                 <dt>De</dt><dd>{{range $i, $a := .FromList}}{{if $i}}, {{end}}{{with $a.Name}}{{.}} {{end}}&lt;{{$a.Address}}&gt;{{end}}</dd>
                 <dt>À</dt><dd>{{.To}}</dd>
@@ -37,7 +52,8 @@
             {{end}}
 
             {{if .Frame}}
-            <div class="mail">
+            <div class="mail viewer">
+                <div class="viewer-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span> aperçu isolé · scripts et images distantes bloqués</div>
                 <!-- Mail content comes from third parties: no script, no same-origin access -->
                 <iframe sandbox src="{{.Frame}}" title="Contenu du mail"></iframe>
             </div>
@@ -49,7 +65,7 @@
                 ne les ouvrez pas si le mail est suspect.</p>
             <ol class="attachment-list">
                 {{range .Attachments}}
-                <li class="attachment {{with .Level}}level-{{.}}{{end}}">
+                <li class="attachment card {{with .Level}}level-{{.}}{{end}}">
                     <div class="link-head">
                         <strong>{{.Name}}</strong>
                         <span class="badge">{{.Kind}}</span>
@@ -131,5 +147,6 @@
         </aside>
     </div>
 </main>
+{{template "site-footer"}}
 </body>
 </html>

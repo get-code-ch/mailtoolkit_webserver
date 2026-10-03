@@ -42,13 +42,20 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
   destination of redirectors such as Outlook Safe Links.
 - **Header analysis** (package `mailauth`, standard library plus `golang.org/x/net/publicsuffix`):
   - DKIM signatures verified (RSA, Ed25519, simple/relaxed canonicalization; `rsa-sha1` and keys shorter than
-    1024 bits refused, `l=` flagged); the attached mail is kept byte for byte for that purpose;
+    1024 bits refused, `l=` flagged); the attached mail is kept byte for byte for that purpose. For each
+    signature, the page shows whether the body hash matches and every field named in `h=`: its value in the
+    mail next to the exact text hashed after canonicalization (absent fields, signed to prevent their
+    addition, included), then the DKIM-Signature field hashed last;
   - SPF recomputed with the IP of the server that sent the mail, guessed from the `Received` headers (the user
     can pick another hop), with the RFC 7208 limits and macros;
   - DMARC policy and alignment of SPF and DKIM with the From domain;
   - results written by the receiving servers (`Authentication-Results`, `ARC-Authentication-Results`,
     `Received-SPF`), the `Received` path, and inconsistencies: address in the display name, Reply-To or
-    Return-Path on another domain, missing Message-ID, date far from the reception.
+    Return-Path on another domain, missing Message-ID, date far from the reception;
+  - all the header fields sorted by category (sender and recipients, authentication, path, content, lists,
+    provider extensions), with RFC 2047 values decoded, DKIM, ARC, `Authentication-Results` and
+    `Content-Type` parameters split, and a badge on each field covered by a DKIM signature; the raw source
+    stays available.
 
   The result shown for SPF, DKIM and DMARC is first the one written by the receiving provider
   (`Authentication-Results` of a server that received the mail: Proton Mail, Google, Microsoft 365…; results

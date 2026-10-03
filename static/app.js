@@ -44,3 +44,29 @@ document.addEventListener("change", function (event) {
         }
     }, seconds * 1000);
 })();
+
+// Remaining time before the mailbox expires.
+(function () {
+    var countdown = document.querySelector(".countdown[data-expires]");
+    if (!countdown) {
+        return;
+    }
+    var expires = Date.parse(countdown.dataset.expires);
+    function update() {
+        var left = Math.max(0, Math.floor((expires - Date.now()) / 1000));
+        var h = Math.floor(left / 3600), m = Math.floor(left / 60) % 60, s = left % 60;
+        countdown.textContent = left ? "(dans " + h + " h " + (m < 10 ? "0" : "") + m + " min " + (s < 10 ? "0" : "") + s + " s)" : "(expirée)";
+    }
+    update();
+    setInterval(update, 1000);
+})();
+
+// Drop zones of the upload forms.
+document.querySelectorAll(".dropzone").forEach(function (zone) {
+    ["dragenter", "dragover"].forEach(function (type) {
+        zone.addEventListener(type, function () { zone.classList.add("dragover"); });
+    });
+    ["dragleave", "drop"].forEach(function (type) {
+        zone.addEventListener(type, function () { zone.classList.remove("dragover"); });
+    });
+});

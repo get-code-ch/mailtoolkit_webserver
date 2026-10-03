@@ -30,6 +30,7 @@ type headerAnalysis struct {
 	Verdicts []authVerdict
 	Checks   []LinkWarning
 	Fields   []mailauth.Field
+	Groups   []headerGroup
 	// Part is the content part shown with the analysis, kept in the links
 	// choosing another hop.
 	Part string
@@ -94,6 +95,7 @@ func analyzeHeaders(ctx context.Context, resolver mailauth.Resolver, raw []byte,
 	}
 	a.DMARC = mailauth.CheckDMARC(ctx, resolver, fromDomain, a.SPF, a.DKIM)
 	a.Checks = consistencyChecks(m, hops)
+	a.Groups = headerGroups(m, a.DKIM)
 
 	receivers := receivingProviders(hops, a.Source)
 	for _, r := range mailauth.ProviderResults(m) {

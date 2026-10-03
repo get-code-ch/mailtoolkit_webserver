@@ -1,49 +1,51 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{.Title}}</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <script src="/static/app.js" defer></script>
-</head>
+<head>{{template "head" .Title}}</head>
 <body>
+{{template "site-header"}}
 <main>
-    <h1>Analyse de mail</h1>
-    <p>Vous avez reçu un mail suspect ? Transférez-le à une adresse temporaire pour l'examiner sans risque :
-        son contenu est affiché sans exécuter de code et sans charger d'images distantes.</p>
+    <section class="hero">
+        <p class="eyebrow">// analyse de mails suspects</p>
+        <h1>Inspectez un mail <span class="accent">sans prendre de risque</span>.</h1>
+        <p class="lead">Transférez-le à une adresse temporaire ou déposez le fichier : contenu affiché sans exécution de code,
+            liens décortiqués, pièces jointes analysées sans être ouvertes, SPF, DKIM et DMARC vérifiés.</p>
+        <form method="post" action="/new">
+            <button type="submit" class="primary">Nouvelle analyse</button>
+        </form>
+    </section>
 
-    <form method="post" action="/new">
-        <button type="submit">Nouvelle analyse</button>
-    </form>
-
-    <h2>Ou envoyez directement un fichier</h2>
-    <p>Un mail enregistré depuis votre messagerie : <code>.eml</code> (Thunderbird, Apple Mail, Gmail « Télécharger le message »)
-        ou <code>.msg</code> (Outlook pour Windows, glisser le mail sur le bureau).</p>
-    {{template "upload-form" "/upload"}}
+    <section class="card">
+        <h2>Ou déposez directement un fichier</h2>
+        <p class="note">Un mail enregistré depuis votre messagerie : <code>.eml</code> (Thunderbird, Apple Mail, Gmail « Télécharger le message »)
+            ou <code>.msg</code> (Outlook pour Windows, glisser le mail sur le bureau).</p>
+        {{template "upload-form" "/upload"}}
+    </section>
 
     <h2>Comment faire</h2>
-    <ol>
-        <li>Cliquez sur « Nouvelle analyse » : une adresse aléatoire et une page privée sont créées.</li>
-        <li>Transférez le mail suspect <strong>en tant que pièce jointe</strong> à cette adresse
-            (un simple transfert modifie le mail original et fausse l'analyse).</li>
-        <li>Le mail apparaît sur votre page privée après quelques secondes.</li>
+    <ol class="steps">
+        <li class="card"><strong>Créez une adresse</strong>Cliquez sur « Nouvelle analyse » : une adresse aléatoire et une page privée sont créées.</li>
+        <li class="card"><strong>Transférez en pièce jointe</strong>Envoyez le mail suspect <em>en tant que pièce jointe</em> :
+            un simple transfert modifie le mail original et fausse l'analyse.</li>
+        <li class="card"><strong>Consultez le rapport</strong>Le mail apparaît sur votre page privée après quelques secondes.</li>
     </ol>
     {{template "forward-help"}}
-    <p class="note">Les adresses et les mails reçus sont supprimés automatiquement après expiration.</p>
 </main>
+{{template "site-footer"}}
 </body>
 </html>
 
 {{define "upload-form"}}
 <form method="post" action="{{.}}" enctype="multipart/form-data" class="upload">
-    <input type="file" name="file" accept=".eml,.msg,message/rfc822,application/vnd.ms-outlook" required>
+    <label class="dropzone">
+        <input type="file" name="file" accept=".eml,.msg,message/rfc822,application/vnd.ms-outlook" required>
+        <span class="dropzone-text"><strong>Choisir un fichier .eml ou .msg</strong> ou le glisser ici</span>
+    </label>
     <button type="submit">Analyser le fichier</button>
 </form>
 {{end}}
 
 {{define "forward-help"}}
-<details>
+<details class="panel">
     <summary>Transférer un mail en pièce jointe</summary>
     <ul>
         <li><strong>Gmail</strong> : ouvrez le mail, menu « ⋮ » puis « Transférer en tant que pièce jointe ».</li>
