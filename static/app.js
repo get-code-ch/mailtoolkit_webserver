@@ -94,3 +94,33 @@ document.addEventListener("submit", function (event) {
         event.preventDefault();
     }
 });
+
+// Folding sections marked data-remember stay open or closed across the
+// automatic reloads of the page.
+document.querySelectorAll("details[data-remember]").forEach(function (details) {
+    var key = "open:" + details.dataset.remember;
+    try {
+        var saved = sessionStorage.getItem(key);
+        if (saved !== null) {
+            details.open = saved === "1";
+        }
+    } catch (e) {
+        // Storage blocked: default state.
+    }
+    details.addEventListener("toggle", function () {
+        try {
+            sessionStorage.setItem(key, details.open ? "1" : "0");
+        } catch (e) {
+            // Storage blocked: the state is not kept.
+        }
+    });
+});
+
+// Links to a folding section open it.
+document.addEventListener("click", function (event) {
+    var link = event.target.closest("a.open-details[href^='#']");
+    var target = link && document.getElementById(link.getAttribute("href").slice(1));
+    if (target && target.tagName === "DETAILS") {
+        target.open = true;
+    }
+});

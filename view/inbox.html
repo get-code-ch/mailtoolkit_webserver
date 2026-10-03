@@ -24,6 +24,8 @@
         {{template "upload-form" (printf "/inbox/%s/upload" .Token)}}
     </details>
 
+    {{template "forward-help"}}
+
     <h2>Mails reçus <span class="badge">{{len .Submissions}}</span></h2>
     {{range .Submissions}}
     <section class="card submission">
@@ -42,7 +44,7 @@
         {{if .Error}}
         <p class="callout level-warning">{{if .Items}}{{.Error}}{{else}}Aucun mail en pièce jointe n'a été trouvé dans cet envoi.
             Le mail suspect doit être transféré <strong>en tant que pièce jointe</strong>.{{end}}</p>
-        {{if not .Items}}{{template "forward-help"}}{{end}}
+        {{if not .Items}}<p class="note"><a href="#forward-help" class="open-details">Voir comment envoyer un mail sans le modifier</a></p>{{end}}
         {{end}}
     </section>
     {{else}}
