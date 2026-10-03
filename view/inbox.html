@@ -27,7 +27,10 @@
     <h2>Mails reçus <span class="badge">{{len .Submissions}}</span></h2>
     {{range .Submissions}}
     <section class="card submission">
-        <p class="meta">{{if .Upload}}Fichier envoyé le {{.Received}}{{else}}Reçu le {{.Received}}{{with .MailFrom}} de <code>{{.}}</code>{{end}}{{end}}</p>
+        <div class="submission-head">
+            <p class="meta">{{if .Upload}}Fichier envoyé le {{.Received}}{{else}}Reçu le {{.Received}}{{with .MailFrom}} de <code>{{.}}</code>{{end}}{{end}}</p>
+            {{template "delete-form" .Delete}}
+        </div>
         {{range .Items}}
         <a class="mail-item" href="{{.Link}}">
             <span class="mail-subject">{{if .Subject}}{{.Subject}}{{else}}(sans sujet){{end}}{{if eq .Format "msg"}} <span class="badge">Outlook .msg</span>{{end}}</span>
@@ -51,3 +54,9 @@
 {{template "site-footer"}}
 </body>
 </html>
+
+{{define "delete-form"}}
+<form method="post" action="{{.}}" class="delete" data-confirm="Supprimer définitivement ce mail et son analyse ?">
+    <button type="submit" class="danger" title="Supprimer définitivement ce mail et son analyse">Supprimer</button>
+</form>
+{{end}}

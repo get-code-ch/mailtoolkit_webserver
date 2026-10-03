@@ -390,6 +390,21 @@ func (s *mailboxStore) Analyzed(token, id string, n int) (mailtoolkit.Mail, Anal
 	return mail, info, nil
 }
 
+// DeleteSubmission removes a carrier and the mails extracted from it.
+func (s *mailboxStore) DeleteSubmission(token, id string) error {
+	if _, err := s.Submission(token, id); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			err = errNotFound
+		}
+		return err
+	}
+	if err := s.root.RemoveAll(token + "/" + id); err != nil {
+		return err
+	}
+	s.parsed.clear()
+	return nil
+}
+
 // PurgeExpired removes the expired mailboxes and their mails.
 func (s *mailboxStore) PurgeExpired() {
 	now := s.now()

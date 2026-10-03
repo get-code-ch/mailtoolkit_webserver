@@ -4,7 +4,10 @@
 <body>
 {{template "site-header"}}
 <main class="wide">
-    <p class="crumbs"><a href="{{.Inbox}}">← Retour à la boîte</a> <span class="note">/ {{.Info.Filename}}</span></p>
+    <div class="page-head">
+        <p class="crumbs"><a href="{{.Inbox}}">← Retour à la boîte</a> <span class="note">/ {{.Info.Filename}}</span></p>
+        {{template "delete-form" .Delete}}
+    </div>
     <h1 class="subject">{{with .Header.Subject}}{{.}}{{else}}{{$.Info.Filename}}{{end}}</h1>
 
     <div class="verdict" aria-label="Synthèse">

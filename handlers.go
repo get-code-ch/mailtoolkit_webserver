@@ -68,6 +68,7 @@ func (s *server) routes(staticFolder string) http.Handler {
 	mux.HandleFunc("POST /ingest", s.ingest)
 	mux.HandleFunc("POST /inbox/{token}/upload", s.upload)
 	mux.HandleFunc("GET /inbox/{token}", s.inbox)
+	mux.HandleFunc("POST /inbox/{token}/{id}/delete", s.deleteSubmission)
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}", s.analysis)
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}/part/{content}", s.mailPart)
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}/attachment/{attachment}", s.mailAttachment)
@@ -206,6 +207,8 @@ type inboxItem struct {
 }
 
 type inboxSubmission struct {
+	// Delete is the URL removing the submission.
+	Delete   string
 	Received string
 	Upload   bool
 	MailFrom string
@@ -237,6 +240,7 @@ func (s *server) inbox(w http.ResponseWriter, r *http.Request) {
 		ExpiresISO: mailbox.Expires.UTC().Format(time.RFC3339)}
 	for _, submission := range submissions {
 		item := inboxSubmission{
+			Delete:   "/inbox/" + token + "/" + submission.ID + "/delete",
 			Received: formatTime(submission.Envelope.Received),
 			Upload:   submission.Envelope.Mode == modeUpload,
 			MailFrom: submission.Envelope.MailFrom,
@@ -257,6 +261,23 @@ func (s *server) inbox(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "inbox.html", data)
 }
 
+// deleteSubmission removes a received mail or an uploaded file, with the
+// mails extracted from it, before the expiration of the mailbox.
+func (s *server) deleteSubmission(w http.ResponseWriter, r *http.Request) {
+	token, id := r.PathValue("token"), r.PathValue("id")
+	err := s.store.DeleteSubmission(token, id)
+	switch {
+	case errors.Is(err, errNotFound):
+		http.NotFound(w, r)
+		return
+	case err != nil:
+		serverError(w, "deleting submission", err)
+		return
+	}
+	s.auth.clear()
+	http.Redirect(w, r, "/inbox/"+token, http.StatusSeeOther)
+}
+
 // analysis displays an extracted mail: header, parts and attachments, the
 // selected part (?part=key) being shown in a sandboxed frame.
 func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
@@ -267,6 +288,7 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Title       string
 		Inbox       string
+		Delete      string
 		Info        AnalyzedInfo
 		Header      mailtoolkit.Header
 		Parts       []Href
@@ -281,9 +303,10 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		// Risky counts the attachments with a warning or a danger.
 		Risky int
 	}{
-		Title: "Analyse : " + info.Filename,
-		Inbox: "/inbox/" + r.PathValue("token"),
-		Info:  info,
+		Title:  "Analyse : " + info.Filename,
+		Inbox:  "/inbox/" + r.PathValue("token"),
+		Delete: "/inbox/" + r.PathValue("token") + "/" + r.PathValue("id") + "/delete",
+		Info:   info,
 		// Header stays empty for formats not parsed yet (.msg).
 		Header: mail.Header,
 	}

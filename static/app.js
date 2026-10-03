@@ -86,3 +86,11 @@ document.addEventListener("click", function (event) {
         // Storage blocked: the choice lasts for this page only.
     }
 });
+
+// Deletion forms ask for a confirmation.
+document.addEventListener("submit", function (event) {
+    var form = event.target;
+    if (form.dataset.confirm && !confirm(form.dataset.confirm)) {
+        event.preventDefault();
+    }
+});

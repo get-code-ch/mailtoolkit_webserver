@@ -57,15 +57,15 @@
         <p class="note">Seuls les résultats écrits par un serveur qui a reçu le mail sont retenus : un expéditeur malveillant peut
             ajouter de faux résultats dans son mail.</p>
         <div class="table-scroll">
-        <table>
+        <table class="providers">
             <thead><tr><th>Serveur</th><th>Méthode</th><th>Résultat</th><th>Retenu</th><th>Détails</th></tr></thead>
             <tbody>
             {{range .Provider}}
             <tr>
-                <td><code>{{.Server}}</code></td><td>{{.Method}}</td>
+                <td><code>{{if .Server}}{{.Server}}{{else}}(non indiqué){{end}}</code></td><td>{{.Method}}</td>
                 <td><span class="badge level-{{resultClass .Result}}">{{.Result}}</span></td>
-                <td>{{if .Trusted}}<span class="level-ok">✓ oui</span>{{else}}<span class="level-warning">non vérifiable</span>{{end}}</td>
-                <td><code>{{range $i, $p := .Properties}}{{if $i}} {{end}}{{$p}}{{end}}</code></td>
+                <td>{{if .Trusted}}<span class="level-ok">✓ oui</span>{{else}}<span class="level-warning">⚠ non vérifiable</span>{{end}}</td>
+                <td>{{range .Properties}}<code>{{.}}</code><br>{{end}}</td>
             </tr>
             {{end}}
             </tbody>

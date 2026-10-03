@@ -135,3 +135,44 @@ func TestCarrierWithMsgAttachment(t *testing.T) {
 		t.Errorf("analyzed msg: %+v %+v %v", mail.Header, info, err)
 	}
 }
+
+func TestDeleteSubmission(t *testing.T) {
+	s := newTestServer(t)
+	handler := s.routes(t.TempDir())
+	location := postFile(t, handler, "/upload", "suspect.eml", []byte("From: a@example.org\r\nSubject: to delete\r\n\r\nbody\r\n")).Header().Get("Location")
+	parts := strings.Split(location, "/") // "", inbox, token, id, n
+	if len(parts) != 5 {
+		t.Fatalf("location %q", location)
+	}
+	inbox, del := "/inbox/"+parts[2], "/inbox/"+parts[2]+"/"+parts[3]+"/delete"
+	if page := get(handler, location).Body.String(); !strings.Contains(page, `action="`+del+`"`) {
+		t.Error("analysis page has no delete button")
+	}
+	if page := get(handler, inbox).Body.String(); !strings.Contains(page, "to delete") || !strings.Contains(page, `action="`+del+`"`) {
+		t.Error("inbox does not list the mail with a delete button")
+	}
+
+	post := func(target string) *httptest.ResponseRecorder {
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, target, nil))
+		return recorder
+	}
+	if r := post(del); r.Code != http.StatusSeeOther || r.Header().Get("Location") != inbox {
+		t.Fatalf("delete: %d %q", r.Code, r.Header().Get("Location"))
+	}
+	if get(handler, location).Code != http.StatusNotFound {
+		t.Error("deleted mail still served")
+	}
+	if page := get(handler, inbox).Body.String(); strings.Contains(page, "to delete") {
+		t.Error("deleted mail still listed")
+	}
+	if r := post(del); r.Code != http.StatusNotFound {
+		t.Errorf("second delete: %d", r.Code)
+	}
+	if r := post("/inbox/" + parts[2] + "/../delete"); r.Code == http.StatusSeeOther {
+		t.Error("invalid id accepted")
+	}
+	if code := get(handler, del).Code; code != http.StatusNotFound && code != http.StatusMethodNotAllowed {
+		t.Errorf("GET on the delete URL: %d", code)
+	}
+}

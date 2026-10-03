@@ -45,15 +45,32 @@
 {{end}}
 
 {{define "forward-help"}}
-<details class="panel">
-    <summary>Transférer un mail en pièce jointe</summary>
-    <ul>
-        <li><strong>Gmail</strong> : ouvrez le mail, menu « ⋮ » puis « Transférer en tant que pièce jointe ».</li>
-        <li><strong>Outlook</strong> : menu « … » du mail, « Transférer » puis « Transférer en tant que pièce jointe ».
-            Depuis Outlook pour Windows : <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd>.</li>
-        <li><strong>Thunderbird</strong> : clic droit sur le mail, « Transférer en tant que » puis « Pièce jointe ».</li>
-        <li><strong>Apple Mail</strong> : menu « Message » puis « Transférer en tant que pièce jointe ».</li>
-        <li>Vous pouvez aussi joindre un fichier <code>.eml</code> ou <code>.msg</code> enregistré depuis votre messagerie.</li>
-    </ul>
+<details class="panel help">
+    <summary>Envoyer le mail sans le modifier : mode d'emploi par messagerie</summary>
+    <p class="note">Le mail doit arriver <strong>intact</strong>, comme pièce jointe ou comme fichier. Un transfert ordinaire
+        (« Transférer ») recopie le texte dans un nouveau mail : les en-têtes et les signatures d'origine sont perdus. Les applications
+        mobiles ne proposent en général aucune de ces options : utilisez la version web ou l'application de bureau.</p>
+    <dl class="help-list">
+        <dt>Proton Mail</dt>
+        <dd>Pas de transfert en pièce jointe. Ouvrez le mail, menu <kbd>⋮</kbd> (Plus) en haut du message, puis
+            « Télécharger » ou « Exporter » : un fichier <code>.eml</code> est enregistré. Déposez-le ensuite ici.</dd>
+        <dt>Gmail (web)</dt>
+        <dd>Dans la liste des mails, clic droit sur le mail puis « Transférer en tant que pièce jointe ». Ou, mail ouvert : menu
+            <kbd>⋮</kbd> à droite de la flèche de réponse, puis « Télécharger le message » pour obtenir le fichier <code>.eml</code>.</dd>
+        <dt>Outlook (web, nouveau Outlook)</dt>
+        <dd>Mail ouvert, menu <kbd>…</kbd> (Autres actions) puis « Transférer » › « Transférer en tant que pièce jointe ».
+            Selon la version, l'option se trouve aussi dans la flèche à côté du bouton « Transférer » du ruban.</dd>
+        <dt>Outlook classique (Windows)</dt>
+        <dd>Sélectionnez le mail puis <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>F</kbd>. Ou glissez le mail sur le bureau : vous obtenez
+            un fichier <code>.msg</code> à déposer ici.</dd>
+        <dt>Thunderbird</dt>
+        <dd>Clic droit sur le mail, « Transférer au format » › « Pièce jointe ». Ou « Fichier » › « Enregistrer comme » › « Fichier »
+            pour obtenir un <code>.eml</code>.</dd>
+        <dt>Apple Mail (Mac)</dt>
+        <dd>Sélectionnez le mail, menu « Message » › « Transférer en tant que pièce jointe ». Ou faites-le glisser sur le bureau
+            pour obtenir un <code>.eml</code>.</dd>
+        <dt>Toutes les messageries de bureau</dt>
+        <dd>Glisser le mail depuis la liste vers une nouvelle fenêtre de rédaction l'ajoute en général comme pièce jointe.</dd>
+    </dl>
 </details>
 {{end}}
