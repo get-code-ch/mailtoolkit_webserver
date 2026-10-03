@@ -1,0 +1,4 @@
+Content-Type: text/plain; charset=utf-8
+
+Paiement de la facture 2026-17.
+Merci.

@@ -1,0 +1,20 @@
+From: Example Signer <signer@example.com>
+To: user@example.org
+Subject: Facture
+MIME-Version: 1.0
+Content-Disposition: attachment; filename="smime.p7m"
+Content-Type: application/x-pkcs7-mime; smime-type=enveloped-data; name="smime.p7m"
+Content-Transfer-Encoding: base64
+
+MIICBAYJKoZIhvcNAQcDoIIB9TCCAfECAQAxggFbMIIBVwIBADA/MDkxCzAJBgNV
+BAYTAkNIMREwDwYDVQQKDAhUZXN0IFBLSTEXMBUGA1UEAwwOVGVzdCBTTUlNRSBJ
+Q0ECAhCSMA0GCSqGSIb3DQEBAQUABIIBACGk7sJ1n76/egRYGARVW/G94HYNaJJH
+2pKfWKMtdMdXqUu6h0AT8dDplIPg3mGY/a/lrpKqWuypAk/IhErUhKSTaiGmNrno
+6UkGwMqcpj9gOD96AbvalmC+CBaHTEKbK0iUFkUVV84DvDuZR5b6KWHQ+5JLo/Zk
+IwaTakKMFh0tAel9er16GI6xZkgjiepV8VxZrr7OFTQqvLCvkcUJs6W/cTgmWJ9g
+CS77Q9zbvz1Ki89RgVAkO1h7FPN8rPs1NObMcHwssgl2YfhtVAlgeN8a2ApJRuH+
+yDAhehRgEZXY1gITrsi/yJQPW4huEczQT6CeBOMmR/QPw5+Fp2Jrf70wgYwGCSqG
+SIb3DQEHATAdBglghkgBZQMEASoEEJFeP96qpWghTh9fro+dmxOAYI2azSuMNE9j
+QzUCDm5cXc+h6ykxofFia0QhZXu3mnUXUCe2Fb91rRauQTbJ3gSy3gV594thBqNu
+M568dkk9538Ucpot/1BE6RAxWICt9ttuPZnw/JYVb9osIE/imx9oVA==
+
