@@ -38,6 +38,7 @@ func main() {
 	if err != nil {
 		log.Fatal("opening data folder: ", err)
 	}
+	assetVersion = staticVersion(conf.StaticFolder)
 	templates, err := template.New("").Funcs(templateFuncs).ParseFS(views, "view/*.html")
 	if err != nil {
 		log.Fatal("parsing templates: ", err)
