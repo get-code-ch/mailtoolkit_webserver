@@ -60,6 +60,8 @@ type server struct {
 	// repCache keeps its answers per mail.
 	reputation *reputationChecker
 	repCache   *boundedCache[reputation]
+	// trustedDomains are the sender domains trusted when authenticated.
+	trustedDomains []string
 }
 
 // dnsTimeout bounds the DNS queries of a header analysis.
@@ -380,7 +382,7 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 	data.Lookalikes = findLookalikes(append(slices.Clone(auth.Senders), linkHosts...))
 	data.Reputation = s.reputationOf(r, &auth, linkDomains)
 	data.Risk = assessRisk(riskInput{Auth: &auth, Links: data.Links, Attachments: data.Attachments,
-		Reputation: data.Reputation, Lookalikes: data.Lookalikes})
+		Reputation: data.Reputation, Lookalikes: data.Lookalikes, TrustedDomains: s.trustedDomains})
 	s.render(w, "mail.html", data)
 }
 

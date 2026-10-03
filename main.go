@@ -59,13 +59,14 @@ func main() {
 	}
 
 	s := &server{
-		store:      store,
-		templates:  templates,
-		limiter:    newRateLimiter(10, time.Hour),
-		resolver:   net.DefaultResolver,
-		auth:       newBoundedCache[headerAnalysis](64),
-		reputation: newReputationChecker(conf.Reputation, net.DefaultResolver, conf.Domains),
-		repCache:   newBoundedCache[reputation](64),
+		store:          store,
+		templates:      templates,
+		limiter:        newRateLimiter(10, time.Hour),
+		resolver:       net.DefaultResolver,
+		auth:           newBoundedCache[headerAnalysis](64),
+		reputation:     newReputationChecker(conf.Reputation, net.DefaultResolver, conf.Domains),
+		repCache:       newBoundedCache[reputation](64),
+		trustedDomains: conf.TrustedDomains,
 
 		maxUploadSize:    conf.MaxMessageSize,
 		hostname:         conf.Hostname,

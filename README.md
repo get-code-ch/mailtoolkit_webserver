@@ -107,8 +107,18 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
 | `ingest_token`     | enables `POST /ingest` (see below); overridden by the `MTK_INGEST_TOKEN` environment variable |
 | `behind_cloudflare`| trust the visitor address given by the Cloudflare proxies |
 | `reputation`       | external reputation checks, see below |
+| `trusted_domains`  | sender domains (subdomains included) whose authenticated mails are not flagged for their links, see below |
 
 Without `cert` and `key`, only the MX port (without STARTTLS) and plain HTTP are started.
+
+### Trusted domains
+
+Mailing platforms (Dynamics 365, Salesforce, Mailchimp…) rewrite the links of the mails they send; the known ones
+are recognized, but not all. For the domains listed in `trusted_domains` (the organization's own domains, for
+example `["example.org"]`), a mail whose sender belongs to one of them is not flagged for its links or for brand
+names in its link domains, provided that DMARC was validated by the receiving server (a sender only authenticated
+by the internal verification is not trusted, nor is a spoofed one). Dangerous attachments, lookalike domains,
+blocklisted domains and antispam verdicts still count: an account of a trusted sender can be compromised.
 
 ### Reputation checks
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -46,6 +47,10 @@ type Configuration struct {
 	BehindCloudflare bool `json:"behind_cloudflare"`
 	// Reputation sets the DNS blocklists and RDAP queries.
 	Reputation ReputationConfig `json:"reputation"`
+	// TrustedDomains are sender domains (and their subdomains) whose
+	// authenticated mails are not flagged for their links: the
+	// organization's own domains, its mailing providers.
+	TrustedDomains []string `json:"trusted_domains"`
 }
 
 // Duration reads a duration written as "24h" in JSON.
@@ -96,6 +101,9 @@ func getConfiguration(file string) (Configuration, error) {
 	}
 	if configuration.IngestToken != "" && len(configuration.IngestToken) < 32 {
 		return Configuration{}, errors.New("configuration: ingest_token must be at least 32 characters")
+	}
+	for i, d := range configuration.TrustedDomains {
+		configuration.TrustedDomains[i] = strings.ToLower(strings.Trim(strings.TrimSpace(d), "."))
 	}
 	if configuration.Hostname == "" {
 		configuration.Hostname, _ = os.Hostname()

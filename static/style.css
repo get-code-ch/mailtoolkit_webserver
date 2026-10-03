@@ -1625,6 +1625,7 @@ ul.reasons li::before {
 ul.reasons li.level-danger::before { content: "✕"; }
 ul.reasons li.level-warning::before { content: "!"; }
 ul.reasons li.level-ok::before { content: "✓"; }
+ul.reasons li.level-info::before { content: "i"; font-family: var(--mono); }
 
 ul.reasons details {
     margin-top: 4px;

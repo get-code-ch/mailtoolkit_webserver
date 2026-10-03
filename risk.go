@@ -33,6 +33,11 @@ type riskReport struct {
 	// really comes from its domain.
 	Sender        string
 	Authenticated bool
+	// Trusted is set when the sender is one of the trusted domains and
+	// its identity was confirmed by the receiving server; TrustedDomain is
+	// the matching entry, also set when the identity was not confirmed.
+	Trusted       bool
+	TrustedDomain string
 }
 
 // riskReason is one doubtful element of the mail.
@@ -65,6 +70,8 @@ type riskInput struct {
 	Attachments []attachmentView
 	Reputation  reputation
 	Lookalikes  []lookalike
+	// TrustedDomains are the sender domains trusted when authenticated.
+	TrustedDomains []string
 }
 
 // assessRisk turns the analyses into a traffic light.
@@ -85,6 +92,16 @@ func assessRisk(in riskInput) riskReport {
 
 	if a := in.Auth; a != nil {
 		assessAuthentication(&r, a, add)
+		r.TrustedDomain = trustedDomain(a.FromDomain, in.TrustedDomains)
+		switch {
+		case r.TrustedDomain != "" && r.ProviderAuthenticated(a):
+			r.Trusted = true
+			r.Positives = append(r.Positives, fmt.Sprintf("L'expéditeur (%s) fait partie des domaines de confiance de votre organisation, "+
+				"et votre messagerie a confirmé son identité : ses liens ne sont pas comptés.", a.FromDomain))
+		case r.TrustedDomain != "":
+			add(levelInfo, 0, "dmarc", fmt.Sprintf("%s fait partie des domaines de confiance, mais son identité n'a pas été confirmée par "+
+				"votre messagerie : la confiance ne s'applique pas.", a.FromDomain), "DMARC non validé par un serveur de réception")
+		}
 		for _, check := range a.Checks {
 			switch check.Level {
 			case levelDanger:
@@ -110,7 +127,9 @@ func assessRisk(in riskInput) riskReport {
 		}
 	}
 
-	assessLinks(&r, in.Links, add)
+	if !r.Trusted {
+		assessLinks(&r, in.Links, add)
+	}
 	assessAttachments(&r, in.Attachments, add)
 
 	// An authenticated mail from a brand links to its other domains:
@@ -127,6 +146,9 @@ func assessRisk(in riskInput) riskReport {
 	linkNames := 0
 	for _, l := range in.Lookalikes {
 		if l.Kind != "sosie" && l.Brand == senderBrand {
+			continue
+		}
+		if l.Kind != "sosie" && l.Role == "lien" && r.Trusted {
 			continue
 		}
 		if l.Kind != "sosie" && l.Role == "lien" {
@@ -192,6 +214,30 @@ func assessRisk(in riskInput) riskReport {
 			"vous demande de l'argent, un mot de passe ou une action urgente."
 	}
 	return r
+}
+
+// ProviderAuthenticated reports whether DMARC was validated by a
+// receiving server (or a trusted ARC sealer), not only by the internal
+// verification of a mail that may have been modified.
+func (r riskReport) ProviderAuthenticated(a *headerAnalysis) bool {
+	for _, v := range a.Verdicts {
+		if v.Name == "DMARC" {
+			return v.Result == mailauth.ResultPass && v.Source != "vérification interne"
+		}
+	}
+	return false
+}
+
+// trustedDomain returns the entry of the trusted domains matching a sender
+// domain or one of its parents, "" if none.
+func trustedDomain(domain string, trusted []string) string {
+	domain = strings.ToLower(domain)
+	for _, t := range trusted {
+		if t != "" && (domain == t || strings.HasSuffix(domain, "."+t)) {
+			return t
+		}
+	}
+	return ""
 }
 
 // assessAuthentication tells whether the mail really comes from the

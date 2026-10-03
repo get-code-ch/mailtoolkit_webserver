@@ -249,6 +249,13 @@
         <p class="note">Un élément de poids 3 ou plus, ou un total de 5, donne un risque élevé ; un total de 2 donne un risque moyen.</p>
         {{end}}
 
+        {{with .Risk.TrustedDomain}}
+        <h3>Domaine de confiance</h3>
+        <p class="{{if $.Risk.Trusted}}level-ok{{else}}level-warning{{end}}">L'expéditeur relève du domaine de confiance <code>{{.}}</code>
+            {{if $.Risk.Trusted}}et son identité a été confirmée par le serveur de réception : les liens ne comptent pas dans le score.
+            {{else}}mais son identité n'a pas été confirmée par un serveur de réception : la confiance ne s'applique pas.{{end}}</p>
+        {{end}}
+
         <h3>Domaines imitant une marque</h3>
         {{range .Lookalikes}}
         <p class="level-{{.Level}}"><code>{{.Domain}}</code> ({{.Role}}) {{.Reason}}.</p>

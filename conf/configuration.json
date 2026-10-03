@@ -14,5 +14,6 @@
   "max_message_size": 26214400,
   "max_mailboxes": 1000,
   "ingest_token": "",
-  "behind_cloudflare": true
+  "behind_cloudflare": true,
+  "trusted_domains": []
 }

@@ -74,6 +74,29 @@ func TestAssessRisk(t *testing.T) {
 			}
 		})
 	}
+	// Trusted domains: links of an authenticated sender are not counted,
+	// a sender only internally authenticated is not trusted.
+	deceptive := []Link{link(levelDanger, "Le texte affiché montre tdh.org")}
+	trusted := &headerAnalysis{FromDomain: "news.tdh.org", Verdicts: authenticated.Verdicts}
+	r := assessRisk(riskInput{Auth: trusted, Links: deceptive, TrustedDomains: []string{"tdh.org"},
+		Lookalikes: []lookalike{{Domain: "tdh-paypal.example", Brand: "PayPal", Kind: "nom", Role: "lien"}}})
+	if !r.Trusted || r.TrustedDomain != "tdh.org" || r.Light != riskGreen || !strings.Contains(strings.Join(r.Positives, " "), "domaines de confiance") {
+		t.Errorf("trusted sender: light %s, trusted %v, positives %q", r.Light, r.Trusted, r.Positives)
+	}
+	r = assessRisk(riskInput{Auth: trusted, Links: deceptive, TrustedDomains: []string{"tdh.org"},
+		Attachments: []attachmentView{{Report: filecheck.Report{Name: "x.docm", Alerts: []filecheck.Alert{{Level: filecheck.LevelDanger, Message: "macros"}}}}}})
+	if r.Light != riskRed {
+		t.Errorf("dangerous attachment from a trusted sender: %s", r.Light)
+	}
+	exportedTrusted := &headerAnalysis{FromDomain: "tdh.org", Verdicts: exported.Verdicts}
+	r = assessRisk(riskInput{Auth: exportedTrusted, Links: deceptive, TrustedDomains: []string{"tdh.org"}})
+	if r.Trusted || r.TrustedDomain != "tdh.org" || r.Light != riskRed {
+		t.Errorf("unconfirmed trusted sender: light %s, trusted %v", r.Light, r.Trusted)
+	}
+	if r := assessRisk(riskInput{Auth: trusted, Links: deceptive, TrustedDomains: []string{"other.org", "dh.org"}}); r.Trusted || r.Light != riskRed {
+		t.Errorf("other trusted domains: light %s, trusted %v", r.Light, r.Trusted)
+	}
+
 	if r := assessRisk(riskInput{Auth: authenticated}); !r.Authenticated || r.Sender != "shop.example" {
 		t.Errorf("sender %q authenticated %v", r.Sender, r.Authenticated)
 	}
