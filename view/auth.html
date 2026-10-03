@@ -206,10 +206,11 @@
             </dl>{{end}}</li>
         {{with $d.BodyHint}}<li class="level-info"><strong>Diagnostic</strong> : {{.}}</li>{{end}}
         {{if $d.BodyLimit}}<li class="level-warning"><strong>l=</strong> : seul le début du corps est signé, du contenu a pu être ajouté à la fin sans invalider la signature.</li>{{end}}
-        <li class="{{if eq $d.Result "pass"}}level-ok{{else if and (eq $d.BodyHash "ok") (eq $d.Result "fail")}}level-danger{{else}}note{{end}}">
+        <li class="{{if eq $d.HeaderHash "ok"}}level-ok{{else if $d.HeaderHash}}level-danger{{else}}note{{end}}">
             <strong>En-têtes</strong> : {{len $d.Fields}} champs signés
-            {{- if eq $d.Result "pass"}}, inchangés depuis la signature
-            {{- else if and (eq $d.BodyHash "ok") (eq $d.Result "fail")}}, au moins un a été modifié (ou la clé a changé){{end}}</li>
+            {{- if eq $d.HeaderHash "ok"}}, signature valide : inchangés depuis la signature
+            {{- else if $d.HeaderHash}}, signature invalide : {{with $d.HeaderHint}}{{.}}{{else}}au moins un a été modifié (ou la clé a changé){{end}}
+            {{- else}}, non vérifiés{{end}}</li>
     </ul>
     {{if and (eq $d.BodyHash "différent") (not $d.BodyHint)}}
     <p class="callout level-info">Les fins de ligne ne sont pas en cause : la signature est toujours calculée sur des lignes terminées
@@ -218,13 +219,14 @@
         reconstruit, avec un autre encodage), par une passerelle de sécurité qui réécrit les liens (Safe Links, Mimecast…) ou qui
         ajoute une mention « mail externe ». Le résultat noté par votre fournisseur à la réception reste la référence.</p>
     {{end}}
-    {{if and (eq $d.BodyHash "ok") (eq $d.Result "fail")}}
-    <p class="callout level-info">Le corps est intact mais la signature des en-têtes échoue. Causes fréquentes : un préfixe ajouté au sujet
-        (<code>[EXT]</code>, <code>RE:</code>), un From réécrit par une liste de diffusion, une Date ou un Message-ID régénérés lors
-        de l'export, ou une clé changée par le domaine depuis l'envoi. Comparez ci-dessous les valeurs actuelles et les valeurs signées.</p>
+    {{if and (eq $d.HeaderHash "différent") (not $d.HeaderHint)}}
+    <p class="callout level-info">La signature des en-têtes échoue. Les hypothèses courantes ont été testées avec la clé (champ ajouté,
+        second exemplaire d'un champ, préfixe ajouté au sujet) sans trouver le champ en cause : une empreinte ne dit pas quelle valeur a
+        changé. Autres causes fréquentes : une valeur réécrite (From réécrit par une liste de diffusion, Date ou Message-ID régénérés
+        lors de l'export, adresses réencodées), ou une clé changée par le domaine depuis l'envoi. Comparez ci-dessous les valeurs actuelles et les valeurs signées.</p>
     {{end}}
 
-    <details{{if ne $d.Result "pass"}} open{{end}}>
+    <details{{if eq $d.HeaderHash "différent"}} open{{end}}>
         <summary>Champs signés (h=) et valeurs utilisées pour la signature</summary>
         <div class="table-scroll">
         <table class="signed-fields">
@@ -237,9 +239,9 @@
                 <td colspan="2" class="note">absent du mail : signé « vide », ce champ ne peut pas être ajouté sans invalider la signature</td>
             </tr>
             {{else}}
-            <tr>
-                <th scope="row"><a href="#h-{{.Index}}"><code>{{.Name}}</code></a></th>
-                <td><pre class="field-raw">{{.Raw}}</pre></td>
+            <tr{{if .Modified}} class="modified"{{end}}>
+                <th scope="row"><a href="#h-{{.Index}}"><code>{{.Name}}</code></a>{{if .Modified}}<br><span class="badge level-warning">modifié</span>{{end}}</th>
+                <td><pre class="field-raw">{{.Raw}}</pre>{{with .Note}}<div class="modified-note">{{.}}</div>{{end}}</td>
                 <td>{{if eq .Raw .Canonical}}<span class="note">identique</span>{{else}}<pre class="field-canon">{{visibleSpace .Canonical}}</pre>{{end}}</td>
             </tr>
             {{end}}
@@ -254,8 +256,8 @@
             </tbody>
         </table>
         </div>
-        <p class="note">Les champs sont pris du bas vers le haut quand un nom est répété. Symboles : <code>␍␊</code> fin de ligne,
-            <code>⇥</code> tabulation, <code>·</code> espace en fin de ligne.</p>
+        <p class="note">Les champs sont pris du bas vers le haut quand un nom est répété. Repères : <span class="ws">CRLF</span> fin de ligne,
+            <span class="ws">TAB</span> tabulation, <span class="ws">·</span> espace en fin de ligne.</p>
     </details>
 
     <details>

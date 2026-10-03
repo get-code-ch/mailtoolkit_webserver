@@ -57,6 +57,12 @@ type DKIMResult struct {
 	// BodyHint explains a body hash mismatch when a variant of the body
 	// matches bh=.
 	BodyHint string
+	// HeaderHash is "ok" when the signed header fields verify with the
+	// key, "différent" when they do not, empty when not checked.
+	HeaderHash string
+	// HeaderHint names the field whose change breaks the signature, when
+	// it could be found.
+	HeaderHint string
 	// SignatureInput is the DKIM-Signature field as hashed last, with an
 	// empty b= and without its final CRLF.
 	SignatureInput string
@@ -73,6 +79,10 @@ type SignedField struct {
 	Raw   string
 	// Canonical is the text hashed, after canonicalization.
 	Canonical string
+	// Modified is set on the field found to break the signature, Note
+	// telling how.
+	Modified bool
+	Note     string
 }
 
 // Tag is a tag=value pair of a DKIM or ARC tag-list.
@@ -204,7 +214,8 @@ func verifySignature(ctx context.Context, resolver Resolver, m Message, index in
 		return fail(ResultPermError, "canonicalisation %q non supportée", tags["c"])
 	}
 
-	// Body hash
+	// Body hash: a mismatch does not stop the verification, the headers
+	// are checked too to tell what was modified.
 	body := canonicalBody(m.Body, bodyCanon)
 	if l, ok := tags["l"]; ok {
 		limit, err := strconv.Atoi(l)
@@ -230,51 +241,80 @@ func verifySignature(ctx context.Context, resolver Resolver, m Message, index in
 	if !bytes.Equal(computed, expected) {
 		result.BodyHash = "différent"
 		result.BodyHint = bodyHint(m.Body, bodyCanon, expected, newHash)
-		return fail(ResultFail, "le corps du mail a été modifié depuis la signature")
+	}
+	bodyFailed := func(headers string) DKIMResult {
+		return fail(ResultFail, "le corps du mail a été modifié depuis la signature%s", headers)
 	}
 
-	// Public key
+	// Public key: without it, a modified body still makes the result fail.
+	keyFail := func(status, format string, args ...any) DKIMResult {
+		if result.BodyHash != "ok" {
+			return bodyFailed(" (en-têtes non vérifiés : " + fmt.Sprintf(format, args...) + ")")
+		}
+		return fail(status, format, args...)
+	}
 	key, err := lookupKey(ctx, resolver, result.Selector, result.Domain)
 	if err != nil {
 		if e, ok := err.(*spfError); ok {
-			return fail(e.result, "%s", e.reason)
+			return keyFail(e.result, "%s", e.reason)
 		}
-		return fail(ResultTempError, "%v", err)
+		return keyFail(ResultTempError, "%v", err)
 	}
 	result.Testing = key.testing
 	if key.keyType != keyType {
-		return fail(ResultPermError, "clé de type %s pour une signature %s", key.keyType, result.Algorithm)
+		return keyFail(ResultPermError, "clé de type %s pour une signature %s", key.keyType, result.Algorithm)
 	}
 	if len(key.hashes) > 0 && !contains(key.hashes, "sha256") {
-		return fail(ResultPermError, "la clé n'autorise pas sha256")
+		return keyFail(ResultPermError, "la clé n'autorise pas sha256")
 	}
 
 	// Header hash
-	headerHash := newHash()
-	for _, signed := range result.Fields {
-		headerHash.Write([]byte(signed.Canonical))
-	}
-	headerHash.Write([]byte(result.SignatureInput))
-	digest := headerHash.Sum(nil)
-
 	signature, err := base64.StdEncoding.DecodeString(tags["b"])
 	if err != nil {
 		return fail(ResultPermError, "signature b= illisible")
+	}
+	verify := func(fields []string) bool {
+		h := newHash()
+		for _, f := range fields {
+			h.Write([]byte(f))
+		}
+		h.Write([]byte(result.SignatureInput))
+		digest := h.Sum(nil)
+		switch k := key.key.(type) {
+		case *rsa.PublicKey:
+			return rsa.VerifyPKCS1v15(k, cryptoHash, digest, signature) == nil
+		case ed25519.PublicKey:
+			return ed25519.Verify(k, digest, signature)
+		}
+		return false
 	}
 	switch k := key.key.(type) {
 	case *rsa.PublicKey:
 		result.KeyBits = k.N.BitLen()
 		if result.KeyBits < 1024 {
-			return fail(ResultPermError, "clé RSA de %d bits, trop courte (RFC 8301)", result.KeyBits)
-		}
-		if err := rsa.VerifyPKCS1v15(k, cryptoHash, digest, signature); err != nil {
-			return fail(ResultFail, "signature invalide : en-têtes modifiés, ou clé changée depuis l'envoi")
+			return keyFail(ResultPermError, "clé RSA de %d bits, trop courte (RFC 8301)", result.KeyBits)
 		}
 	case ed25519.PublicKey:
 		result.KeyBits = 256
-		if !ed25519.Verify(k, digest, signature) {
-			return fail(ResultFail, "signature invalide : en-têtes modifiés, ou clé changée depuis l'envoi")
+	}
+	canonical := make([]string, len(result.Fields))
+	for i, f := range result.Fields {
+		canonical[i] = f.Canonical
+	}
+	if !verify(canonical) {
+		result.HeaderHash = "différent"
+		result.HeaderHint = findModifiedField(m, &result, canonical, headerCanon, verify)
+		if result.BodyHash != "ok" {
+			return bodyFailed(", et les en-têtes signés aussi")
 		}
+		if result.HeaderHint != "" {
+			return fail(ResultFail, "signature invalide : %s", result.HeaderHint)
+		}
+		return fail(ResultFail, "signature invalide : en-têtes modifiés, ou clé changée depuis l'envoi")
+	}
+	result.HeaderHash = "ok"
+	if result.BodyHash != "ok" {
+		return bodyFailed(" (les en-têtes signés sont intacts)")
 	}
 
 	if x, err := strconv.ParseInt(tags["x"], 10, 64); err == nil && time.Now().After(time.Unix(x, 0)) {
@@ -285,6 +325,53 @@ func verifySignature(ctx context.Context, resolver Resolver, m Message, index in
 		result.Reason = "clé publiée en mode test (t=y)"
 	}
 	return result
+}
+
+// subjectPrefix matches the tags added in front of a subject by gateways
+// and mail clients: "[EXT] ", "***SPAM*** ", "RE: "...
+var subjectPrefix = regexp.MustCompile(`^\s*(?:\[[^\]]{1,40}\]|\*{1,5}[^*]{1,30}\*{1,5}|\((?:EXT|EXTERNAL|SPAM)\)|(?i:RE|TR|FW|FWD|AW|WG|RV|SV|VS)\s*:)\s*`)
+
+// findModifiedField looks for the header field whose change breaks the
+// signature, by verifying it with the field as it probably was: absent
+// (added since), another occurrence (a duplicate was added), or a subject
+// without the prefixes added on the way. It marks the field found and
+// returns a description, or "" when no single change explains the failure.
+func findModifiedField(m Message, result *DKIMResult, canonical []string, canon string, verify func([]string) bool) string {
+	try := func(k int, value string) bool {
+		saved := canonical[k]
+		canonical[k] = value
+		ok := verify(canonical)
+		canonical[k] = saved
+		return ok
+	}
+	for k := range result.Fields {
+		f := &result.Fields[k]
+		if f.Index < 0 {
+			continue
+		}
+		if try(k, "") {
+			f.Modified, f.Note = true, "champ ajouté après la signature : il n'existait pas quand le mail a été signé"
+			return fmt.Sprintf("le champ %s a été ajouté après la signature", m.Fields[f.Index].Name)
+		}
+		for j, other := range m.Fields {
+			if j != f.Index && strings.EqualFold(other.Name, f.Name) && try(k, canonicalHeader(other.Raw, canon)) {
+				f.Modified, f.Note = true, fmt.Sprintf("un champ %s a été ajouté : la signature porte sur une autre occurrence", other.Name)
+				return fmt.Sprintf("un second champ %s a été ajouté après la signature", other.Name)
+			}
+		}
+		if strings.EqualFold(f.Name, "subject") {
+			name, value, _ := strings.Cut(f.Raw, ":")
+			value = strings.TrimSpace(unfold(value))
+			for subjectPrefix.MatchString(value) {
+				value = subjectPrefix.ReplaceAllString(value, "")
+				if try(k, canonicalHeader(name+": "+value+"\r\n", canon)) {
+					f.Modified, f.Note = true, fmt.Sprintf("sujet modifié, sujet d'origine : « %s »", strings.Join(strings.Fields(value), " "))
+					return "un préfixe a été ajouté au sujet"
+				}
+			}
+		}
+	}
+	return ""
 }
 
 // bodyHint looks for the change that explains a body hash mismatch, by

@@ -248,3 +248,50 @@ func TestBodyHint(t *testing.T) {
 		t.Errorf("unexpected hint %q", hint)
 	}
 }
+
+func TestDKIMModifiedField(t *testing.T) {
+	resolver := dkimResolver(t)
+	relaxed := readVector(t, "dkim-relaxed-relaxed.eml")
+	modified := func(r DKIMResult) []string {
+		var names []string
+		for _, f := range r.Fields {
+			if f.Modified {
+				names = append(names, f.Name+": "+f.Note)
+			}
+		}
+		return names
+	}
+
+	tests := []struct {
+		name, old, new string
+		field, note    string
+	}{
+		{"header added", "Date:", "Reply-To: evil@example.org\r\nDate:", "reply-to", "ajouté après la signature"},
+		{"subject prefix", "Subject:   Is dinner", "Subject: [EXT] RE: Is dinner", "subject", "« Is dinner ready? folded continuation »"},
+		{"second From added", "DKIM-Signature:", "From: evil@example.org\r\nDKIM-Signature:", "from", "ajouté"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := verifyOne(t, resolver, bytes.Replace(relaxed, []byte(tt.old), []byte(tt.new), 1))
+			names := modified(got)
+			if got.Result != ResultFail || got.HeaderHash != "différent" || got.BodyHash != "ok" || got.HeaderHint == "" ||
+				len(names) != 1 || !strings.HasPrefix(names[0], tt.field+": ") || !strings.Contains(names[0], tt.note) {
+				t.Errorf("result %s (%s), header %q, modified %q", got.Result, got.Reason, got.HeaderHash, names)
+			}
+		})
+	}
+
+	// A changed value cannot be located: nothing is marked.
+	changed := verifyOne(t, resolver, bytes.Replace(relaxed, []byte("Is dinner"), []byte("Is lunch"), 1))
+	if changed.HeaderHash != "différent" || changed.HeaderHint != "" || len(modified(changed)) != 0 {
+		t.Errorf("changed subject: %+v", changed)
+	}
+	// Only the body changed: the headers are reported intact.
+	body := verifyOne(t, resolver, bytes.Replace(relaxed, []byte("We lost"), []byte("We won"), 1))
+	if body.HeaderHash != "ok" || body.BodyHash != "différent" || !strings.Contains(body.Reason, "intacts") {
+		t.Errorf("body changed: %s %s (%s)", body.HeaderHash, body.BodyHash, body.Reason)
+	}
+	if pass := verifyOne(t, resolver, relaxed); pass.HeaderHash != "ok" {
+		t.Errorf("pass: header hash %q", pass.HeaderHash)
+	}
+}

@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -174,5 +175,24 @@ func TestDeleteSubmission(t *testing.T) {
 	}
 	if code := get(handler, del).Code; code != http.StatusNotFound && code != http.StatusMethodNotAllowed {
 		t.Errorf("GET on the delete URL: %d", code)
+	}
+}
+
+func TestModifiedFieldHighlighted(t *testing.T) {
+	key, err := os.ReadFile("mailauth/testdata/dkim-key.txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile("mailauth/testdata/dkim-relaxed-relaxed.eml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := newTestServer(t)
+	s.resolver = mapResolver{txt: map[string][]string{"test._domainkey.example.com": {strings.TrimSpace(string(key))}}}
+	handler := s.routes(t.TempDir())
+	location := postFile(t, handler, "/upload", "x.eml", bytes.Replace(raw, []byte("Subject:   Is dinner"), []byte("Subject: [EXT] Is dinner"), 1)).Header().Get("Location")
+	page := get(handler, location).Body.String()
+	if !strings.Contains(page, `<tr class="modified">`) || !strings.Contains(page, "un préfixe a été ajouté au sujet") || !strings.Contains(page, "Is dinner ready? folded continuation") {
+		t.Error("modified subject not highlighted")
 	}
 }

@@ -1436,3 +1436,24 @@ a.tile {
 a.tile:hover {
     border-color: var(--level, var(--accent));
 }
+
+/* Signed field found modified */
+
+table.signed-fields tr.modified {
+    background: color-mix(in srgb, var(--warning) 9%, transparent);
+    box-shadow: inset 3px 0 var(--warning);
+}
+
+table.signed-fields tr.modified:hover {
+    background: color-mix(in srgb, var(--warning) 13%, transparent);
+}
+
+table.signed-fields tr.modified pre.field-raw {
+    border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+}
+
+.modified-note {
+    margin-top: 6px;
+    color: var(--warning);
+    font-size: 0.85em;
+}
