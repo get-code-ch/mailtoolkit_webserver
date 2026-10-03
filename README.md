@@ -52,6 +52,8 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
   - results written by the receiving servers (`Authentication-Results`, `ARC-Authentication-Results`,
     `Received-SPF`), the `Received` path, and inconsistencies: address in the display name, Reply-To or
     Return-Path on another domain, missing Message-ID, date far from the reception;
+  - ARC chain (RFC 8617) validated: seals and newest message signature; the results recorded by a first sealer that
+    is a receiving provider are used when forwarding broke DKIM;
   - verdicts of the antispam filters the mail went through, decoded: Microsoft 365 / Exchange Online
     Protection (SCL, BCL, SFV, CAT, delivery folder…), SpamAssassin and Rspamd (score, threshold, rules sorted
     by weight), Proofpoint, Gmail (`X-Gm-Spam`, `X-Gm-Phishy`), Barracuda, Mimecast, and the other filtering
@@ -75,6 +77,14 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
   external relationships, DDE fields, password protected documents and archives, ZIP content, PDF actions
   (JavaScript, OpenAction, Launch, embedded files), RTF objects (Equation.3), HTML and SVG scripts, forms and
   HTML smuggling. Office 97-2003 files are read with the `cfb` package, a defensive compound file reader.
+- **Reputation**: DNS blocklists (Spamhaus ZEN and DBL, SpamCop, SURBL by default) for the sending server and the
+  domains of the mail, registration date of these domains (RDAP), and lookalike domains of often impersonated
+  brands (PayPal, Microsoft, PostFinance, TWINT, Swisscom…): letters swapped or replaced by lookalike characters,
+  brand name in another domain.
+- **Risk assessment**: every finding gets a weight and a plain-language explanation; one serious finding or a total
+  of 5 turns the light red, a total of 2 orange. The analysis page opens on a **simplified view** for non-technical
+  visitors: a traffic light, what is doubtful, what is reassuring and what to do. A switch next to the theme one
+  shows the detailed analysis, and the choice is remembered.
 
 ## Configuration
 
@@ -96,8 +106,32 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
 | `max_mailboxes`    | maximum number of active mailboxes |
 | `ingest_token`     | enables `POST /ingest` (see below); overridden by the `MTK_INGEST_TOKEN` environment variable |
 | `behind_cloudflare`| trust the visitor address given by the Cloudflare proxies |
+| `reputation`       | external reputation checks, see below |
 
 Without `cert` and `key`, only the MX port (without STARTTLS) and plain HTTP are started.
+
+### Reputation checks
+
+The analysis queries DNS blocklists for the IP address of the sending server and the domains of the mail (sender,
+Reply-To, Return-Path, DKIM signers, links), and the registries (RDAP, through the IANA bootstrap) for the age of
+these domains. These services receive the addresses and domains of the analyzed mails.
+
+```json
+"reputation": {
+  "disabled": false,
+  "dnsbl_ip": ["zen.spamhaus.org", "bl.spamcop.net"],
+  "dnsbl_domain": ["dbl.spamhaus.org", "multi.surbl.org"],
+  "spamhaus_dqs_key": "",
+  "rdap_disabled": false
+}
+```
+
+All fields are optional; the lists above are the defaults. Spamhaus refuses the queries coming through public or
+shared DNS resolvers (most cloud providers): the page then says the list did not answer. A free
+[Data Query Service](https://www.spamhaus.com/free-trial/free-data-query-service/) key for non-commercial use
+solves it; pass it with the `MTK_SPAMHAUS_DQS_KEY` environment variable (`-e MTK_SPAMHAUS_DQS_KEY=...` with
+`docker run`) rather than in the file. Some registries publish no RDAP service (`.ch`, `.li`): the age of their
+domains is not shown.
 
 ## Deployment
 

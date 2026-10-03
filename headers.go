@@ -24,6 +24,7 @@ type headerAnalysis struct {
 	SPF      mailauth.SPFResult
 	DKIM     []mailauth.DKIMResult
 	DMARC    mailauth.DMARCResult
+	ARC      mailauth.ARCResult
 	Provider []providerView
 	// Verdicts combine, for SPF, DKIM and DMARC, the result written by the
 	// receiving provider and the internal verification.
@@ -33,6 +34,10 @@ type headerAnalysis struct {
 	Groups   []headerGroup
 	// Spam are the verdicts of the antispam filters.
 	Spam []spamReport
+	// FromDomain is the domain of the displayed sender, Senders the
+	// domains naming the sender (From, Reply-To, Return-Path, DKIM d=).
+	FromDomain string
+	Senders    []subject
 	// Part is the content part shown with the analysis, kept in the links
 	// choosing another hop.
 	Part string
@@ -90,12 +95,15 @@ func analyzeHeaders(ctx context.Context, resolver mailauth.Resolver, raw []byte,
 		a.SPF = mailauth.SPFResult{Result: mailauth.ResultNone, Reason: "aucune adresse IP d'expéditeur dans les en-têtes Received"}
 	}
 	a.DKIM = mailauth.VerifyDKIM(ctx, resolver, m)
+	a.ARC = mailauth.VerifyARC(ctx, resolver, m)
 
 	fromDomain := ""
 	if from, err := (&mail.AddressParser{WordDecoder: wordDecoder}).ParseList(m.Get("From")); err == nil && len(from) == 1 {
 		fromDomain = domainOfAddress(from[0].Address)
 	}
 	a.DMARC = mailauth.CheckDMARC(ctx, resolver, fromDomain, a.SPF, a.DKIM)
+	a.FromDomain = fromDomain
+	a.Senders = senderDomains(m, fromDomain, a.MailFrom, a.DKIM)
 	a.Checks = consistencyChecks(m, hops)
 	a.Groups = headerGroups(m, a.DKIM)
 
@@ -113,10 +121,19 @@ func analyzeHeaders(ctx context.Context, resolver mailauth.Resolver, raw []byte,
 			break
 		}
 	}
+	// A valid ARC chain first sealed by a receiving provider keeps the
+	// results it recorded before the mail was forwarded.
+	provider := a.Provider
+	if original := a.ARC.OriginalResults(); original != nil && receivers[providerOf(a.ARC.Sets[0].Sealer)] {
+		for _, r := range original {
+			r.Server = r.Server + " (scellé ARC)"
+			provider = append(provider, providerView{ProviderResult: r, Trusted: true})
+		}
+	}
 	a.Verdicts = []authVerdict{
-		verdict("SPF", "spf", a.SPF.Result, a.Provider),
-		verdict("DKIM", "dkim", dkim, a.Provider),
-		verdict("DMARC", "dmarc", a.DMARC.Result, a.Provider),
+		verdict("SPF", "spf", a.SPF.Result, provider),
+		verdict("DKIM", "dkim", dkim, provider),
+		verdict("DMARC", "dmarc", a.DMARC.Result, provider),
 	}
 	return a
 }
@@ -328,4 +345,28 @@ func resultClass(result string) string {
 		return levelWarning
 	}
 	return levelInfo
+}
+
+// senderDomains lists the domains that name the sender, From first.
+func senderDomains(m mailauth.Message, from, mailFrom string, dkim []mailauth.DKIMResult) []subject {
+	var subjects []subject
+	seen := map[string]bool{}
+	add := func(domain, role string) {
+		domain = strings.ToLower(strings.TrimSuffix(domain, "."))
+		if domain != "" && !seen[domain+role] {
+			seen[domain+role] = true
+			subjects = append(subjects, subject{domain, role})
+		}
+	}
+	add(from, "expéditeur (From)")
+	if replyTo, err := (&mail.AddressParser{WordDecoder: wordDecoder}).ParseList(m.Get("Reply-To")); err == nil {
+		for _, address := range replyTo {
+			add(domainOfAddress(address.Address), "adresse de réponse (Reply-To)")
+		}
+	}
+	add(domainOfAddress(mailFrom), "adresse de retour (Return-Path)")
+	for _, d := range dkim {
+		add(d.Domain, "signataire DKIM")
+	}
+	return subjects
 }

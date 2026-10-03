@@ -32,6 +32,9 @@ func main() {
 	if logged.IngestToken != "" {
 		logged.IngestToken = "(set)" // never write the secret in the logs
 	}
+	if logged.Reputation.SpamhausDQSKey != "" {
+		logged.Reputation.SpamhausDQSKey = "(set)"
+	}
 	log.Printf("Configuration %+v\n", logged)
 
 	store, err := newMailboxStore(conf.DataFolder, conf.Domains, conf.Retention.Duration, conf.MaxMailboxes)
@@ -56,11 +59,13 @@ func main() {
 	}
 
 	s := &server{
-		store:     store,
-		templates: templates,
-		limiter:   newRateLimiter(10, time.Hour),
-		resolver:  net.DefaultResolver,
-		auth:      newBoundedCache[headerAnalysis](64),
+		store:      store,
+		templates:  templates,
+		limiter:    newRateLimiter(10, time.Hour),
+		resolver:   net.DefaultResolver,
+		auth:       newBoundedCache[headerAnalysis](64),
+		reputation: newReputationChecker(conf.Reputation, net.DefaultResolver, conf.Domains),
+		repCache:   newBoundedCache[reputation](64),
 
 		maxUploadSize:    conf.MaxMessageSize,
 		hostname:         conf.Hostname,
@@ -71,6 +76,7 @@ func main() {
 		for range time.Tick(purgeInterval) {
 			store.PurgeExpired()
 			s.auth.clear()
+			s.repCache.clear()
 			s.limiter.prune()
 		}
 	}()

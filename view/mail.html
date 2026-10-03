@@ -10,7 +10,15 @@
     </div>
     <h1 class="subject">{{with .Header.Subject}}{{.}}{{else}}{{$.Info.Filename}}{{end}}</h1>
 
+    {{template "simple-view" .}}
+
+    <div class="detailed-view">
     <div class="verdict" aria-label="Synthèse">
+        <a class="tile risk-tile level-{{.Risk.Level}}" href="#reputation">
+            <span class="tile-label">Risque</span>
+            <span class="tile-value">{{if eq .Risk.Light "red"}}élevé{{else if eq .Risk.Light "orange"}}moyen{{else}}faible{{end}}</span>
+            <span class="tile-note">score {{.Risk.Score}} · {{len .Risk.Reasons}} élément{{if gt (len .Risk.Reasons) 1}}s{{end}}</span>
+        </a>
         {{with .Auth}}{{range .Verdicts}}
         <div class="tile level-{{.Level}}">
             <span class="tile-label">{{.Name}}{{if .Warning}} <span class="level-warning" title="{{.Warning}}">⚠</span>{{end}}</span>
@@ -54,6 +62,8 @@
             </dl>
 
             {{with .Auth}}{{template "auth" .}}{{end}}
+
+            {{template "reputation" .}}
 
             {{if .Parts}}
             <nav class="parts">
@@ -156,7 +166,123 @@
             {{end}}
         </aside>
     </div>
+    </div>
 </main>
 {{template "site-footer"}}
 </body>
 </html>
+
+{{define "simple-view"}}
+<section class="simple-view" aria-label="Résultat simplifié">
+    <div class="risk card level-{{.Risk.Level}}">
+        <div class="traffic-light light-{{.Risk.Light}}" role="img" aria-label="Feu {{if eq .Risk.Light "red"}}rouge{{else if eq .Risk.Light "orange"}}orange{{else}}vert{{end}}">
+            <span class="lamp red"></span><span class="lamp orange"></span><span class="lamp green"></span>
+        </div>
+        <div class="risk-summary">
+            <h2>{{.Risk.Headline}}</h2>
+            {{with .Header}}{{range .FromList}}
+            <p class="risk-sender">Expéditeur affiché : <strong>{{with .Name}}{{.}} {{end}}&lt;{{.Address}}&gt;</strong></p>
+            {{end}}{{end}}
+            <p class="risk-auth {{if .Risk.Authenticated}}level-ok{{else}}level-warning{{end}}">
+                {{if .Risk.Authenticated}}✓ Le message vient bien du domaine {{.Risk.Sender}}.
+                {{else}}⚠ Rien ne garantit que le message vient vraiment de {{with .Risk.Sender}}{{.}}{{else}}cet expéditeur{{end}}.{{end}}</p>
+            <p class="risk-advice">{{.Risk.Advice}}</p>
+        </div>
+    </div>
+
+    {{if .Risk.Reasons}}
+    <h2>Ce qui est douteux</h2>
+    <ul class="reasons">
+        {{range .Risk.Reasons}}{{if .Simple}}
+        <li class="level-{{.Level}}">
+            <span>{{.Simple}}</span>
+            {{with .Detail}}<details><summary>Détail technique</summary><code>{{.}}</code></details>{{end}}
+        </li>
+        {{end}}{{end}}
+    </ul>
+    {{end}}
+
+    {{if .Risk.Positives}}
+    <h2>Ce qui rassure</h2>
+    <ul class="reasons positives">
+        {{range .Risk.Positives}}<li class="level-ok"><span>{{.}}</span></li>{{end}}
+    </ul>
+    {{end}}
+
+    <p class="note">Ces explications sont produites automatiquement à partir des en-têtes, des liens et des pièces jointes du message.
+        Aucune analyse n'est infaillible : en cas de doute, ne cliquez pas et demandez conseil.</p>
+    <p><button type="button" class="view-toggle-inline" data-view="detailed">Voir l'analyse détaillée</button></p>
+
+    {{if .Frame}}
+    <details class="panel">
+        <summary>Afficher le message (sans risque : liens et images distantes bloqués)</summary>
+        <div class="mail viewer">
+            <div class="viewer-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span> aperçu isolé · scripts et images distantes bloqués</div>
+            <iframe sandbox loading="lazy" src="{{.Frame}}" title="Contenu du mail"></iframe>
+        </div>
+    </details>
+    {{end}}
+</section>
+{{end}}
+
+{{define "reputation"}}
+<section class="auth" id="reputation" aria-label="Réputation">
+    <details class="panel"{{if or .Lookalikes .Reputation.Listings}} open{{end}}>
+        <summary>Réputation et domaines
+            {{if or .Lookalikes .Reputation.Listings}}<span class="badge level-danger">{{len .Lookalikes}} sosie{{if gt (len .Lookalikes) 1}}s{{end}} · {{len .Reputation.Listings}} liste{{if gt (len .Reputation.Listings) 1}}s{{end}} noire{{if gt (len .Reputation.Listings) 1}}s{{end}}</span>
+            {{else}}<span class="badge level-ok">rien à signaler</span>{{end}}
+            <span class="summary-note">listes noires, âge des domaines, imitations de marques</span></summary>
+
+        <h3>Score de risque : {{.Risk.Score}} ({{if eq .Risk.Light "red"}}élevé{{else if eq .Risk.Light "orange"}}moyen{{else}}faible{{end}})</h3>
+        {{if .Risk.Reasons}}
+        <div class="table-scroll">
+        <table>
+            <thead><tr><th>Poids</th><th>Élément</th><th>Détail</th></tr></thead>
+            <tbody>
+            {{range .Risk.Reasons}}
+            <tr><td><span class="badge level-{{.Level}}">+{{.Weight}}</span></td><td>{{.Simple}}</td><td>{{with .Detail}}<code>{{.}}</code>{{end}}
+                {{with .Anchor}} <a href="#{{.}}">voir</a>{{end}}</td></tr>
+            {{end}}
+            </tbody>
+        </table>
+        </div>
+        <p class="note">Un élément de poids 3 ou plus, ou un total de 5, donne un risque élevé ; un total de 2 donne un risque moyen.</p>
+        {{end}}
+
+        <h3>Domaines imitant une marque</h3>
+        {{range .Lookalikes}}
+        <p class="level-{{.Level}}"><code>{{.Domain}}</code> ({{.Role}}) {{.Reason}}.</p>
+        {{else}}
+        <p class="note">Aucun domaine du message n'imite une marque connue de la liste ({{len brands}} marques souvent usurpées).</p>
+        {{end}}
+
+        {{if .Reputation.Checked}}
+        <h3>Listes noires</h3>
+        {{range .Reputation.Listings}}
+        <p class="level-{{.Level}}"><code>{{.Subject}}</code> ({{.Role}}) : {{.Meaning}} <span class="note">— {{.List}}, réponse {{.Code}}</span></p>
+        {{else}}
+        <p class="level-ok">Aucune adresse ni aucun domaine du message n'est sur les listes consultées.</p>
+        {{end}}
+        {{with .Reputation.Errors}}<p class="note">Sans réponse exploitable (accès refusé ou quota atteint) : {{range $i, $z := .}}{{if $i}}, {{end}}<code>{{$z}}</code>{{end}}.
+            Spamhaus refuse les requêtes passant par les résolveurs DNS publics : configurez une clé DQS.</p>{{end}}
+        {{end}}
+
+        {{with .Reputation.Domains}}
+        <h3>Âge des domaines</h3>
+        <div class="table-scroll">
+        <table>
+            <thead><tr><th>Domaine</th><th>Rôle</th><th>Création</th></tr></thead>
+            <tbody>
+            {{range .}}
+            <tr><td><code>{{.Domain}}</code></td><td>{{.Role}}</td>
+                <td>{{if .DateText}}<span class="level-{{.Level}}">{{.DateText}} (il y a {{.Days}} jours)</span>{{else}}<span class="note">{{.Error}}</span>{{end}}</td></tr>
+            {{end}}
+            </tbody>
+        </table>
+        </div>
+        <p class="note">Dates fournies par les registres (RDAP). Un domaine de moins de 30 jours est un signal fort d'hameçonnage.</p>
+        {{end}}
+        {{if not .Reputation.Checked}}<p class="note">Consultation des listes noires et des registres désactivée sur ce serveur.</p>{{end}}
+    </details>
+</section>
+{{end}}

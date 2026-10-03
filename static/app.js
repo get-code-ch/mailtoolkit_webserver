@@ -124,3 +124,20 @@ document.addEventListener("click", function (event) {
         target.open = true;
     }
 });
+
+// View switch of the analysis page: simplified (default) or detailed.
+document.addEventListener("click", function (event) {
+    var button = event.target.closest("button.view-toggle, button[data-view]");
+    if (!button) {
+        return;
+    }
+    var root = document.documentElement;
+    var next = button.dataset.view || (root.dataset.view === "detailed" ? "simple" : "detailed");
+    root.dataset.view = next;
+    try {
+        localStorage.setItem("view", next);
+    } catch (e) {
+        // Storage blocked: the choice lasts for this page only.
+    }
+    window.scrollTo(0, 0);
+});

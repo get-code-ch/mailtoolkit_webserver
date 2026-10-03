@@ -38,6 +38,35 @@
             (par exemple par un transfert qui n'était pas « en tant que pièce jointe », ou par l'export du fournisseur).</p>
     </details>
 
+    {{if ne .ARC.Result "none"}}
+    <details class="panel" id="arc">
+        <summary>ARC <span class="badge level-{{resultClass .ARC.Result}}">{{.ARC.Result}}</span>
+            <span class="summary-note">les intermédiaires qui ont transféré le mail ont-ils scellé leurs constats ?</span></summary>
+        <p class="level-{{resultClass .ARC.Result}}"><strong>{{.ARC.Result}}</strong> : {{.ARC.Reason}}</p>
+        <p class="note">Une liste de diffusion ou un service de transfert modifie souvent le mail, ce qui casse DKIM. Avec ARC, chaque
+            intermédiaire note l'authentification qu'il a constatée et scelle la chaîne : si la chaîne est valide, les résultats notés par le
+            premier intermédiaire restent prouvés. Un expéditeur malveillant peut toutefois sceller lui-même une chaîne : seuls comptent
+            les intermédiaires que vous connaissez.</p>
+        <div class="table-scroll">
+        <table>
+            <thead><tr><th>#</th><th>Intermédiaire (d=)</th><th>cv=</th><th>Sceau</th><th>Résultats notés</th></tr></thead>
+            <tbody>
+            {{range .ARC.Sets}}
+            <tr>
+                <td>{{.Instance}}</td>
+                <td><code>{{.Sealer}}</code>{{with .AuthServer}}<br><span class="note">{{.}}</span>{{end}}</td>
+                <td>{{.ChainValidation}}</td>
+                <td>{{with .Seal}}<span class="badge level-{{resultClass .}}">{{.}}</span>{{else}}<span class="note">non vérifié</span>{{end}}
+                    {{with .Signature}}<br><span class="note">message : {{.}}</span>{{end}}</td>
+                <td>{{range .Results}}<code>{{.Method}}={{.Result}}</code> {{end}}</td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+        </div>
+    </details>
+    {{end}}
+
     <details class="panel">
         <summary>DMARC <span class="badge level-{{resultClass .DMARC.Result}}">{{.DMARC.Result}}</span>
             <span class="summary-note">l'expéditeur affiché est-il authentifié ?</span></summary>

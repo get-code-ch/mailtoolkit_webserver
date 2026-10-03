@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"sync"
@@ -55,6 +56,10 @@ type server struct {
 	// auth keeps the header analyses: they need DNS queries and the inbox
 	// page reloads itself.
 	auth *boundedCache[headerAnalysis]
+	// reputation queries the blocklists and RDAP (nil when disabled),
+	// repCache keeps its answers per mail.
+	reputation *reputationChecker
+	repCache   *boundedCache[reputation]
 }
 
 // dnsTimeout bounds the DNS queries of a header analysis.
@@ -299,6 +304,9 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		Dangers     int
 		Warnings    int
 		Auth        *headerAnalysis
+		Risk        riskReport
+		Reputation  reputation
+		Lookalikes  []lookalike
 		Part        string
 		// Risky counts the attachments with a warning or a danger.
 		Risky int
@@ -367,7 +375,46 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 	auth.Part = selected
 	auth.Converted = info.Format == formatMSG
 	data.Auth = &auth
+
+	linkDomains, linkHosts := linkSubjects(data.Links)
+	data.Lookalikes = findLookalikes(append(slices.Clone(auth.Senders), linkHosts...))
+	data.Reputation = s.reputationOf(r, &auth, linkDomains)
+	data.Risk = assessRisk(riskInput{Auth: &auth, Links: data.Links, Attachments: data.Attachments,
+		Reputation: data.Reputation, Lookalikes: data.Lookalikes})
 	s.render(w, "mail.html", data)
+}
+
+// reputationTimeout bounds the blocklist and RDAP queries of a mail.
+const reputationTimeout = 8 * time.Second
+
+// reputationOf checks the sending server and the domains of a mail, cached
+// per mail.
+func (s *server) reputationOf(r *http.Request, auth *headerAnalysis, linkDomains []subject) reputation {
+	if s.reputation == nil {
+		return reputation{}
+	}
+	key := r.PathValue("token") + "/" + r.PathValue("id") + "/" + r.PathValue("n")
+	if rep, ok := s.repCache.get(key); ok {
+		return rep
+	}
+	var ips []subject
+	if auth.Selected >= 0 && auth.Selected < len(auth.Hops) && auth.Hops[auth.Selected].Public {
+		ips = append(ips, subject{auth.Hops[auth.Selected].IP.String(), "serveur d'envoi"})
+	}
+	var domains []subject
+	seen := map[string]bool{}
+	for _, d := range append(slices.Clone(auth.Senders), linkDomains...) {
+		org := mailauth.OrgDomain(d.Value)
+		if org != "" && !seen[org] {
+			seen[org] = true
+			domains = append(domains, subject{org, d.Role})
+		}
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), reputationTimeout)
+	defer cancel()
+	rep := s.reputation.check(ctx, ips, domains)
+	s.repCache.put(key, rep)
+	return rep
 }
 
 // headerAnalysis returns the cached analysis of the headers of the mail of

@@ -44,6 +44,8 @@ type Configuration struct {
 	// BehindCloudflare trusts the CF-Connecting-IP header sent by the
 	// Cloudflare proxies for the visitor address.
 	BehindCloudflare bool `json:"behind_cloudflare"`
+	// Reputation sets the DNS blocklists and RDAP queries.
+	Reputation ReputationConfig `json:"reputation"`
 }
 
 // Duration reads a duration written as "24h" in JSON.
@@ -88,6 +90,9 @@ func getConfiguration(file string) (Configuration, error) {
 	}
 	if token := os.Getenv("MTK_INGEST_TOKEN"); token != "" {
 		configuration.IngestToken = token
+	}
+	if key := os.Getenv("MTK_SPAMHAUS_DQS_KEY"); key != "" {
+		configuration.Reputation.SpamhausDQSKey = key
 	}
 	if configuration.IngestToken != "" && len(configuration.IngestToken) < 32 {
 		return Configuration{}, errors.New("configuration: ingest_token must be at least 32 characters")

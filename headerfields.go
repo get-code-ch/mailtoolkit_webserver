@@ -11,7 +11,7 @@ import (
 )
 
 // templateFuncs are the functions available in the views.
-var templateFuncs = template.FuncMap{"resultClass": resultClass, "visibleSpace": visibleSpace, "dkimView": dkimView, "asset": asset}
+var templateFuncs = template.FuncMap{"resultClass": resultClass, "visibleSpace": visibleSpace, "dkimView": dkimView, "asset": asset, "brands": func() []brand { return brands }}
 
 // dkimView passes a signature and its position to the dkim-signature
 // template.
