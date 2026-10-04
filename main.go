@@ -36,6 +36,11 @@ func main() {
 	if logged.AdminToken != "" {
 		logged.AdminToken = "(set)"
 	}
+	for _, key := range []*string{&logged.ThreatIntel.AbuseCHKey, &logged.ThreatIntel.SafeBrowsingKey, &logged.ThreatIntel.VirusTotalKey} {
+		if *key != "" {
+			*key = "(set)"
+		}
+	}
 	if logged.Reputation.SpamhausDQSKey != "" {
 		logged.Reputation.SpamhausDQSKey = "(set)"
 	}
@@ -50,6 +55,18 @@ func main() {
 		log.Fatal("opening statistics: ", err)
 	}
 	store.onSubmission = stats.recordSubmission
+	lists, err := newListStore(conf.DataFolder)
+	if err != nil {
+		log.Fatal("opening local lists: ", err)
+	}
+	var threats *threatChecker
+	var visitor *linkVisitor
+	if !conf.Reputation.Disabled {
+		threats = newThreatChecker(conf.ThreatIntel)
+		if !conf.LinkVisits.Disabled {
+			visitor = newLinkVisitor()
+		}
+	}
 	assetVersion = staticVersion(conf.StaticFolder)
 	templates, err := template.New("").Funcs(templateFuncs).ParseFS(views, "view/*.html")
 	if err != nil {
@@ -75,12 +92,18 @@ func main() {
 		auth:           newBoundedCache[headerAnalysis](64),
 		reputation:     newReputationChecker(conf.Reputation, net.DefaultResolver, conf.Domains),
 		repCache:       newBoundedCache[reputation](64),
+		threatCache:    newBoundedCache[threatReport](64),
 		trustedDomains: conf.TrustedDomains,
 		protectedNames: conf.ProtectedNames,
 		smime:          newSMIMEVerifier(conf.Reputation),
 		smimeCache:     newBoundedCache[smime.Result](64),
 		qrCache:        newBoundedCache[qrScan](64),
 		stats:          stats,
+		lists:          lists,
+		threats:        threats,
+		visitor:        visitor,
+		visitCache:     newBoundedCache[[]pageVisit](64),
+		visitLimiter:   newRateLimiter(30, time.Hour),
 		adminToken:     conf.AdminToken,
 		adminLimiter:   newRateLimiter(10, time.Hour),
 
@@ -94,6 +117,9 @@ func main() {
 			store.PurgeExpired()
 			s.auth.clear()
 			s.repCache.clear()
+			s.threatCache.clear()
+			s.visitCache.clear()
+			s.visitLimiter.prune()
 			s.smimeCache.clear()
 			s.qrCache.clear()
 			s.limiter.prune()

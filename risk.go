@@ -82,6 +82,11 @@ type riskInput struct {
 	SMIME          smime.Result
 	QRCodes        []qrCode
 	Fraud          fraudAnalysis
+	Threats        threatReport
+	// Lists are the local lists, Destinations the pages reached by
+	// following the links.
+	Lists        localLists
+	Destinations []Link
 }
 
 // assessRisk turns the analyses into a traffic light.
@@ -113,6 +118,7 @@ func assessRisk(in riskInput) riskReport {
 			add(levelInfo, 0, "dmarc", fmt.Sprintf("%s fait partie des domaines de confiance, mais son identité n'a pas été confirmée par "+
 				"votre messagerie : la confiance ne s'applique pas.", a.FromDomain), "DMARC non validé par un serveur de réception")
 		}
+		assessLists(&r, in.Lists, a, append(slices.Clone(in.Links), in.Destinations...), add)
 		assessImpersonation(&r, a, in.TrustedDomains, in.ProtectedNames, add)
 		assessDisplayBrand(a, add)
 		if a.Relay != nil {
@@ -148,6 +154,7 @@ func assessRisk(in riskInput) riskReport {
 		}
 	}
 
+	assessThreats(&r, in.Threats, add)
 	assessFraud(&r, in.Fraud, in.Auth, add)
 	assessQR(&r, in.QRCodes, in.Fraud, add)
 	if !r.Trusted {
@@ -157,7 +164,7 @@ func assessRisk(in riskInput) riskReport {
 	if in.Auth != nil {
 		relay = in.Auth.Relay
 	}
-	assessAttachments(&r, in.Attachments, relay, add)
+	assessAttachments(&r, in.Attachments, relay, in.Lists, add)
 
 	// An authenticated mail from a brand links to its other domains:
 	// only real lookalikes count then.
@@ -388,9 +395,17 @@ func assessLinks(r *riskReport, links []Link, add func(level string, weight int,
 }
 
 // assessAttachments reports the dangerous attachments.
-func assessAttachments(r *riskReport, attachments []attachmentView, relay *relayService, add func(level string, weight int, anchor, simple, detail string)) {
+func assessAttachments(r *riskReport, attachments []attachmentView, relay *relayService, lists localLists, add func(level string, weight int, anchor, simple, detail string)) {
 	clean := true
 	for _, a := range attachments {
+		if e, ok := lists.listedFile(a.SHA256); ok {
+			if e.Verdict == verdictTrust {
+				r.Positives = append(r.Positives, fmt.Sprintf("La pièce jointe « %s » est un fichier approuvé par votre organisation.", a.Name))
+				continue
+			}
+			clean = false
+			add(levelDanger, 4, "lists", fmt.Sprintf("La pièce jointe « %s » figure sur la liste noire de votre organisation.", a.Name), a.SHA256+" "+e.Note)
+		}
 		if relayPage(a, relay) {
 			r.Positives = append(r.Positives, fmt.Sprintf("La pièce jointe « %s » est la page d'ouverture de %s : son formulaire envoie vers %s.",
 				a.Name, relay.Name, strings.Join(a.FormHosts, ", ")))

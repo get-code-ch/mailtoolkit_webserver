@@ -67,6 +67,17 @@ type server struct {
 	// per mail.
 	smime      *smime.Verifier
 	smimeCache *boundedCache[smime.Result]
+	// lists are the local lists of the organization.
+	lists *listStore
+	// visitor follows the links (nil when disabled), visitCache keeps the
+	// visits per mail, visitLimiter bounds the visits asked for.
+	visitor      *linkVisitor
+	visitCache   *boundedCache[[]pageVisit]
+	visitLimiter *rateLimiter
+	// threats queries the threat databases (nil when none is configured),
+	// threatCache keeps their answers per mail.
+	threats     *threatChecker
+	threatCache *boundedCache[threatReport]
 	// protectedNames are the people whose display name is usurped.
 	protectedNames []string
 	// qrCache keeps the QR codes found per mail (decoding images is slow).
@@ -92,10 +103,12 @@ func (s *server) routes(staticFolder string) http.Handler {
 	mux.HandleFunc("POST /inbox/{token}/{id}/delete", s.deleteSubmission)
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}", s.analysis)
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}/part/{content}", s.mailPart)
+	mux.HandleFunc("POST /inbox/{token}/{id}/{n}/visit", s.visitLink)
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}/attachment/{attachment}", s.mailAttachment)
 	mux.HandleFunc("GET /admin", s.admin)
+	mux.HandleFunc("POST /admin/lists", s.adminLists)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticFolder))))
-	return securityHeaders(mux)
+	return securityHeaders(languageSwitch(mux))
 }
 
 func securityHeaders(next http.Handler) http.Handler {
@@ -128,7 +141,7 @@ func redirectToHTTPS(httpsPort, acmeWebroot string) http.Handler {
 }
 
 func (s *server) index(w http.ResponseWriter, r *http.Request) {
-	s.render(w, "index.html", struct{ Title string }{"Analyse de mail"})
+	s.render(w, r, "index.html", struct{ Title string }{"Analyse de mail"})
 }
 
 func (s *server) newMailbox(w http.ResponseWriter, r *http.Request) {
@@ -141,12 +154,12 @@ func (s *server) newMailbox(w http.ResponseWriter, r *http.Request) {
 // response.
 func (s *server) createMailbox(w http.ResponseWriter, r *http.Request) (Mailbox, bool) {
 	if !s.limiter.allow(s.clientIP(r)) {
-		http.Error(w, "Trop de demandes, réessayez plus tard.", http.StatusTooManyRequests)
+		httpError(w, r, "Trop de demandes, réessayez plus tard.", http.StatusTooManyRequests)
 		return Mailbox{}, false
 	}
 	mailbox, err := s.store.Create()
 	if errors.Is(err, errTooManyMailboxes) {
-		http.Error(w, "Service saturé, réessayez plus tard.", http.StatusServiceUnavailable)
+		httpError(w, r, "Service saturé, réessayez plus tard.", http.StatusServiceUnavailable)
 		return mailbox, false
 	}
 	if err != nil {
@@ -163,7 +176,7 @@ func (s *server) upload(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, s.maxUploadSize+1<<20)
 	reader, err := r.MultipartReader()
 	if err != nil {
-		http.Error(w, "Formulaire invalide.", http.StatusBadRequest)
+		httpError(w, r, "Formulaire invalide.", http.StatusBadRequest)
 		return
 	}
 	var filename string
@@ -177,7 +190,7 @@ func (s *server) upload(w http.ResponseWriter, r *http.Request) {
 			filename = part.FileName()
 			data, err = io.ReadAll(io.LimitReader(part, s.maxUploadSize+1))
 			if err != nil {
-				http.Error(w, "Envoi interrompu.", http.StatusBadRequest)
+				httpError(w, r, "Envoi interrompu.", http.StatusBadRequest)
 				return
 			}
 			break
@@ -185,14 +198,14 @@ func (s *server) upload(w http.ResponseWriter, r *http.Request) {
 	}
 	switch {
 	case len(data) == 0:
-		http.Error(w, "Aucun fichier reçu.", http.StatusBadRequest)
+		httpError(w, r, "Aucun fichier reçu.", http.StatusBadRequest)
 		return
 	case int64(len(data)) > s.maxUploadSize:
-		http.Error(w, "Fichier trop volumineux.", http.StatusRequestEntityTooLarge)
+		httpError(w, r, "Fichier trop volumineux.", http.StatusRequestEntityTooLarge)
 		return
 	}
 	if _, err := uploadedMail(filename, data); err != nil {
-		http.Error(w, "Ce fichier n'est pas un mail : envoyez un fichier .eml ou .msg.", http.StatusUnprocessableEntity)
+		httpError(w, r, "Ce fichier n'est pas un mail : envoyez un fichier .eml ou .msg.", http.StatusUnprocessableEntity)
 		return
 	}
 
@@ -204,7 +217,7 @@ func (s *server) upload(w http.ResponseWriter, r *http.Request) {
 		}
 		token = mailbox.Token
 	} else if !s.limiter.allow(s.clientIP(r)) {
-		http.Error(w, "Trop de demandes, réessayez plus tard.", http.StatusTooManyRequests)
+		httpError(w, r, "Trop de demandes, réessayez plus tard.", http.StatusTooManyRequests)
 		return
 	}
 	id, err := s.store.AddUpload(token, filename, data, s.clientIP(r))
@@ -280,7 +293,7 @@ func (s *server) inbox(w http.ResponseWriter, r *http.Request) {
 		}
 		data.Submissions = append(data.Submissions, item)
 	}
-	s.render(w, "inbox.html", data)
+	s.render(w, r, "inbox.html", data)
 }
 
 // deleteSubmission removes a received mail or an uploaded file, with the
@@ -325,11 +338,14 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		SMIME       smime.Result
 		Reputation  reputation
 		Lookalikes  []lookalike
+		Threats     threatReport
 		QRCodes     []qrCode
 		// QRSkipped counts the images not scanned for QR codes.
 		QRSkipped int
 		Fraud     fraudAnalysis
-		Part      string
+		// Visit is the URL following a link on request.
+		Visit string
+		Part  string
 		// Risky counts the attachments with a warning or a danger.
 		Risky int
 	}{
@@ -354,17 +370,10 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 	if selected != "" {
 		data.Frame = base + "/part/" + url.PathEscape(selected)
 	}
-	for _, name := range sortedKeys(mail.Attachments) {
-		attachment := mail.Attachments[name]
-		view := attachmentView{Link: base + "/attachment/" + url.PathEscape(name)}
-		content, err := attachment.Decode()
-		if err != nil {
-			log.Printf("decoding attachment %s: %v", name, err)
-		}
-		ct := attachment.ContentInfo.Type
-		view.Report = filecheck.Analyze(name, ct.Type+"/"+ct.Subtype, content)
-		data.Attachments = append(data.Attachments, view)
+	if s.visitor != nil {
+		data.Visit = base + "/visit"
 	}
+	data.Attachments = mailAttachments(mail, base)
 	for _, a := range data.Attachments {
 		if l := a.Level(); l == levelDanger || l == levelWarning {
 			data.Risky++
@@ -374,11 +383,16 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		return severity[data.Attachments[i].Level()] < severity[data.Attachments[j].Level()]
 	})
 
-	// Most suspicious links first, then in order of appearance; the links
-	// of the QR codes are analyzed with the others.
-	scan := s.qrCodesOf(r, mail)
+	var scan qrScan
+	data.Links, scan = s.mailLinks(r, mail, data.Attachments)
 	data.QRCodes, data.QRSkipped = scan.Codes, scan.Skipped
-	data.Links = append(append(extractLinks(mail), qrLinks(data.QRCodes)...), attachmentLinks(data.Attachments)...)
+	// The suspicious links are followed; what the visits found counts with
+	// the warnings of the link, and the destinations are checked like the
+	// links.
+	lists := s.lists.snapshot()
+	trusted := append(slices.Clone(s.trustedDomains), lists.trustedDomains()...)
+	visits := s.visitsOf(r, data.Links, trusted)
+	destinations := applyVisits(data.Links, visits)
 	data.LinkGroups = groupLinks(data.Links)
 	for _, link := range data.Links {
 		switch link.Level() {
@@ -404,16 +418,129 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 	if !auth.Converted {
 		data.SMIME = s.smimeOf(r, auth.FromAddress)
 	}
-	linkDomains, linkHosts := linkSubjects(data.Links)
+	linkDomains, linkHosts := linkSubjects(append(slices.Clone(data.Links), destinations...))
 	data.Lookalikes = findLookalikes(append(slices.Clone(auth.Senders), linkHosts...), s.trustedDomains)
 	data.Reputation = s.reputationOf(r, &auth, linkDomains)
+	data.Threats = s.threatsOf(r, append(slices.Clone(data.Links), destinations...), data.Attachments)
 	data.Fraud = analyzeText(mail.Header.Subject, mailText(mail))
 	data.Fraud.ImageOnly = imageOnly(mail)
 	data.Risk = assessRisk(riskInput{Auth: &auth, Links: data.Links, Attachments: data.Attachments,
-		Reputation: data.Reputation, Lookalikes: data.Lookalikes, TrustedDomains: s.trustedDomains, ProtectedNames: s.protectedNames,
-		SMIME: data.SMIME, QRCodes: data.QRCodes, Fraud: data.Fraud})
-	s.stats.recordAnalysis(base, data.Risk, data.Lookalikes, data.Reputation, data.QRCodes)
-	s.render(w, "mail.html", data)
+		Reputation: data.Reputation, Lookalikes: data.Lookalikes, TrustedDomains: trusted, ProtectedNames: s.protectedNames,
+		SMIME: data.SMIME, QRCodes: data.QRCodes, Fraud: data.Fraud, Threats: data.Threats, Lists: lists, Destinations: destinations})
+	s.stats.recordAnalysis(base, data.Risk, data.Lookalikes, data.Reputation, data.QRCodes,
+		suggestionDomains(data.Risk, &auth, append(slices.Clone(data.Links), destinations...), data.Lookalikes))
+	s.render(w, r, "mail.html", data)
+}
+
+// mailAttachments analyzes the attachments of a mail.
+func mailAttachments(mail mailtoolkit.Mail, base string) []attachmentView {
+	var attachments []attachmentView
+	for _, name := range sortedKeys(mail.Attachments) {
+		attachment := mail.Attachments[name]
+		view := attachmentView{Link: base + "/attachment/" + url.PathEscape(name)}
+		content, err := attachment.Decode()
+		if err != nil {
+			log.Printf("decoding attachment %s: %v", name, err)
+		}
+		ct := attachment.ContentInfo.Type
+		view.Report = filecheck.Analyze(name, ct.Type+"/"+ct.Subtype, content)
+		attachments = append(attachments, view)
+	}
+	return attachments
+}
+
+// mailLinks returns the links of a mail: its text parts, then its QR codes
+// and its attached documents.
+func (s *server) mailLinks(r *http.Request, mail mailtoolkit.Mail, attachments []attachmentView) ([]Link, qrScan) {
+	scan := s.qrCodesOf(r, mail)
+	return append(append(extractLinks(mail), qrLinks(scan.Codes)...), attachmentLinks(attachments)...), scan
+}
+
+// visitsOf returns the visits of the links of the mail: the automatic ones,
+// made at the first display, and those asked for. Cached per mail.
+func (s *server) visitsOf(r *http.Request, links []Link, trusted []string) []pageVisit {
+	if s.visitor == nil {
+		return nil
+	}
+	key := r.PathValue("token") + "/" + r.PathValue("id") + "/" + r.PathValue("n")
+	if visits, ok := s.visitCache.get(key); ok {
+		return visits
+	}
+	visits := s.visitor.visitAll(r.Context(), autoVisits(links, trusted))
+	s.visitCache.put(key, visits)
+	return visits
+}
+
+// visitLink follows a link of the mail on request (POST url=...), then
+// shows the analysis again.
+func (s *server) visitLink(w http.ResponseWriter, r *http.Request) {
+	mail, _, base, ok := s.lookupAnalyzed(w, r)
+	if !ok {
+		return
+	}
+	if s.visitor == nil {
+		http.NotFound(w, r)
+		return
+	}
+	target := r.PostFormValue("url")
+	links, _ := s.mailLinks(r, mail, mailAttachments(mail, base))
+	// Only the links of the mail: the server is no open proxy.
+	if !slices.ContainsFunc(links, func(l Link) bool { return l.URL == target }) {
+		httpError(w, r, "Ce lien ne fait pas partie du mail.", http.StatusBadRequest)
+		return
+	}
+	if !s.visitLimiter.allow(s.clientIP(r)) {
+		httpError(w, r, "Trop de demandes, réessayez plus tard.", http.StatusTooManyRequests)
+		return
+	}
+	key := r.PathValue("token") + "/" + r.PathValue("id") + "/" + r.PathValue("n")
+	visits := s.visitsOf(r, links, append(slices.Clone(s.trustedDomains), s.lists.snapshot().trustedDomains()...))
+	if !slices.ContainsFunc(visits, func(v pageVisit) bool { return v.URL == target }) {
+		ctx, cancel := context.WithTimeout(r.Context(), visitMailTimeout)
+		visit := s.visitor.visit(ctx, target)
+		cancel()
+		visit.Manual = true
+		s.visitCache.put(key, append(slices.Clone(visits), visit))
+	}
+	http.Redirect(w, r, base+"#links", http.StatusSeeOther)
+}
+
+// applyVisits attaches the visits to their links, adding their findings to
+// the warnings, and returns the new destinations reached.
+func applyVisits(links []Link, visits []pageVisit) []Link {
+	var destinations []Link
+	for i := range links {
+		for _, v := range visits {
+			if v.URL != links[i].URL {
+				continue
+			}
+			links[i].Visit = &v
+			for _, w := range v.Warnings {
+				links[i].Warnings = append(links[i].Warnings, LinkWarning{w.Level, "Visite : " + lowerFirst(w.Message)})
+			}
+			if v.Final != "" && v.Final != v.URL {
+				destinations = append(destinations, Link{URL: v.Final, Source: "destination"})
+			}
+		}
+	}
+	return destinations
+}
+
+// threatsOf asks the threat databases about the links and attachments of
+// the mail, cached per mail.
+func (s *server) threatsOf(r *http.Request, links []Link, attachments []attachmentView) threatReport {
+	if s.threats == nil {
+		return threatReport{}
+	}
+	key := r.PathValue("token") + "/" + r.PathValue("id") + "/" + r.PathValue("n")
+	if report, ok := s.threatCache.get(key); ok {
+		return report
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), reputationTimeout)
+	defer cancel()
+	report := s.threats.check(ctx, subjectsOf(links, attachments))
+	s.threatCache.put(key, report)
+	return report
 }
 
 // qrCodesOf returns the QR codes of the analyzed mail, cached per mail.
@@ -594,7 +721,7 @@ func (s *server) lookupAnalyzed(w http.ResponseWriter, r *http.Request) (mailtoo
 	}
 	if errors.Is(err, errUnreadable) {
 		log.Printf("reading mail: %v", err)
-		http.Error(w, "Ce fichier Outlook .msg est endommagé ou dans un format non pris en charge.", http.StatusUnprocessableEntity)
+		httpError(w, r, "Ce fichier Outlook .msg est endommagé ou dans un format non pris en charge.", http.StatusUnprocessableEntity)
 		return mail, info, "", false
 	}
 	if err != nil {
@@ -606,15 +733,22 @@ func (s *server) lookupAnalyzed(w http.ResponseWriter, r *http.Request) (mailtoo
 
 // render executes the template in a buffer so that a failing template gives a
 // clean error page.
-func (s *server) render(w http.ResponseWriter, name string, data any) {
+func (s *server) render(w http.ResponseWriter, r *http.Request, name string, data any) {
 	var buffer bytes.Buffer
 	if err := s.templates.ExecuteTemplate(&buffer, name, data); err != nil {
 		serverError(w, "rendering "+name, err)
 		return
 	}
+	page := buffer.Bytes()
+	lang := language(r)
+	if lang == langEN {
+		page = english.translateHTML(page, lang)
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Content-Language", lang)
+	w.Header().Set("Vary", "Cookie, Accept-Language")
 	w.Header().Set("Content-Security-Policy", appCSP)
-	buffer.WriteTo(w)
+	w.Write(page)
 }
 
 func serverError(w http.ResponseWriter, context string, err error) {

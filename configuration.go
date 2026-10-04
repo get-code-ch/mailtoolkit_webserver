@@ -47,6 +47,11 @@ type Configuration struct {
 	BehindCloudflare bool `json:"behind_cloudflare"`
 	// Reputation sets the DNS blocklists and RDAP queries.
 	Reputation ReputationConfig `json:"reputation"`
+	// LinkVisits sets the following of the links by the server.
+	LinkVisits LinkVisitsConfig `json:"link_visits"`
+	// ThreatIntel enables the threat databases (URLhaus, MalwareBazaar,
+	// Google Safe Browsing, VirusTotal).
+	ThreatIntel ThreatIntelConfig `json:"threat_intel"`
 	// TrustedDomains are sender domains (and their subdomains) whose
 	// authenticated mails are not flagged for their links: the
 	// organization's own domains, its mailing providers.
@@ -59,6 +64,13 @@ type Configuration struct {
 	// authentication, any user name). The MTK_ADMIN_TOKEN environment
 	// variable overrides it; without it, the page is disabled.
 	AdminToken string `json:"admin_token"`
+}
+
+// LinkVisitsConfig sets the following of the links: the suspicious ones
+// automatically, the others on request. The visited sites see the visit,
+// from the address of the server.
+type LinkVisitsConfig struct {
+	Disabled bool `json:"disabled"`
 }
 
 // Duration reads a duration written as "24h" in JSON.
@@ -106,6 +118,12 @@ func getConfiguration(file string) (Configuration, error) {
 	}
 	if key := os.Getenv("MTK_SPAMHAUS_DQS_KEY"); key != "" {
 		configuration.Reputation.SpamhausDQSKey = key
+	}
+	for env, field := range map[string]*string{"MTK_ABUSECH_KEY": &configuration.ThreatIntel.AbuseCHKey,
+		"MTK_SAFEBROWSING_KEY": &configuration.ThreatIntel.SafeBrowsingKey, "MTK_VIRUSTOTAL_KEY": &configuration.ThreatIntel.VirusTotalKey} {
+		if v := os.Getenv(env); v != "" {
+			*field = v
+		}
 	}
 	if token := os.Getenv("MTK_ADMIN_TOKEN"); token != "" {
 		configuration.AdminToken = token

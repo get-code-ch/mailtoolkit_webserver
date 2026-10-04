@@ -97,6 +97,77 @@
             </table>
         </section>
     </div>
+
+    <section class="card" id="lists">
+        <h2>Listes locales</h2>
+        <p class="note">Domaines, expéditeurs et fichiers que votre organisation déclare malveillants ou de confiance. Un élément de la liste
+            noire fait passer le message au rouge ; un domaine ou un expéditeur de confiance, authentifié par votre messagerie, n'est pas
+            pénalisé pour ses liens ; un fichier de confiance n'est pas compté.</p>
+        {{with .Error}}<p class="level-danger">{{.}}</p>{{end}}
+        <form method="post" action="/admin/lists" class="list-form">
+            <input type="hidden" name="csrf" value="{{.CSRF}}">
+            <input type="hidden" name="days" value="{{.Period.Days}}">
+            <input type="hidden" name="action" value="add">
+            <label>Type
+                <select name="kind">
+                    <option value="domain">Domaine</option>
+                    <option value="sender">Expéditeur</option>
+                    <option value="hash">Fichier (SHA-256)</option>
+                </select>
+            </label>
+            <label>Valeur <input type="text" name="value" required maxlength="320" placeholder="exemple.com, nom@exemple.com ou empreinte"></label>
+            <label>Verdict
+                <select name="verdict">
+                    <option value="block">Malveillant</option>
+                    <option value="trust">De confiance</option>
+                </select>
+            </label>
+            <label>Note <input type="text" name="note" maxlength="200" placeholder="facultatif"></label>
+            <button type="submit" class="primary">Ajouter</button>
+        </form>
+
+        {{if .Period.Suggestions}}
+        <h3>Suggestions</h3>
+        <p class="note">Domaines des messages classés rouges sur la période. Vérifiez avant de bloquer : un domaine légitime peut servir à
+            envoyer un hameçonnage depuis un compte piraté.</p>
+        <table class="stats-counts">
+            <tbody>
+            {{range .Period.Suggestions}}
+            <tr><td><code>{{.Key}}</code></td><td class="count">{{.Count}}</td>
+                <td><form method="post" action="/admin/lists" class="inline-form">
+                    <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="days" value="{{$.Period.Days}}">
+                    <input type="hidden" name="action" value="add"><input type="hidden" name="kind" value="domain">
+                    <input type="hidden" name="verdict" value="block"><input type="hidden" name="value" value="{{.Key}}">
+                    <input type="hidden" name="note" value="suggéré par les statistiques">
+                    <button type="submit">Bloquer</button></form></td></tr>
+            {{end}}
+            </tbody>
+        </table>
+        {{end}}
+
+        <h3>Entrées ({{len .Lists}})</h3>
+        {{if .Lists}}
+        <div class="table-scroll">
+        <table>
+            <thead><tr><th>Type</th><th>Valeur</th><th>Verdict</th><th>Note</th><th>Ajouté le</th><th></th></tr></thead>
+            <tbody>
+            {{range .Lists}}
+            <tr><td>{{.KindText}}</td><td><code>{{.Value}}</code></td>
+                <td>{{if eq .Verdict "block"}}<span class="badge level-danger">malveillant</span>{{else}}<span class="badge level-ok">de confiance</span>{{end}}</td>
+                <td>{{.Note}}</td><td>{{.Added.Local.Format "02.01.2006"}}</td>
+                <td><form method="post" action="/admin/lists" class="inline-form">
+                    <input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="days" value="{{$.Period.Days}}">
+                    <input type="hidden" name="action" value="delete"><input type="hidden" name="kind" value="{{.Kind}}">
+                    <input type="hidden" name="value" value="{{.Value}}">
+                    <button type="submit">Retirer</button></form></td></tr>
+            {{end}}
+            </tbody>
+        </table>
+        </div>
+        {{else}}
+        <p class="note">Les listes sont vides.</p>
+        {{end}}
+    </section>
 </main>
 {{template "site-footer"}}
 </body>

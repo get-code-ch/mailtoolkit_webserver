@@ -189,7 +189,7 @@
                 <tr id="h-{{.Index}}">
                     <th scope="row"><code>{{.Name}}</code></th>
                     <td>
-                        <div class="field-value">{{.Value}}</div>
+                        <div class="field-value" translate="no">{{.Value}}</div>
                         {{if .Decoded}}<div class="note">décodé depuis : <code>{{.Raw}}</code></div>{{end}}
                         {{if .Params}}
                         <dl class="params">{{range .Params}}<dt>{{.Name}}</dt><dd><code>{{.Value}}</code></dd>{{end}}</dl>

@@ -1,8 +1,12 @@
 package main
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/hex"
 	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 )
@@ -21,21 +25,23 @@ var reasonNames = map[string]string{
 	"smime":       "Signature S/MIME douteuse",
 	"fraud":       "Demande de paiement ou d'identifiants (fraude)",
 	"qrcodes":     "QR codes",
+	"threats":     "Connu des bases de menaces",
+	"lists":       "Sur la liste noire locale",
 }
 
-// admin shows the statistics, behind HTTP basic authentication with the
-// admin token. Without token, the page does not exist.
-func (s *server) admin(w http.ResponseWriter, r *http.Request) {
+// authorized checks the HTTP basic authentication of the statistics page,
+// or writes the error response. Without token, the page does not exist.
+func (s *server) authorized(w http.ResponseWriter, r *http.Request) bool {
 	if s.adminToken == "" || s.stats == nil {
 		http.NotFound(w, r)
-		return
+		return false
 	}
 	// After too many failures, even the right token is refused for a
 	// while: guessing gets no answer.
 	ip := s.clientIP(r)
 	if s.adminLimiter.exceeded(ip) {
-		http.Error(w, "Trop de tentatives, réessayez plus tard.", http.StatusTooManyRequests)
-		return
+		httpError(w, r, "Trop de tentatives, réessayez plus tard.", http.StatusTooManyRequests)
+		return false
 	}
 	_, password, ok := r.BasicAuth()
 	if !ok || subtle.ConstantTimeCompare([]byte(password), []byte(s.adminToken)) != 1 {
@@ -43,7 +49,24 @@ func (s *server) admin(w http.ResponseWriter, r *http.Request) {
 			s.adminLimiter.allow(ip)
 		}
 		w.Header().Set("WWW-Authenticate", `Basic realm="Mail Analyzer admin", charset="UTF-8"`)
-		http.Error(w, "Authentification requise.", http.StatusUnauthorized)
+		httpError(w, r, "Authentification requise.", http.StatusUnauthorized)
+		return false
+	}
+	return true
+}
+
+// csrfToken protects the forms of the statistics page: the browser sends
+// the basic authentication with any request, a form posted from another
+// site included.
+func (s *server) csrfToken() string {
+	mac := hmac.New(sha256.New, []byte(s.adminToken))
+	mac.Write([]byte("admin forms"))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+// admin shows the statistics and the local lists.
+func (s *server) admin(w http.ResponseWriter, r *http.Request) {
+	if !s.authorized(w, r) {
 		return
 	}
 	days, err := strconv.Atoi(r.URL.Query().Get("days"))
@@ -56,14 +79,58 @@ func (s *server) admin(w http.ResponseWriter, r *http.Request) {
 			period.Reasons[i].Key = name
 		}
 	}
+	entries := s.lists.all()
+	// Domains already listed are not suggested again.
+	period.Suggestions = slices.DeleteFunc(period.Suggestions, func(c statsCount) bool {
+		return slices.ContainsFunc(entries, func(e listEntry) bool { return e.Kind == listDomain && e.Value == c.Key })
+	})
+	if len(period.Suggestions) > 15 {
+		period.Suggestions = period.Suggestions[:15]
+	}
 	w.Header().Set("Cache-Control", "no-store")
-	s.render(w, "admin.html", struct {
+	s.render(w, r, "admin.html", struct {
 		Title   string
 		Period  statsPeriod
 		Periods []int
 		Active  int
 		Chart   statsChart
-	}{"Statistiques", period, statsPeriods, s.store.Active(), newStatsChart(period.Daily)})
+		Lists   []listEntry
+		CSRF    string
+		Error   string
+	}{"Statistiques", period, statsPeriods, s.store.Active(), newStatsChart(period.Daily), entries, s.csrfToken(),
+		r.URL.Query().Get("error")})
+}
+
+// adminLists adds (action=add) or removes (action=delete) an entry of the
+// local lists.
+func (s *server) adminLists(w http.ResponseWriter, r *http.Request) {
+	if !s.authorized(w, r) {
+		return
+	}
+	if s.lists == nil {
+		http.NotFound(w, r)
+		return
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, 16<<10)
+	if subtle.ConstantTimeCompare([]byte(r.PostFormValue("csrf")), []byte(s.csrfToken())) != 1 {
+		httpError(w, r, "Formulaire expiré ou envoyé depuis un autre site.", http.StatusForbidden)
+		return
+	}
+	var err error
+	switch r.PostFormValue("action") {
+	case "add":
+		err = s.lists.add(r.PostFormValue("kind"), r.PostFormValue("value"), r.PostFormValue("verdict"), r.PostFormValue("note"))
+	case "delete":
+		err = s.lists.remove(r.PostFormValue("kind"), r.PostFormValue("value"))
+	default:
+		httpError(w, r, "Action inconnue.", http.StatusBadRequest)
+		return
+	}
+	target := "/admin?days=" + url.QueryEscape(r.PostFormValue("days"))
+	if err != nil {
+		target += "&error=" + url.QueryEscape(err.Error())
+	}
+	http.Redirect(w, r, target+"#lists", http.StatusSeeOther)
 }
 
 // statsChart is the daily chart of the analyses, drawn as SVG by the

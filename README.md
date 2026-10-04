@@ -113,6 +113,21 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
   of 5 turns the light red, a total of 2 orange. The analysis page opens on a **simplified view** for non-technical
   visitors: a traffic light, what is doubtful, what is reassuring and what to do. A switch next to the theme one
   shows the detailed analysis, and the choice is remembered.
+- **Threat databases** (optional keys): URLhaus and MalwareBazaar (abuse.ch), Google Safe Browsing and VirusTotal are
+  asked about the link hosts and the attachment hashes; a link or a file they know turns the light red. Only host
+  names, file hashes and, for the links of shared platforms (SharePoint, GitHub…), the URLs without their parameters
+  are sent: the parameters of a link often hold the address of the recipient.
+- **Link following**: the server follows the suspicious links (shorteners, QR codes, attached documents, sharing
+  services, links with an alert) and, on request, any link of the mail, without running any code: HTTP, meta refresh
+  and literal JavaScript redirections are followed, the final page is read for a password field, a form sending
+  elsewhere, a captcha hiding it from robots and the brand it claims. The connections only reach public addresses
+  (checked after the DNS resolution, ports 80 and 443); single-use links (unsubscription, confirmation, reset) are
+  never followed automatically. The visited sites see the visit, from the address of the server.
+- **Local lists**: from the statistics page, domains, sender addresses and file hashes are marked as malicious (the
+  light turns red) or trusted; the domains of the red mails are suggested.
+- **English version**: a FR / EN switch in the header (remembered in a cookie, the browser language by default). The
+  rendered page is translated with a catalog of sentences and patterns (`i18n_en.go`); the content of the mails is
+  never translated.
 - **Statistics**: `/admin` shows, per period, the analyses by traffic light, the kinds of findings, the brands
   imitated and the domains reported, from counters kept in `data/stats.json` (no content, address or subject of the
   analyzed mails). The page exists only when an admin token is set.
@@ -140,6 +155,8 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
 | `reputation`       | external reputation checks, see below |
 | `trusted_domains`  | sender domains (subdomains included) whose authenticated mails are not flagged for their links, see below |
 | `protected_names`  | names of executives and people handling payments, e.g. `["Jean Dupont"]`: shown as display name of an outside address, they reveal an impersonation |
+| `threat_intel`     | keys of the threat databases: `abusech_key`, `safebrowsing_key`, `virustotal_key`; overridden by `MTK_ABUSECH_KEY`, `MTK_SAFEBROWSING_KEY`, `MTK_VIRUSTOTAL_KEY` |
+| `link_visits`      | `{"disabled": true}` stops the following of the links by the server |
 | `admin_token`      | password of the statistics page `/admin` (at least 32 characters, any user name); overridden by the `MTK_ADMIN_TOKEN` environment variable |
 
 Without `cert` and `key`, only the MX port (without STARTTLS) and plain HTTP are started.
@@ -156,6 +173,16 @@ blocklisted domains and antispam verdicts still count: an account of a trusted s
 The trusted domains also describe the organization: a domain imitating one of them (`example-org-support.com`,
 `example.org.login.top`, `exarnple.org`) as sender or link domain is reported like a lookalike of a brand, and a
 display name holding the organization's name with an address outside these domains is flagged.
+
+### Threat databases
+
+Each database needs a free key, better passed as an environment variable than written in the file:
+
+- `MTK_ABUSECH_KEY`: an [abuse.ch](https://auth.abuse.ch/) account key, for URLhaus and MalwareBazaar;
+- `MTK_SAFEBROWSING_KEY`: a Google Cloud API key with the Safe Browsing API enabled (non-commercial use);
+- `MTK_VIRUSTOTAL_KEY`: a VirusTotal key; the free one allows 4 queries a minute, so at most 4 per mail are made.
+
+`"reputation": {"disabled": true}` disables them, as well as the following of the links.
 
 ### Statistics page
 

@@ -45,6 +45,9 @@ type dayStats struct {
 	Domains map[string]int `json:"domains,omitempty"`
 	// QRCodes counts the analyses holding a QR code with a link.
 	QRCodes int `json:"qr_codes,omitempty"`
+	// Suggestions counts the domains of the red mails, offered for the
+	// local lists.
+	Suggestions map[string]int `json:"suggestions,omitempty"`
 }
 
 type statsData struct {
@@ -118,7 +121,7 @@ func (s *statsStore) recordSubmission(mode string, mails int) {
 }
 
 // recordAnalysis counts the analysis of a mail, once per mail.
-func (s *statsStore) recordAnalysis(mailKey string, risk riskReport, lookalikes []lookalike, rep reputation, codes []qrCode) {
+func (s *statsStore) recordAnalysis(mailKey string, risk riskReport, lookalikes []lookalike, rep reputation, codes []qrCode, suggestions []string) {
 	if s == nil {
 		return
 	}
@@ -162,6 +165,9 @@ func (s *statsStore) recordAnalysis(mailKey string, risk riskReport, lookalikes 
 			d.QRCodes++
 			break
 		}
+	}
+	for _, domain := range suggestions {
+		increment(&d.Suggestions, domain)
 	}
 	s.save()
 }
@@ -227,6 +233,7 @@ type statsPeriod struct {
 	Reasons     []statsCount
 	Brands      []statsCount
 	Domains     []statsCount
+	Suggestions []statsCount
 	// Daily are the analyses per day, oldest first.
 	Daily []statsDay
 }
@@ -262,7 +269,7 @@ func (s *statsStore) period(days int) statsPeriod {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	p := statsPeriod{Days: days, Submissions: map[string]int{}, Lights: map[string]int{}}
-	reasons, brands, domains := map[string]int{}, map[string]int{}, map[string]int{}
+	reasons, brands, domains, suggestions := map[string]int{}, map[string]int{}, map[string]int{}, map[string]int{}
 	today := s.now().UTC()
 	for i := days - 1; i >= 0; i-- {
 		date := today.AddDate(0, 0, -i).Format(time.DateOnly)
@@ -292,10 +299,12 @@ func (s *statsStore) period(days int) statsPeriod {
 			addCounts(reasons, d.Reasons)
 			addCounts(brands, d.Brands)
 			addCounts(domains, d.Domains)
+			addCounts(suggestions, d.Suggestions)
 		}
 		p.Daily = append(p.Daily, day)
 	}
 	p.Reasons, p.Brands, p.Domains = topCounts(reasons, 12), topCounts(brands, 15), topCounts(domains, 20)
+	p.Suggestions = topCounts(suggestions, 50)
 	return p
 }
 

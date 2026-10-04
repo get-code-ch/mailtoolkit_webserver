@@ -5,10 +5,10 @@
 {{template "site-header"}}
 <main class="wide">
     <div class="page-head">
-        <p class="crumbs"><a href="{{.Inbox}}">← Retour à la boîte</a> <span class="note">/ {{.Info.Filename}}</span></p>
+        <p class="crumbs"><a href="{{.Inbox}}">← Retour à la boîte</a> <span class="note" translate="no">/ {{.Info.Filename}}</span></p>
         {{template "delete-form" .Delete}}
     </div>
-    <h1 class="subject">{{with .Header.Subject}}{{.}}{{else}}{{$.Info.Filename}}{{end}}</h1>
+    <h1 class="subject" translate="no">{{with .Header.Subject}}{{.}}{{else}}{{$.Info.Filename}}{{end}}</h1>
 
     {{template "simple-view" .}}
 
@@ -67,11 +67,11 @@
         <div class="analysis-main">
             <dl class="header card">
                 {{with .Header}}
-                <dt>De</dt><dd>{{range $i, $a := .FromList}}{{if $i}}, {{end}}{{with $a.Name}}{{.}} {{end}}&lt;{{$a.Address}}&gt;{{end}}</dd>
-                <dt>À</dt><dd>{{.To}}</dd>
-                {{with .Cc}}<dt>Cc</dt><dd>{{.}}</dd>{{end}}
-                <dt>Sujet</dt><dd>{{.Subject}}</dd>
-                <dt>Date</dt><dd>{{.Date}}</dd>
+                <dt>De</dt><dd translate="no">{{range $i, $a := .FromList}}{{if $i}}, {{end}}{{with $a.Name}}{{.}} {{end}}&lt;{{$a.Address}}&gt;{{end}}</dd>
+                <dt>À</dt><dd translate="no">{{.To}}</dd>
+                {{with .Cc}}<dt>Cc</dt><dd translate="no">{{.}}</dd>{{end}}
+                <dt>Sujet</dt><dd translate="no">{{.Subject}}</dd>
+                <dt>Date</dt><dd translate="no">{{.Date}}</dd>
                 {{end}}
             </dl>
 
@@ -168,7 +168,7 @@
                             <span class="badge">{{.Source}}</span>
                             {{if gt .Count 1}}<span class="badge">×{{.Count}}</span>{{end}}
                         </div>
-                        {{with .Text}}<div class="link-text">Texte affiché : « {{.}} »</div>{{end}}
+                        {{with .Text}}<div class="link-text">Texte affiché : « <span translate="no">{{.}}</span> »</div>{{end}}
                         <code class="link-url">{{.URL}}</code>
                         {{with .Target}}<div class="link-target">Destination finale : <code>{{.}}</code></div>{{end}}
                         {{if .Warnings}}
@@ -176,8 +176,15 @@
                             {{range .Warnings}}<li class="level-{{.Level}}">{{.Message}}</li>{{end}}
                         </ul>
                         {{end}}
+                        {{with .Visit}}{{template "visit" .}}{{end}}
                         <div class="link-foot">
                             <span class="note">{{.Part}}</span>
+                            {{if and $.Visit .Visitable (not .Visit)}}
+                            <form method="post" action="{{$.Visit}}" class="visit-form">
+                                <input type="hidden" name="url" value="{{.URL}}">
+                                <button type="submit" title="Le serveur ouvre le lien sans exécuter de code et montre où il mène. Le site voit cette visite.">Suivre le lien</button>
+                            </form>
+                            {{end}}
                             <button type="button" class="copy" data-copy="{{.URL}}">Copier</button>
                         </div>
                     </li>
@@ -205,7 +212,7 @@
         <div class="risk-summary">
             <h2>{{.Risk.Headline}}</h2>
             {{with .Header}}{{range .FromList}}
-            <p class="risk-sender">Expéditeur affiché : <strong>{{with .Name}}{{.}} {{end}}&lt;{{.Address}}&gt;</strong></p>
+            <p class="risk-sender">Expéditeur affiché : <strong translate="no">{{with .Name}}{{.}} {{end}}&lt;{{.Address}}&gt;</strong></p>
             {{end}}{{end}}
             <p class="risk-auth {{if .Risk.Authenticated}}level-ok{{else}}level-warning{{end}}">
                 {{if .Risk.Authenticated}}✓ Le message vient bien du domaine {{.Risk.Sender}}.
@@ -252,7 +259,7 @@
 
 {{define "reputation"}}
 <section class="auth" id="reputation" aria-label="Réputation">
-    <details class="panel"{{if or .Lookalikes .Reputation.Listings}} open{{end}}>
+    <details class="panel"{{if or .Lookalikes .Reputation.Listings .Threats.Findings}} open{{end}}>
         <summary>Réputation et domaines
             {{if or .Lookalikes .Reputation.Listings}}<span class="badge level-danger">{{len .Lookalikes}} sosie{{if gt (len .Lookalikes) 1}}s{{end}} · {{len .Reputation.Listings}} liste{{if gt (len .Reputation.Listings) 1}}s{{end}} noire{{if gt (len .Reputation.Listings) 1}}s{{end}}</span>
             {{else}}<span class="badge level-ok">rien à signaler</span>{{end}}
@@ -299,6 +306,21 @@
             Spamhaus refuse les requêtes passant par les résolveurs DNS publics : configurez une clé DQS.</p>{{end}}
         {{end}}
 
+        <h3 id="threats">Bases de menaces</h3>
+        {{if .Threats.Services}}
+        {{range .Threats.Findings}}
+        <p class="level-{{.Level}}"><code>{{.Subject}}</code> ({{.Kind}}) : {{.Threat}} <span class="note">— {{.Service}}</span>
+            {{with .Reference}}<a href="{{.}}" target="_blank" rel="noopener noreferrer">fiche</a>{{end}}</p>
+        {{else}}
+        <p class="level-ok">Aucun lien ni aucune pièce jointe n'est connu de {{range $i, $s := .Threats.Services}}{{if $i}}, {{end}}{{$s}}{{end}}.</p>
+        {{end}}
+        {{with .Threats.Errors}}<p class="note">Sans réponse (clé refusée, quota atteint ou service indisponible) : {{range $i, $z := .}}{{if $i}}, {{end}}{{$z}}{{end}}.</p>{{end}}
+        <p class="note">Seuls les noms des sites, les empreintes des fichiers et, pour les plateformes partagées, les adresses sans leurs
+            paramètres sont transmis à ces services.</p>
+        {{else}}
+        <p class="note">Aucune base de menaces n'est configurée sur ce serveur (URLhaus, MalwareBazaar, Google Safe Browsing, VirusTotal).</p>
+        {{end}}
+
         {{with .Reputation.Domains}}
         <h3>Âge des domaines</h3>
         <div class="table-scroll">
@@ -317,6 +339,19 @@
         {{if not .Reputation.Checked}}<p class="note">Consultation des listes noires et des registres désactivée sur ce serveur.</p>{{end}}
     </details>
 </section>
+{{end}}
+
+{{define "visit"}}
+<div class="visit">
+    <div class="visit-head">{{if .Manual}}Lien suivi à votre demande{{else}}Lien suivi automatiquement{{end}}
+        {{with .Status}}<span class="badge">HTTP {{.}}</span>{{end}}</div>
+    {{if gt (len .Chain) 1}}
+    <ol class="visit-chain">{{range .Chain}}<li><code>{{.URL}}</code>{{with .Status}} <span class="note">{{.}}</span>{{end}}{{with .Via}} <span class="note">→ {{.}}</span>{{end}}</li>{{end}}</ol>
+    {{end}}
+    {{with .Final}}<div class="link-target">Page finale : <code>{{.}}</code></div>{{end}}
+    {{with .Title}}<div class="note">Titre : « <span translate="no">{{.}}</span> »</div>{{end}}
+    {{with .Error}}<div class="note">{{.}}</div>{{end}}
+</div>
 {{end}}
 
 {{define "fraud"}}

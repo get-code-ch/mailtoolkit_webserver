@@ -31,10 +31,10 @@ func TestStats(t *testing.T) {
 	lookalikes := []lookalike{{Domain: "paypa1.com", Brand: "PayPal"}}
 	s.recordSubmission("mx", 1)
 	s.recordSubmission(modeUpload, 1)
-	s.recordAnalysis("/inbox/a/1/1", red, lookalikes, reputation{}, []qrCode{{Link: &Link{}}})
-	s.recordAnalysis("/inbox/a/1/1", red, lookalikes, reputation{}, nil) // displayed again
+	s.recordAnalysis("/inbox/a/1/1", red, lookalikes, reputation{}, []qrCode{{Link: &Link{}}}, []string{"evil.example"})
+	s.recordAnalysis("/inbox/a/1/1", red, lookalikes, reputation{}, nil, nil) // displayed again
 	clock.now = clock.now.Add(24 * time.Hour)
-	s.recordAnalysis("/inbox/b/1/1", riskReport{Light: riskGreen}, nil, reputation{}, nil)
+	s.recordAnalysis("/inbox/b/1/1", riskReport{Light: riskGreen}, nil, reputation{}, nil, nil)
 
 	// Reloaded from the file.
 	s, err = newStatsStore(dir, clock.Now)

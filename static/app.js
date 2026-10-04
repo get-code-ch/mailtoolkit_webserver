@@ -1,3 +1,16 @@
+// The texts written by the scripts, in the language of the page.
+var english = document.documentElement.lang === "en";
+var texts = english
+    ? { copied: "Copied", copy: "Copy", sending: "Sending…", expired: "(expired)", left: "(in {h} h {m} min {s} s)" }
+    : { copied: "Copié", copy: "Copier", sending: "Envoi…", expired: "(expirée)", left: "(dans {h} h {m} min {s} s)" };
+
+// The language links keep the address of the page (part shown, hop).
+document.querySelectorAll("a.lang-link").forEach(function (link) {
+    var url = new URL(location.href);
+    url.searchParams.set("lang", link.hreflang);
+    link.href = url.pathname + url.search + url.hash;
+});
+
 // Copy buttons of the links panel. Links are never made clickable.
 document.addEventListener("click", function (event) {
     var button = event.target.closest("button[data-copy]");
@@ -5,8 +18,8 @@ document.addEventListener("click", function (event) {
         return;
     }
     navigator.clipboard.writeText(button.dataset.copy).then(function () {
-        button.textContent = "Copié";
-        setTimeout(function () { button.textContent = "Copier"; }, 1500);
+        button.textContent = texts.copied;
+        setTimeout(function () { button.textContent = texts.copy; }, 1500);
     });
 });
 
@@ -19,7 +32,7 @@ document.addEventListener("change", function (event) {
     var button = input.form.querySelector("button");
     if (button) {
         button.disabled = true;
-        button.textContent = "Envoi…";
+        button.textContent = texts.sending;
     }
     input.form.submit();
 });
@@ -55,7 +68,7 @@ document.addEventListener("change", function (event) {
     function update() {
         var left = Math.max(0, Math.floor((expires - Date.now()) / 1000));
         var h = Math.floor(left / 3600), m = Math.floor(left / 60) % 60, s = left % 60;
-        countdown.textContent = left ? "(dans " + h + " h " + (m < 10 ? "0" : "") + m + " min " + (s < 10 ? "0" : "") + s + " s)" : "(expirée)";
+        countdown.textContent = left ? texts.left.replace("{h}", h).replace("{m}", (m < 10 ? "0" : "") + m).replace("{s}", (s < 10 ? "0" : "") + s) : texts.expired;
     }
     update();
     setInterval(update, 1000);

@@ -46,6 +46,14 @@ type Link struct {
 	// parameter (Safe Links, trackers...).
 	Target   string
 	Warnings []LinkWarning
+	// Visit is what following the link found, nil if not followed.
+	Visit *pageVisit
+}
+
+// Visitable reports whether the link can be followed by the server.
+func (l Link) Visitable() bool {
+	lower := strings.ToLower(l.URL)
+	return strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://")
 }
 
 // Level returns the most severe warning level of the link, "" if none.

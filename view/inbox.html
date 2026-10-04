@@ -35,10 +35,10 @@
         </div>
         {{range .Items}}
         <a class="mail-item" href="{{.Link}}">
-            <span class="mail-subject">{{if .Subject}}{{.Subject}}{{else}}(sans sujet){{end}}{{if eq .Format "msg"}} <span class="badge">Outlook .msg</span>{{end}}</span>
-            <span class="mail-from">{{.From}}</span>
-            <span class="mail-date">{{.Date}}</span>
-            <span class="mail-file">{{.Filename}}</span>
+            <span class="mail-subject">{{if .Subject}}<span translate="no">{{.Subject}}</span>{{else}}(sans sujet){{end}}{{if eq .Format "msg"}} <span class="badge">Outlook .msg</span>{{end}}</span>
+            <span class="mail-from" translate="no">{{.From}}</span>
+            <span class="mail-date" translate="no">{{.Date}}</span>
+            <span class="mail-file" translate="no">{{.Filename}}</span>
         </a>
         {{end}}
         {{if .Error}}

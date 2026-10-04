@@ -1757,3 +1757,107 @@ table.stats-counts svg {
     height: 8px;
     fill: var(--accent);
 }
+
+/* Link visits */
+
+.visit {
+    margin: 8px 0;
+    padding: 8px 10px;
+    border-left: 2px solid var(--border-strong);
+    background: var(--surface-3);
+    border-radius: 0 6px 6px 0;
+    font-size: 0.9rem;
+}
+
+.visit-head {
+    color: var(--muted);
+    margin-bottom: 4px;
+}
+
+ol.visit-chain {
+    margin: 4px 0;
+    padding-left: 20px;
+}
+
+ol.visit-chain li, .visit code {
+    overflow-wrap: anywhere;
+}
+
+form.visit-form {
+    display: inline;
+    margin: 0;
+}
+
+form.visit-form button {
+    padding: 3px 10px;
+    font-size: 0.85rem;
+}
+
+/* Local lists */
+
+form.list-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    align-items: flex-end;
+    margin: 12px 0;
+}
+
+form.list-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    min-width: 0;
+}
+
+form.list-form input[type=text], form.list-form select {
+    padding: 6px 8px;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    background: var(--surface-2);
+    color: var(--text);
+    font: inherit;
+    max-width: 100%;
+}
+
+form.list-form input[name=value] {
+    width: min(360px, 80vw);
+}
+
+form.inline-form {
+    display: inline;
+    margin: 0;
+}
+
+form.inline-form button {
+    padding: 3px 10px;
+    font-size: 0.85rem;
+}
+
+/* Language switch */
+
+.lang-switch {
+    display: inline-flex;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    font: 600 0.75rem var(--mono);
+}
+
+.lang-switch a {
+    padding: 4px 9px;
+    color: var(--muted);
+    text-decoration: none;
+}
+
+.lang-switch a:hover {
+    color: var(--text);
+}
+
+html[lang="fr"] .lang-switch a[hreflang="fr"],
+html[lang="en"] .lang-switch a[hreflang="en"] {
+    background: var(--accent);
+    color: var(--accent-ink);
+}
