@@ -76,7 +76,12 @@ type riskInput struct {
 	Lookalikes  []lookalike
 	// TrustedDomains are the sender domains trusted when authenticated.
 	TrustedDomains []string
+	// ProtectedNames are the names of the organization's people whose
+	// display name fraudsters borrow.
+	ProtectedNames []string
 	SMIME          smime.Result
+	QRCodes        []qrCode
+	Fraud          fraudAnalysis
 }
 
 // assessRisk turns the analyses into a traffic light.
@@ -108,6 +113,7 @@ func assessRisk(in riskInput) riskReport {
 			add(levelInfo, 0, "dmarc", fmt.Sprintf("%s fait partie des domaines de confiance, mais son identité n'a pas été confirmée par "+
 				"votre messagerie : la confiance ne s'applique pas.", a.FromDomain), "DMARC non validé par un serveur de réception")
 		}
+		assessImpersonation(&r, a, in.TrustedDomains, in.ProtectedNames, add)
 		if a.Relay != nil {
 			for _, check := range a.Checks {
 				if check.Level == levelInfo && strings.HasPrefix(check.Message, "Envoyé par") {
@@ -141,6 +147,8 @@ func assessRisk(in riskInput) riskReport {
 		}
 	}
 
+	assessFraud(&r, in.Fraud, in.Auth, add)
+	assessQR(&r, in.QRCodes, in.Fraud, add)
 	if !r.Trusted {
 		assessLinks(&r, in.Links, add)
 	}
@@ -167,6 +175,17 @@ func assessRisk(in riskInput) riskReport {
 			continue
 		}
 		if l.Kind != "sosie" && l.Role == "lien" && r.Trusted {
+			continue
+		}
+		if l.Kind != "sosie" && l.Own {
+			if l.Role == "lien" {
+				add(levelWarning, 2, "reputation", fmt.Sprintf("Un lien mène vers %s, qui reprend le nom de votre organisation sans lui appartenir.", l.Domain),
+					fmt.Sprintf("%s %s", l.Domain, l.Reason))
+			} else {
+				add(levelDanger, 3, "reputation", fmt.Sprintf("L'adresse %s reprend le nom de votre organisation sans lui appartenir : "+
+					"l'expéditeur se fait passer pour un collègue ou pour votre service informatique.", l.Domain),
+					fmt.Sprintf("%s (%s) %s", l.Domain, l.Role, l.Reason))
+			}
 			continue
 		}
 		if l.Kind != "sosie" && l.Role == "lien" {
@@ -359,7 +378,8 @@ func assessLinks(r *riskReport, links []Link, add func(level string, weight int,
 	if dangers > 3 {
 		add(levelDanger, 0, "links", fmt.Sprintf("Et %d autres liens piégés.", dangers-3), "")
 	}
-	if len(links) > 0 && dangers == 0 && warnings == 0 {
+	qr := slices.ContainsFunc(links, func(l Link) bool { return l.Source == "QR code" })
+	if len(links) > 0 && dangers == 0 && warnings == 0 && !qr {
 		r.Positives = append(r.Positives, "Aucun lien trompeur n'a été trouvé.")
 	}
 }

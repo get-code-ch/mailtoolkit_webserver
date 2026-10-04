@@ -82,6 +82,10 @@ type mailboxStore struct {
 	// parsed keeps the last parsed mails: the analysis page and its frames
 	// parse the same mail several times.
 	parsed *boundedCache[mailtoolkit.Mail]
+
+	// onSubmission, when set, is called for each stored submission with
+	// its mode and the number of mails extracted (statistics).
+	onSubmission func(mode string, mails int)
 }
 
 func newMailboxStore(folder string, domains []string, retention time.Duration, maxMailboxes int) (*mailboxStore, error) {
@@ -290,7 +294,13 @@ func (s *mailboxStore) writeSubmission(token string, env smtpd.Envelope, carrier
 	if len(mails) == 0 && submission.Error == "" {
 		submission.Error = errNoAttachedMail
 	}
-	return s.writeJSON(dir+"/result.json", submission)
+	if err := s.writeJSON(dir+"/result.json", submission); err != nil {
+		return err
+	}
+	if s.onSubmission != nil {
+		s.onSubmission(env.Mode, len(mails))
+	}
+	return nil
 }
 
 // Submissions lists the carriers received by a mailbox, newest first.
@@ -473,4 +483,17 @@ func validToken(token string) bool {
 // validID checks a submission id: 12 random bytes in hex (smtpd.newID).
 func validID(id string) bool {
 	return len(id) == 24 && strings.Trim(id, "0123456789abcdef") == ""
+}
+
+// Active returns the number of active mailboxes.
+func (s *mailboxStore) Active() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	now, n := s.now(), 0
+	for _, mailbox := range s.byToken {
+		if now.Before(mailbox.Expires) {
+			n++
+		}
+	}
+	return n
 }

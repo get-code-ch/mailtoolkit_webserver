@@ -13,7 +13,30 @@ import (
 
 // templateFuncs are the functions available in the views.
 var templateFuncs = template.FuncMap{"resultClass": resultClass, "visibleSpace": visibleSpace, "dkimView": dkimView, "asset": asset, "brands": func() []brand { return brands },
-	"smimeLevel": smimeLevel, "smimeText": smimeText}
+	"smimeLevel": smimeLevel, "smimeText": smimeText, "qrLevel": qrLevel, "fraudReasons": fraudReasons,
+	"add": func(a, b int) int { return a + b }}
+
+// qrLevel is the most severe level of the QR codes.
+func qrLevel(codes []qrCode) string {
+	level := levelInfo
+	for _, c := range codes {
+		if l := c.Level(); severity[l] < severity[level] {
+			level = l
+		}
+	}
+	return level
+}
+
+// fraudReasons counts the findings of the text of the mail.
+func fraudReasons(r riskReport) int {
+	n := 0
+	for _, reason := range r.Reasons {
+		if reason.Anchor == "fraud" && reason.Weight > 0 {
+			n++
+		}
+	}
+	return n
+}
 
 // dkimView passes a signature and its position to the dkim-signature
 // template.

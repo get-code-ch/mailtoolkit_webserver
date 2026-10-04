@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>{{template "head" .Title}}</head>
+<body class="admin">
+{{template "site-header"}}
+<main class="wide">
+    <div class="page-head">
+        <h1>Statistiques</h1>
+        <nav class="parts" aria-label="Période">
+            {{range .Periods}}<a href="?days={{.}}"{{if eq . $.Period.Days}} class="active" aria-current="page"{{end}}>{{.}} jours</a>{{end}}
+        </nav>
+    </div>
+    <p class="note">Du {{.Period.From}} au {{.Period.To}} (UTC). Seuls des compteurs sont conservés : ni contenu, ni adresse, ni sujet
+        des mails analysés. Un mail est compté une fois, à la première ouverture de son analyse.</p>
+
+    <div class="verdict" aria-label="Chiffres clés">
+        <div class="tile">
+            <span class="tile-label">Analyses</span>
+            <span class="tile-value">{{.Period.Analyses}}</span>
+            <span class="tile-note">{{.Period.Mails}} mail{{if gt .Period.Mails 1}}s{{end}} extrait{{if gt .Period.Mails 1}}s{{end}}</span>
+        </div>
+        <div class="tile">
+            <span class="tile-label">Reçus</span>
+            <span class="tile-value">{{.Period.Received}}</span>
+            <span class="tile-note">par SMTP ou relais · {{.Period.Uploaded}} déposé{{if gt .Period.Uploaded 1}}s{{end}}</span>
+        </div>
+        <div class="tile level-danger">
+            <span class="tile-label">Rouge</span>
+            <span class="tile-value">{{index .Period.Lights "red"}}</span>
+            <span class="tile-note">{{.Period.Percent "red"}} % des analyses</span>
+        </div>
+        <div class="tile level-warning">
+            <span class="tile-label">Orange</span>
+            <span class="tile-value">{{index .Period.Lights "orange"}}</span>
+            <span class="tile-note">{{.Period.Percent "orange"}} % des analyses</span>
+        </div>
+        <div class="tile level-ok">
+            <span class="tile-label">Vert</span>
+            <span class="tile-value">{{index .Period.Lights "green"}}</span>
+            <span class="tile-note">{{.Period.Percent "green"}} % des analyses</span>
+        </div>
+        <div class="tile">
+            <span class="tile-label">QR codes</span>
+            <span class="tile-value">{{.Period.QRCodes}}</span>
+            <span class="tile-note">analyses avec un lien en QR code</span>
+        </div>
+        <div class="tile">
+            <span class="tile-label">Boîtes actives</span>
+            <span class="tile-value">{{.Active}}</span>
+            <span class="tile-note">en ce moment</span>
+        </div>
+    </div>
+
+    <section class="card">
+        <h2>Analyses par jour</h2>
+        {{if .Chart.Bars}}
+        <div class="chart">
+            <svg viewBox="0 0 {{.Chart.Width}} {{add .Chart.Height 18}}" role="img" aria-label="Analyses par jour et par feu, au plus {{.Chart.Max}} par jour" class="chart-bars">
+                <line x1="0" x2="{{.Chart.Width}}" y1="{{.Chart.Height}}" y2="{{.Chart.Height}}" class="axis"/>
+                {{range .Chart.Bars}}{{$b := .}}{{if .Total}}
+                <g><title>{{.Date}} : {{.Total}} analyse{{if gt .Total 1}}s{{end}}</title>
+                    {{range .Segments}}<rect x="{{$b.X}}" y="{{.Y}}" width="{{$b.Width}}" height="{{.Height}}" class="{{.Class}}"/>{{end}}
+                </g>
+                {{end}}{{end}}
+                {{range .Chart.Labels}}<text x="{{.X}}" y="{{add $.Chart.Height 14}}" class="chart-label">{{.Text}}</text>{{end}}
+            </svg>
+            <p class="chart-legend"><span class="key bar-green"></span> vert <span class="key bar-orange"></span> orange
+                <span class="key bar-red"></span> rouge · au plus {{.Chart.Max}} analyse{{if gt .Chart.Max 1}}s{{end}} par jour</p>
+        </div>
+        {{else}}
+        <p class="note">Aucune analyse sur la période.</p>
+        {{end}}
+    </section>
+
+    <div class="stats-grid">
+        <section class="card">
+            <h2>Motifs d'alerte</h2>
+            {{template "stats-counts" .Period.Reasons}}
+            <p class="note">Nombre d'analyses où chaque type d'élément a compté dans le score.</p>
+        </section>
+        <section class="card">
+            <h2>Marques imitées</h2>
+            {{template "stats-counts" .Period.Brands}}
+        </section>
+        <section class="card">
+            <h2>Domaines signalés</h2>
+            {{template "stats-counts" .Period.Domains}}
+            <p class="note">Domaines sosies d'une marque et domaines inscrits sur une liste noire.</p>
+        </section>
+        <section class="card">
+            <h2>Réceptions par canal</h2>
+            <table>
+                <tbody>
+                {{range $mode, $n := .Period.Submissions}}<tr><td><code>{{$mode}}</code></td><td>{{$n}}</td></tr>
+                {{else}}<tr><td class="note">Aucune réception sur la période.</td></tr>{{end}}
+                </tbody>
+            </table>
+        </section>
+    </div>
+</main>
+{{template "site-footer"}}
+</body>
+</html>
+
+{{define "stats-counts"}}
+{{if .}}
+<table class="stats-counts">
+    <tbody>
+    {{range .}}
+    <tr><td>{{.Key}}</td><td class="count">{{.Count}}</td>
+        <td class="bar-cell"><svg viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect width="{{.Percent}}" height="8" rx="2"/></svg></td></tr>
+    {{end}}
+    </tbody>
+</table>
+{{else}}
+<p class="note">Rien sur la période.</p>
+{{end}}
+{{end}}

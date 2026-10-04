@@ -45,6 +45,8 @@ func newTestServer(t *testing.T) *server {
 		limiter:       newRateLimiter(100, time.Hour),
 		resolver:      mapResolver{},
 		auth:          newBoundedCache[headerAnalysis](8),
+		qrCache:       newBoundedCache[qrScan](8),
+		adminLimiter:  newRateLimiter(3, time.Hour),
 		maxUploadSize: 1 << 20,
 	}
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/get-code-ch/mailtoolkit_webserver/mailauth"
@@ -11,6 +12,21 @@ type brand struct {
 	Name    string
 	Label   string
 	Domains []string
+}
+
+// ownBrands turns the trusted domains into brands: fraudsters imitate the
+// organization's domain to pose as a colleague or its IT department.
+func ownBrands(trusted []string) []brand {
+	var own []brand
+	for _, t := range trusted {
+		org := mailauth.OrgDomain(t)
+		label, _, _ := strings.Cut(org, ".")
+		if len(label) < 4 {
+			continue // too short to be recognized without false alarms
+		}
+		own = append(own, brand{org, label, []string{org}})
+	}
+	return own
 }
 
 // brands are frequent phishing targets, in Switzerland and worldwide.
@@ -71,14 +87,18 @@ type lookalike struct {
 	Kind   string
 	Reason string
 	Level  string
+	// Own is set when the domain imitates the organization itself.
+	Own bool
 }
 
 // confusables are the substitutions used to imitate a name.
 var confusables = strings.NewReplacer("rn", "m", "vv", "w", "0", "o", "1", "l", "3", "e", "4", "a", "5", "s", "7", "t", "8", "b", "-", "", "_", "")
 
 // findLookalikes checks the organizational domains of a mail against the
-// brands. host is the full name (subdomains included).
-func findLookalikes(subjects []subject) []lookalike {
+// brands and the organization's own domains. host is the full name
+// (subdomains included).
+func findLookalikes(subjects []subject, trusted []string) []lookalike {
+	own := ownBrands(trusted)
 	var found []lookalike
 	seen := map[string]bool{}
 	for _, s := range subjects {
@@ -88,7 +108,16 @@ func findLookalikes(subjects []subject) []lookalike {
 			continue
 		}
 		seen[host] = true
-		if l, ok := checkLookalike(host, org); ok {
+		if official(org, own...) {
+			continue
+		}
+		l, ok := checkLookalike(host, org, own)
+		if ok {
+			l.Own = true
+		} else {
+			l, ok = checkLookalike(host, org, brands)
+		}
+		if ok {
 			l.Role = s.Role
 			found = append(found, l)
 		}
@@ -96,23 +125,21 @@ func findLookalikes(subjects []subject) []lookalike {
 	return found
 }
 
-func checkLookalike(host, org string) (lookalike, bool) {
+func checkLookalike(host, org string, list []brand) (lookalike, bool) {
 	label, _, _ := strings.Cut(org, ".")
-	for _, b := range brands {
-		if official(org, b) {
-			return lookalike{}, false
-		}
+	if official(org, list...) {
+		return lookalike{}, false
 	}
-	for _, b := range brands {
+	for _, b := range list {
 		l := lookalike{Domain: host, Brand: b.Name}
 		switch {
 		case label == b.Label:
 			l.Kind, l.Level = "nom", levelWarning
 			l.Reason = "porte exactement le nom de " + b.Name + " mais avec une extension qui n'est pas l'une des siennes"
-		case confusables.Replace(label) == b.Label:
+		case confusables.Replace(label) == strings.ReplaceAll(b.Label, "-", ""):
 			l.Kind, l.Level = "sosie", levelDanger
 			l.Reason = "imite " + b.Name + " en remplaçant des lettres par des caractères qui leur ressemblent"
-		case len(b.Label) >= 5 && editDistance(label, b.Label) == 1:
+		case len(b.Label) >= 5 && editDistance(strings.ReplaceAll(label, "-", ""), strings.ReplaceAll(b.Label, "-", "")) == 1:
 			l.Kind, l.Level = "sosie", levelDanger
 			l.Reason = "ne diffère de " + b.Name + " que d'une lettre"
 		case containsWord(label, b.Label):
@@ -129,9 +156,10 @@ func checkLookalike(host, org string) (lookalike, bool) {
 	return lookalike{}, false
 }
 
-func official(org string, b brand) bool {
-	for _, d := range b.Domains {
-		if org == d {
+// official reports whether org is a domain of one of the brands.
+func official(org string, list ...brand) bool {
+	for _, b := range list {
+		if slices.Contains(b.Domains, org) {
 			return true
 		}
 	}

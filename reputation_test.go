@@ -31,7 +31,7 @@ func TestFindLookalikes(t *testing.T) {
 		"booking.com":               "",
 	}
 	for host, want := range tests {
-		found := findLookalikes([]subject{{host, "lien"}})
+		found := findLookalikes([]subject{{host, "lien"}}, nil)
 		got := ""
 		if len(found) == 1 {
 			got = found[0].Kind + " " + found[0].Brand

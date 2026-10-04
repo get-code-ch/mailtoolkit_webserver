@@ -33,6 +33,9 @@ func main() {
 	if logged.IngestToken != "" {
 		logged.IngestToken = "(set)" // never write the secret in the logs
 	}
+	if logged.AdminToken != "" {
+		logged.AdminToken = "(set)"
+	}
 	if logged.Reputation.SpamhausDQSKey != "" {
 		logged.Reputation.SpamhausDQSKey = "(set)"
 	}
@@ -42,6 +45,11 @@ func main() {
 	if err != nil {
 		log.Fatal("opening data folder: ", err)
 	}
+	stats, err := newStatsStore(conf.DataFolder, time.Now)
+	if err != nil {
+		log.Fatal("opening statistics: ", err)
+	}
+	store.onSubmission = stats.recordSubmission
 	assetVersion = staticVersion(conf.StaticFolder)
 	templates, err := template.New("").Funcs(templateFuncs).ParseFS(views, "view/*.html")
 	if err != nil {
@@ -68,8 +76,13 @@ func main() {
 		reputation:     newReputationChecker(conf.Reputation, net.DefaultResolver, conf.Domains),
 		repCache:       newBoundedCache[reputation](64),
 		trustedDomains: conf.TrustedDomains,
+		protectedNames: conf.ProtectedNames,
 		smime:          newSMIMEVerifier(conf.Reputation),
 		smimeCache:     newBoundedCache[smime.Result](64),
+		qrCache:        newBoundedCache[qrScan](64),
+		stats:          stats,
+		adminToken:     conf.AdminToken,
+		adminLimiter:   newRateLimiter(10, time.Hour),
 
 		maxUploadSize:    conf.MaxMessageSize,
 		hostname:         conf.Hostname,
@@ -82,7 +95,9 @@ func main() {
 			s.auth.clear()
 			s.repCache.clear()
 			s.smimeCache.clear()
+			s.qrCache.clear()
 			s.limiter.prune()
+			s.adminLimiter.prune()
 		}
 	}()
 

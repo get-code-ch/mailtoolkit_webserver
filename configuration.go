@@ -51,6 +51,14 @@ type Configuration struct {
 	// authenticated mails are not flagged for their links: the
 	// organization's own domains, its mailing providers.
 	TrustedDomains []string `json:"trusted_domains"`
+	// ProtectedNames are the names of the organization's executives and
+	// people handling payments: a mail showing one of them from outside
+	// the trusted domains is an impersonation.
+	ProtectedNames []string `json:"protected_names"`
+	// AdminToken protects the statistics page /admin (HTTP basic
+	// authentication, any user name). The MTK_ADMIN_TOKEN environment
+	// variable overrides it; without it, the page is disabled.
+	AdminToken string `json:"admin_token"`
 }
 
 // Duration reads a duration written as "24h" in JSON.
@@ -98,6 +106,12 @@ func getConfiguration(file string) (Configuration, error) {
 	}
 	if key := os.Getenv("MTK_SPAMHAUS_DQS_KEY"); key != "" {
 		configuration.Reputation.SpamhausDQSKey = key
+	}
+	if token := os.Getenv("MTK_ADMIN_TOKEN"); token != "" {
+		configuration.AdminToken = token
+	}
+	if configuration.AdminToken != "" && len(configuration.AdminToken) < 32 {
+		return Configuration{}, errors.New("configuration: admin_token must be at least 32 characters")
 	}
 	if configuration.IngestToken != "" && len(configuration.IngestToken) < 32 {
 		return Configuration{}, errors.New("configuration: ingest_token must be at least 32 characters")

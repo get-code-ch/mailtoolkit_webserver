@@ -1672,3 +1672,88 @@ ol.cert-chain li {
     margin-bottom: 4px;
     overflow-wrap: anywhere;
 }
+
+/* QR codes */
+
+article.qr {
+    margin-bottom: 10px;
+}
+
+pre.qr-text {
+    margin: 8px 0 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+/* Statistics */
+
+.page-head h1 {
+    margin: 0;
+}
+
+.chart svg {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.chart .axis {
+    stroke: var(--border-strong);
+}
+
+.chart-label {
+    fill: var(--muted);
+    font: 11px var(--mono);
+}
+
+.bar-green { fill: var(--ok); background: var(--ok); }
+.bar-orange { fill: var(--warning); background: var(--warning); }
+.bar-red { fill: var(--danger); background: var(--danger); }
+.bar-other { fill: var(--muted); background: var(--muted); }
+
+.chart-legend {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.chart-legend .key {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    margin-left: 8px;
+    border-radius: 2px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.stats-grid .card {
+    margin: 0;
+    min-width: 0;
+}
+
+table.stats-counts td {
+    overflow-wrap: anywhere;
+}
+
+table.stats-counts td.count {
+    width: 1%;
+    text-align: right;
+    font-family: var(--mono);
+}
+
+table.stats-counts td.bar-cell {
+    width: 35%;
+}
+
+table.stats-counts svg {
+    display: block;
+    width: 100%;
+    height: 8px;
+    fill: var(--accent);
+}

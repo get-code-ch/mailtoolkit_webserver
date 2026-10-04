@@ -67,6 +67,15 @@ type server struct {
 	// per mail.
 	smime      *smime.Verifier
 	smimeCache *boundedCache[smime.Result]
+	// protectedNames are the people whose display name is usurped.
+	protectedNames []string
+	// qrCache keeps the QR codes found per mail (decoding images is slow).
+	qrCache *boundedCache[qrScan]
+	// stats counts the submissions and analyses; adminToken protects their
+	// page, adminLimiter bounds the failed logins.
+	stats        *statsStore
+	adminToken   string
+	adminLimiter *rateLimiter
 }
 
 // dnsTimeout bounds the DNS queries of a header analysis.
@@ -84,6 +93,7 @@ func (s *server) routes(staticFolder string) http.Handler {
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}", s.analysis)
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}/part/{content}", s.mailPart)
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}/attachment/{attachment}", s.mailAttachment)
+	mux.HandleFunc("GET /admin", s.admin)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticFolder))))
 	return securityHeaders(mux)
 }
@@ -315,7 +325,11 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		SMIME       smime.Result
 		Reputation  reputation
 		Lookalikes  []lookalike
-		Part        string
+		QRCodes     []qrCode
+		// QRSkipped counts the images not scanned for QR codes.
+		QRSkipped int
+		Fraud     fraudAnalysis
+		Part      string
 		// Risky counts the attachments with a warning or a danger.
 		Risky int
 	}{
@@ -360,8 +374,11 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		return severity[data.Attachments[i].Level()] < severity[data.Attachments[j].Level()]
 	})
 
-	// Most suspicious links first, then in order of appearance.
-	data.Links = extractLinks(mail)
+	// Most suspicious links first, then in order of appearance; the links
+	// of the QR codes are analyzed with the others.
+	scan := s.qrCodesOf(r, mail)
+	data.QRCodes, data.QRSkipped = scan.Codes, scan.Skipped
+	data.Links = append(extractLinks(mail), qrLinks(data.QRCodes)...)
 	data.LinkGroups = groupLinks(data.Links)
 	for _, link := range data.Links {
 		switch link.Level() {
@@ -388,11 +405,25 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		data.SMIME = s.smimeOf(r, auth.FromAddress)
 	}
 	linkDomains, linkHosts := linkSubjects(data.Links)
-	data.Lookalikes = findLookalikes(append(slices.Clone(auth.Senders), linkHosts...))
+	data.Lookalikes = findLookalikes(append(slices.Clone(auth.Senders), linkHosts...), s.trustedDomains)
 	data.Reputation = s.reputationOf(r, &auth, linkDomains)
+	data.Fraud = analyzeText(mail.Header.Subject, mailText(mail))
 	data.Risk = assessRisk(riskInput{Auth: &auth, Links: data.Links, Attachments: data.Attachments,
-		Reputation: data.Reputation, Lookalikes: data.Lookalikes, TrustedDomains: s.trustedDomains, SMIME: data.SMIME})
+		Reputation: data.Reputation, Lookalikes: data.Lookalikes, TrustedDomains: s.trustedDomains, ProtectedNames: s.protectedNames,
+		SMIME: data.SMIME, QRCodes: data.QRCodes, Fraud: data.Fraud})
+	s.stats.recordAnalysis(base, data.Risk, data.Lookalikes, data.Reputation, data.QRCodes)
 	s.render(w, "mail.html", data)
+}
+
+// qrCodesOf returns the QR codes of the analyzed mail, cached per mail.
+func (s *server) qrCodesOf(r *http.Request, mail mailtoolkit.Mail) qrScan {
+	key := r.PathValue("token") + "/" + r.PathValue("id") + "/" + r.PathValue("n")
+	if codes, ok := s.qrCache.get(key); ok {
+		return codes
+	}
+	codes := findQRCodes(mail)
+	s.qrCache.put(key, codes)
+	return codes
 }
 
 // smimeOf verifies the S/MIME signature of the analyzed mail, cached per
@@ -653,6 +684,20 @@ func (l *rateLimiter) allow(key string) bool {
 	}
 	l.events[key] = append(recent, now)
 	return true
+}
+
+// exceeded reports whether the limit is reached, without counting an
+// event.
+func (l *rateLimiter) exceeded(key string) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now, recent := time.Now(), 0
+	for _, t := range l.events[key] {
+		if now.Sub(t) < l.window {
+			recent++
+		}
+	}
+	return recent >= l.limit
 }
 
 // prune forgets the keys without recent events.

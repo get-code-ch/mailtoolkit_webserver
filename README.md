@@ -85,12 +85,27 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
   was broken by a forward or an export; encrypted messages are reported as such.
 - **Reputation**: DNS blocklists (Spamhaus ZEN and DBL, SpamCop, SURBL by default) for the sending server and the
   domains of the mail, registration date of these domains (RDAP), and lookalike domains of often impersonated
-  brands (PayPal, Microsoft, PostFinance, TWINT, Swisscom…): letters swapped or replaced by lookalike characters,
-  brand name in another domain.
+  brands (PayPal, Microsoft, PostFinance, TWINT, Swisscom…) and of the organization's own domains (`trusted_domains`):
+  letters swapped or replaced by lookalike characters, brand name in another domain.
+- **QR codes** (package `qrscan`, with `github.com/makiuchi-d/gozxing`, a port of ZXing, and
+  `golang.org/x/image`): QR codes are read in the inline images, the images embedded in the HTML, image attachments,
+  the images of PDF documents (JPEG, raw and stencil mask images) and of Office and OpenDocument files. A link
+  hidden in a QR code (quishing) escapes the mail filters and opens on a phone: it is analyzed like the other
+  links, and a request to scan a code to log in turns the light red. Swiss QR-bills and SEPA (EPC) payment codes
+  are decoded: IBAN checked, account outside Switzerland, QR-IBAN without QR reference. QR codes drawn as vector
+  graphics in a PDF are not read.
+- **Fraud requests**: the text of the mail is searched, in French, German, English and Italian, for the cues of
+  payment fraud and credential phishing: bank details change, payment asked with secrecy or while avoiding the
+  phone (CEO fraud), gift cards, urgency, credentials asked under threat; the IBANs written in the mail are listed.
+  A display name usurping a person of `protected_names` or the organization's name from an outside address is
+  reported, and a payment request coming from a free mailbox (Gmail, Outlook.com, Bluewin…) too.
 - **Risk assessment**: every finding gets a weight and a plain-language explanation; one serious finding or a total
   of 5 turns the light red, a total of 2 orange. The analysis page opens on a **simplified view** for non-technical
   visitors: a traffic light, what is doubtful, what is reassuring and what to do. A switch next to the theme one
   shows the detailed analysis, and the choice is remembered.
+- **Statistics**: `/admin` shows, per period, the analyses by traffic light, the kinds of findings, the brands
+  imitated and the domains reported, from counters kept in `data/stats.json` (no content, address or subject of the
+  analyzed mails). The page exists only when an admin token is set.
 
 ## Configuration
 
@@ -114,6 +129,8 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
 | `behind_cloudflare`| trust the visitor address given by the Cloudflare proxies |
 | `reputation`       | external reputation checks, see below |
 | `trusted_domains`  | sender domains (subdomains included) whose authenticated mails are not flagged for their links, see below |
+| `protected_names`  | names of executives and people handling payments, e.g. `["Jean Dupont"]`: shown as display name of an outside address, they reveal an impersonation |
+| `admin_token`      | password of the statistics page `/admin` (at least 32 characters, any user name); overridden by the `MTK_ADMIN_TOKEN` environment variable |
 
 Without `cert` and `key`, only the MX port (without STARTTLS) and plain HTTP are started.
 
@@ -125,6 +142,20 @@ example `["example.org"]`), a mail whose sender belongs to one of them is not fl
 names in its link domains, provided that DMARC was validated by the receiving server (a sender only authenticated
 by the internal verification is not trusted, nor is a spoofed one). Dangerous attachments, lookalike domains,
 blocklisted domains and antispam verdicts still count: an account of a trusted sender can be compromised.
+
+The trusted domains also describe the organization: a domain imitating one of them (`example-org-support.com`,
+`example.org.login.top`, `exarnple.org`) as sender or link domain is reported like a lookalike of a brand, and a
+display name holding the organization's name with an address outside these domains is flagged.
+
+### Statistics page
+
+```sh
+export MTK_ADMIN_TOKEN=$(openssl rand -hex 32)
+```
+
+Pass it to the container (`-e MTK_ADMIN_TOKEN=...` with `docker run`) rather than writing it in the file, then open
+`https://<host>/admin` and log in with any user name and the token as password. After 10 failed attempts within an
+hour, an address is refused, even with the right token, until the hour has passed.
 
 ### Reputation checks
 

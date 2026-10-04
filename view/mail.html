@@ -45,6 +45,13 @@
             <span class="tile-value">{{len .Links}}</span>
             <span class="tile-note">{{if .Dangers}}{{.Dangers}} dangereux{{end}}{{if and .Dangers .Warnings}}, {{end}}{{if .Warnings}}{{.Warnings}} suspect{{if gt .Warnings 1}}s{{end}}{{end}}{{if not (or .Dangers .Warnings)}}aucune alerte{{end}}</span>
         </div>
+        {{if .QRCodes}}
+        <a class="tile level-{{qrLevel .QRCodes}}" href="#qrcodes">
+            <span class="tile-label">QR codes</span>
+            <span class="tile-value">{{len .QRCodes}}</span>
+            <span class="tile-note">{{range $i, $q := .QRCodes}}{{if $i}}, {{end}}{{$q.Kind}}{{end}}</span>
+        </a>
+        {{end}}
         <div class="tile level-{{if .Risky}}warning{{else}}ok{{end}}">
             <span class="tile-label">Pièces jointes</span>
             <span class="tile-value">{{len .Attachments}}</span>
@@ -72,6 +79,8 @@
 
             {{if ne .SMIME.Status "none"}}{{template "smime" .SMIME}}{{end}}
             {{template "reputation" .}}
+            {{template "fraud" .}}
+            {{if or .QRCodes .QRSkipped}}{{template "qrcodes" .}}{{end}}
 
             {{if .Parts}}
             <nav class="parts">
@@ -299,6 +308,70 @@
         <p class="note">Dates fournies par les registres (RDAP). Un domaine de moins de 30 jours est un signal fort d'hameçonnage.</p>
         {{end}}
         {{if not .Reputation.Checked}}<p class="note">Consultation des listes noires et des registres désactivée sur ce serveur.</p>{{end}}
+    </details>
+</section>
+{{end}}
+
+{{define "fraud"}}
+<section class="auth" id="fraud" aria-label="Contenu du message">
+    {{$cues := .Fraud.CueList}}
+    <details class="panel"{{if fraudReasons .Risk}} open{{end}}>
+        <summary>Demandes du message
+            {{if fraudReasons .Risk}}<span class="badge level-danger">{{fraudReasons .Risk}} alerte{{if gt (fraudReasons .Risk) 1}}s{{end}}</span>
+            {{else if $cues}}<span class="badge level-info">{{len $cues}} indice{{if gt (len $cues) 1}}s{{end}}</span>
+            {{else}}<span class="badge level-ok">rien à signaler</span>{{end}}
+            <span class="summary-note">paiement, coordonnées bancaires, urgence, discrétion, identifiants</span></summary>
+        {{range .Risk.Reasons}}{{if eq .Anchor "fraud"}}<p class="level-{{.Level}}">{{.Simple}}</p>{{end}}{{end}}
+        {{if $cues}}
+        <h3>Formules relevées dans le texte</h3>
+        <ul class="checks">{{range $cues}}<li class="level-info">{{.}}</li>{{end}}</ul>
+        <p class="note">Ces formules ne sont suspectes qu'associées : une demande de paiement urgente et confidentielle, un changement de
+            coordonnées bancaires, des cartes cadeaux, des identifiants réclamés sous la menace.</p>
+        {{else}}
+        <p class="level-ok">Le texte ne contient aucune des formules typiques des fraudes au paiement ou aux identifiants.</p>
+        {{end}}
+        {{with .Fraud.IBANs}}
+        <h3>IBAN cités</h3>
+        <ul class="checks">{{range .}}<li class="level-info"><code>{{.}}</code> <span class="note">(compte {{slice . 0 2}})</span></li>{{end}}</ul>
+        <p class="note">Avant un premier paiement ou après un changement annoncé, confirmez le compte par téléphone, à un numéro que vous
+            connaissez déjà, jamais à celui donné dans le message.</p>
+        {{end}}
+    </details>
+</section>
+{{end}}
+
+{{define "qrcodes"}}
+<section class="auth" id="qrcodes" aria-label="QR codes">
+    <details class="panel" open>
+        <summary>QR codes <span class="badge level-{{qrLevel .QRCodes}}">{{len .QRCodes}}</span>
+            <span class="summary-note">codes lus dans les images et les pièces jointes</span></summary>
+        <p class="note">Un lien caché dans un QR code échappe au filtre de la messagerie et s'ouvre sur un téléphone, souvent moins protégé :
+            c'est l'hameçonnage par QR code (« quishing »). Les codes dessinés en vectoriel dans un PDF ne sont pas lus.</p>
+        {{with .QRSkipped}}<p class="level-warning">{{.}} image{{if gt . 1}}s{{end}} n'{{if gt . 1}}ont{{else}}a{{end}} pas été examinée{{if gt . 1}}s{{end}} (trop d'images ou
+            durée maximale atteinte) : un QR code a pu échapper à l'analyse.</p>{{end}}
+        {{range .QRCodes}}
+        <article class="card qr level-{{.Level}}">
+            <div class="link-head"><strong>{{.Kind}}</strong> <span class="badge">{{.Source}}</span></div>
+            {{with .Link}}
+            <code class="link-url">{{.URL}}</code>
+            {{with .Target}}<div class="link-target">Destination finale : <code>{{.}}</code></div>{{end}}
+            <ul class="link-warnings">{{range .Warnings}}<li class="level-{{.Level}}">{{.Message}}</li>{{end}}</ul>
+            <div class="link-foot"><span class="note">{{.Host}}</span><button type="button" class="copy" data-copy="{{.URL}}">Copier</button></div>
+            {{else}}{{with .Payment}}{{$p := .}}
+            <dl class="header">
+                <dt>Type</dt><dd>{{.Kind}}</dd>
+                <dt>Compte</dt><dd><code>{{.FormattedIBAN}}</code> {{if .Valid}}<span class="badge level-ok">IBAN valide</span>{{else}}<span class="badge level-danger">IBAN invalide</span>{{end}}</dd>
+                {{with .Creditor}}<dt>Bénéficiaire</dt><dd>{{.}}{{with $p.Country}} ({{.}}){{end}}</dd>{{end}}
+                {{with .Amount}}<dt>Montant</dt><dd>{{.}} {{$p.Currency}}</dd>{{end}}
+                {{with .Reference}}<dt>Référence</dt><dd><code>{{.}}</code></dd>{{end}}
+                {{with .Message}}<dt>Communication</dt><dd>{{.}}</dd>{{end}}
+            </dl>
+            {{if .Problems}}<ul class="link-warnings">{{range .Problems}}<li class="level-warning">{{.}}</li>{{end}}</ul>{{end}}
+            {{else}}
+            <pre class="qr-text">{{.Text}}</pre>
+            {{end}}{{end}}
+        </article>
+        {{end}}
     </details>
 </section>
 {{end}}
