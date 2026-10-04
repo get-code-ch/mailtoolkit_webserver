@@ -545,6 +545,9 @@ func (s *server) mailPart(w http.ResponseWriter, r *http.Request) {
 	if content.ContentInfo.Type.Type == "text" {
 		data = removeCid.ReplaceAll(data, []byte("$1$3"))
 	}
+	if ct := content.ContentInfo.Type; ct.Type == "text" && ct.Subtype == "html" {
+		data = placeholderImages(data)
+	}
 
 	w.Header().Set("Content-Type", formatContentType(content.ContentInfo.Type))
 	w.Header().Set("Content-Security-Policy", mailCSP)
