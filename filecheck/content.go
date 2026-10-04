@@ -28,7 +28,6 @@ var pdfKeywords = []struct {
 	{"SubmitForm", LevelWarning, "Peut envoyer les données saisies vers un serveur"},
 	{"AcroForm", LevelInfo, "Contient un formulaire"},
 	{"Encrypt", LevelInfo, "Document chiffré : son contenu n'est pas inspecté"},
-	{"ObjStm", LevelInfo, "Contient des objets compressés, qui ne sont pas inspectés"},
 }
 
 // inspectPDF looks for the PDF names that trigger actions. Names can be

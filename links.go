@@ -349,7 +349,50 @@ func analyzeLink(raw, text, source, part string) Link {
 	} else if platform != "" {
 		warn(levelInfo, "Lien de suivi des clics ("+platform+")")
 	}
+	if source == "image" || source == "image de fond" || strings.HasPrefix(source, "style") || strings.HasPrefix(source, "ressource") {
+		return link // images are often served from CDNs with generated names
+	}
+	if p := platformOf(hostingPlatforms, host); p != "" {
+		warn(levelWarning, "Site hébergé gratuitement sur "+p+" : n'importe qui peut y publier une page en quelques minutes, "+
+			"c'est l'un des hébergements préférés des pages d'hameçonnage")
+	}
+	if p := platformOf(sharingPlatforms, host); p != "" {
+		warn(levelInfo, "Lien de partage ("+p+") : le service est légitime, mais le document ou le formulaire partagé peut "+
+			"renvoyer vers un site malveillant")
+	}
+	if label := randomLabel(host); label != "" && platform == "" {
+		warn(levelWarning, "Nom de site aléatoire (« "+label+" ») : typique des adresses créées en masse pour l'hameçonnage")
+	}
 	return link
+}
+
+// randomLabel returns a label of host that looks generated: long, letters
+// and digits mixed ("v912zlhw-vz5u0n2-zqdrr2y7uv").
+func randomLabel(host string) string {
+	for _, label := range strings.Split(host, ".") {
+		compact := strings.ReplaceAll(label, "-", "")
+		if len(compact) < 12 || strings.HasPrefix(label, "xn--") {
+			continue
+		}
+		letters, digits, switches := 0, 0, 0
+		for i, c := range compact {
+			isDigit := c >= '0' && c <= '9'
+			if isDigit {
+				digits++
+			} else {
+				letters++
+			}
+			if i > 0 && isDigit != (compact[i-1] >= '0' && compact[i-1] <= '9') {
+				switches++
+			}
+		}
+		// Many switches between letters and digits: not a word followed
+		// by a number ("newsletter2026").
+		if digits >= 3 && letters >= 3 && switches >= 4 {
+			return label
+		}
+	}
+	return ""
 }
 
 // clickTrackers are the link rewriting services of mailing platforms and
@@ -391,11 +434,46 @@ var clickTrackers = map[string]string{
 	"linkprotect.cudasvc.com":          "Barracuda",
 }
 
+// hostingPlatforms are free hosting services where anyone publishes a
+// page in minutes: phishing kits live there, under the platform's domain
+// and certificate.
+var hostingPlatforms = map[string]string{
+	"workers.dev": "Cloudflare Workers", "pages.dev": "Cloudflare Pages", "r2.dev": "Cloudflare R2",
+	"trycloudflare.com": "Cloudflare Tunnel", "web.app": "Firebase", "firebaseapp.com": "Firebase",
+	"appspot.com": "Google App Engine", "storage.googleapis.com": "Google Cloud Storage", "netlify.app": "Netlify",
+	"vercel.app": "Vercel", "github.io": "GitHub Pages", "glitch.me": "Glitch", "onrender.com": "Render",
+	"herokuapp.com": "Heroku", "ngrok-free.app": "ngrok", "ngrok.io": "ngrok", "ngrok.app": "ngrok",
+	"blob.core.windows.net": "Azure Storage", "web.core.windows.net": "Azure Storage", "azurewebsites.net": "Azure App Service",
+	"s3.amazonaws.com": "Amazon S3", "amplifyapp.com": "AWS Amplify", "ipfs.io": "IPFS", "dweb.link": "IPFS",
+	"weebly.com": "Weebly", "wixsite.com": "Wix", "webflow.io": "Webflow", "framer.app": "Framer",
+	"godaddysites.com": "GoDaddy Sites", "square.site": "Square Online", "replit.app": "Replit", "repl.co": "Replit",
+	"surge.sh": "Surge", "fly.dev": "Fly.io", "railway.app": "Railway", "000webhostapp.com": "000webhost",
+	"canva.site": "Canva", "my.canva.site": "Canva", "notion.site": "Notion", "typedream.app": "Typedream",
+}
+
+// sharingPlatforms are file sharing and form services: legitimate, they
+// are used to carry a document or a form leading to the phishing page.
+var sharingPlatforms = map[string]string{
+	"sharepoint.com": "SharePoint", "1drv.ms": "OneDrive", "onedrive.live.com": "OneDrive", "dropbox.com": "Dropbox",
+	"dropboxusercontent.com": "Dropbox", "docs.google.com": "Google Docs", "drive.google.com": "Google Drive",
+	"sites.google.com": "Google Sites", "forms.gle": "Google Forms", "wetransfer.com": "WeTransfer", "we.tl": "WeTransfer",
+	"box.com": "Box", "mega.nz": "MEGA", "forms.office.com": "Microsoft Forms", "forms.microsoft.com": "Microsoft Forms",
+	"sway.office.com": "Microsoft Sway", "sway.cloud.microsoft": "Microsoft Sway", "acrobat.adobe.com": "Adobe Acrobat",
+	"docsend.com": "DocSend", "canva.com": "Canva", "padlet.com": "Padlet", "filemail.com": "Filemail",
+	"swisstransfer.com": "SwissTransfer",
+}
+
 // trackerOf returns the click tracking platform of a host, "" if none.
 func trackerOf(host string) string {
+	return platformOf(clickTrackers, host)
+}
+
+// platformOf returns the platform of a host from a table of domain
+// suffixes, "" if none.
+func platformOf(platforms map[string]string, host string) string {
 	host = strings.TrimSuffix(strings.ToLower(host), ".")
 	for {
-		if name, ok := clickTrackers[host]; ok {
+		if name, ok := platforms[host]; ok {
 			return name
 		}
 		_, parent, ok := strings.Cut(host, ".")

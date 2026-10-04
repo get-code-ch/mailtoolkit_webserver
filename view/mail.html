@@ -116,6 +116,13 @@
                     {{else}}
                     <p class="level-ok">Aucun élément dangereux détecté (ce qui ne garantit pas que le fichier est sain).</p>
                     {{end}}
+                    {{$lure := .Lure}}{{with .Links}}
+                    <details{{if $lure}} open{{end}}>
+                        <summary>Liens du document ({{len .}})</summary>
+                        <ul class="entries">{{range .}}<li><code>{{.}}</code></li>{{end}}</ul>
+                        <p class="note">Analysés avec les liens du mail, dans le panneau des liens.</p>
+                    </details>
+                    {{end}}
                     {{if .Entries}}
                     <details>
                         <summary>Contenu de l'archive ({{len .Entries}})</summary>

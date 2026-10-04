@@ -378,7 +378,7 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 	// of the QR codes are analyzed with the others.
 	scan := s.qrCodesOf(r, mail)
 	data.QRCodes, data.QRSkipped = scan.Codes, scan.Skipped
-	data.Links = append(extractLinks(mail), qrLinks(data.QRCodes)...)
+	data.Links = append(append(extractLinks(mail), qrLinks(data.QRCodes)...), attachmentLinks(data.Attachments)...)
 	data.LinkGroups = groupLinks(data.Links)
 	for _, link := range data.Links {
 		switch link.Level() {
@@ -408,6 +408,7 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 	data.Lookalikes = findLookalikes(append(slices.Clone(auth.Senders), linkHosts...), s.trustedDomains)
 	data.Reputation = s.reputationOf(r, &auth, linkDomains)
 	data.Fraud = analyzeText(mail.Header.Subject, mailText(mail))
+	data.Fraud.ImageOnly = imageOnly(mail)
 	data.Risk = assessRisk(riskInput{Auth: &auth, Links: data.Links, Attachments: data.Attachments,
 		Reputation: data.Reputation, Lookalikes: data.Lookalikes, TrustedDomains: s.trustedDomains, ProtectedNames: s.protectedNames,
 		SMIME: data.SMIME, QRCodes: data.QRCodes, Fraud: data.Fraud})

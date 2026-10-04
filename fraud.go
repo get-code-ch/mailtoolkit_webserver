@@ -9,6 +9,7 @@ import (
 	"unicode"
 
 	"github.com/get-code-ch/mailtoolkit"
+	"github.com/get-code-ch/mailtoolkit_webserver/mailauth"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"golang.org/x/text/unicode/norm"
@@ -108,6 +109,8 @@ type fraudAnalysis struct {
 	IBANs []string
 	// Length is the number of characters of the text.
 	Length int
+	// ImageOnly is set when the mail shows an image instead of a text.
+	ImageOnly bool
 }
 
 func (f fraudAnalysis) has(cue string) bool {
@@ -235,6 +238,42 @@ func htmlText(data []byte) string {
 	}
 }
 
+// externalBanners are the warnings mail gateways add on top of external
+// mails; they are not the sender's text.
+var externalBanners = regexp.MustCompile(`(?i)[^.\n]*(originated from outside|provient de l'ext[ée]rieur|von ausserhalb|von au[sß]erhalb|external (e-?mail|sender)|courriel externe|exp[ée]diteur externe|externe[rn]? absender|proviene dall'esterno)[^\n]*`)
+
+// imageOnly reports whether the HTML part of a mail is a picture with
+// (almost) no text: the message cannot be read by the filters.
+func imageOnly(mail mailtoolkit.Mail) bool {
+	for _, key := range contentKeys(mail.Contents) {
+		content := mail.Contents[key]
+		ct := content.ContentInfo.Type
+		if ct.Type != "text" || ct.Subtype != "html" {
+			continue
+		}
+		data, err := content.Decode()
+		if err != nil {
+			return false
+		}
+		images := 0
+		z := html.NewTokenizer(bytes.NewReader(data))
+		for t := z.Next(); t != html.ErrorToken; t = z.Next() {
+			if t != html.StartTagToken && t != html.SelfClosingTagToken {
+				continue
+			}
+			if token := z.Token(); token.DataAtom == atom.Img {
+				attrs := attributes(token)
+				if attrs["width"] != "1" && attrs["height"] != "1" && attrs["width"] != "0" && attrs["height"] != "0" {
+					images++
+				}
+			}
+		}
+		text := externalBanners.ReplaceAllString(htmlText(toUTF8(data, ct.Parameters["charset"])), "")
+		return images > 0 && len(strings.Join(strings.Fields(text), " ")) < 40
+	}
+	return false
+}
+
 // freemailDomains are the free mailboxes used by fraudsters posing as an
 // executive or a supplier.
 var freemailDomains = []string{
@@ -278,6 +317,10 @@ func assessFraud(r *riskReport, f fraudAnalysis, a *headerAnalysis, add func(lev
 		add(levelWarning, 1, "fraud", fmt.Sprintf("Une demande d'argent venant d'une messagerie gratuite (%s) : une entreprise utilise "+
 			"son propre domaine.", a.FromDomain), a.FromAddress)
 	}
+	if f.ImageOnly {
+		add(levelWarning, 1, "fraud", "Le message se résume à une image, sans texte : c'est un moyen d'empêcher les filtres de lire "+
+			"son contenu.", "aucun texte hors de l'avertissement ajouté par la messagerie")
+	}
 	if f.has(cueCredentials) && (f.has(cueThreat) || f.has(cueUrgency)) {
 		add(levelWarning, 2, "fraud", "Le message réclame vos identifiants en vous mettant sous pression (compte bloqué, délai) : un service "+
 			"sérieux ne demande jamais votre mot de passe par mail.", f.found(cueCredentials, cueThreat, cueUrgency))
@@ -318,6 +361,44 @@ func assessImpersonation(r *riskReport, a *headerAnalysis, trusted, protected []
 			return
 		}
 	}
+}
+
+// commonWords are brand labels that are also ordinary words or first
+// names ("Booking confirmation", "Ricardo Silva"): not looked for in display
+// names.
+var commonWords = []string{"booking", "visa", "apple", "ledger", "ricardo", "sunrise", "outlook", "gmail"}
+
+// displayBrand returns the brand a display name claims ("DHL EXPRESS",
+// "Microsoft 365 Security"), nil if none.
+func displayBrand(name string) *brand {
+	normalized := normalizeText(name)
+	words := strings.FieldsFunc(normalized, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
+	compact := strings.Join(words, "")
+	for i, b := range brands {
+		label := strings.ReplaceAll(b.Label, "-", "")
+		if slices.Contains(commonWords, label) {
+			continue
+		}
+		if slices.Contains(words, label) || (len(label) >= 6 && strings.Contains(compact, label)) {
+			return &brands[i]
+		}
+	}
+	return nil
+}
+
+// assessDisplayBrand reports a display name naming a brand while the
+// address belongs to another domain: the most common disguise of phishing,
+// which DMARC does not see (the sender's own domain is authenticated).
+func assessDisplayBrand(a *headerAnalysis, add func(level string, weight int, anchor, simple, detail string)) {
+	if a == nil || a.FromName == "" || a.Relay != nil {
+		return
+	}
+	b := displayBrand(a.FromName)
+	if b == nil || official(mailauth.OrgDomain(a.FromDomain), *b) {
+		return
+	}
+	add(levelDanger, 3, "headers", fmt.Sprintf("Le nom affiché « %s » se présente comme %s, mais le message vient de %s, qui n'appartient pas à %s.",
+		a.FromName, b.Name, a.FromDomain, b.Name), a.FromName+" <"+a.FromAddress+">")
 }
 
 // sameName reports whether a display name holds every word of a person's

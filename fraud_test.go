@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/get-code-ch/mailtoolkit"
+	"github.com/get-code-ch/mailtoolkit_webserver/filecheck"
 	"github.com/get-code-ch/mailtoolkit_webserver/mailauth"
 	"github.com/get-code-ch/mailtoolkit_webserver/qrscan"
 )
@@ -189,5 +191,85 @@ func TestOwnLookalikes(t *testing.T) {
 	}
 	if len(findLookalikes([]subject{{"kite-project-helpdesk.net", "expéditeur"}}, nil)) != 0 {
 		t.Error("found without trusted domains")
+	}
+}
+
+func TestHostingLinks(t *testing.T) {
+	tests := map[string]string{
+		"https://v912zlhw-vz5u0n2-zqdrr2y7uv.besaduromnvcx.workers.dev/f": levelWarning,
+		"https://login-portal.pages.dev/":                                 levelWarning,
+		"https://contoso.sharepoint.com/:b:/s/x":                          levelInfo,
+		"https://newsletter2026.example.com/":                             "",
+		"https://www.example.com/":                                        "",
+	}
+	for raw, want := range tests {
+		if got := analyzeLink(raw, "", "lien", "text/html").Level(); got != want {
+			t.Errorf("%s: %q", raw, got)
+		}
+	}
+	// Images come from CDNs with generated names.
+	if l := analyzeLink("https://d1a2b3c4d5e6f7.cloudfront.net/logo.png", "", "image", "text/html"); l.Level() != "" {
+		t.Errorf("%+v", l.Warnings)
+	}
+}
+
+func TestDisplayBrand(t *testing.T) {
+	tests := []struct {
+		name, domain string
+		weight       int
+	}{
+		{"DHL EXPRESS", "sic-net.co.jp", 3},
+		{"Microsoft 365 Security", "secure-alerts.example", 3},
+		{"SharePoint Online", "docs-share.example", 3},
+		{"Swiss Post PostFinance", "pf-secure.example", 3},
+		{"DHL Express", "dhl.com", 0},
+		{"Microsoft Teams", "mail.microsoft", 0},
+		{"Booking confirmation", "hotel.example", 0},
+		{"Ricardo Silva", "example.org", 0},
+		{"Jean Dupont", "example.org", 0},
+	}
+	for _, tt := range tests {
+		total := 0
+		assessDisplayBrand(authenticated(tt.domain, tt.name), func(level string, weight int, anchor, simple, detail string) { total += weight })
+		if total != tt.weight {
+			t.Errorf("%s <%s>: %d", tt.name, tt.domain, total)
+		}
+	}
+}
+
+func TestImageOnly(t *testing.T) {
+	parse := func(body string) mailtoolkit.Mail {
+		m, err := mailtoolkit.Parse([]byte("From: a@example.org\r\nSubject: x\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=utf-8\r\n\r\n" + body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return m
+	}
+	banner := `<div>CAUTION: This email originated from outside of the organization. Do not click links.</div>`
+	if !imageOnly(parse(banner + `<img src="cid:a" width="576">`)) {
+		t.Error("image only mail not recognized")
+	}
+	if imageOnly(parse(`<p>Bonjour, voici les nouvelles de la semaine et notre sélection.</p><img src="cid:a">`)) {
+		t.Error("mail with text taken for an image")
+	}
+	if imageOnly(parse(`<p>Ok</p><img src="https://t.example/p.gif" width="1" height="1">`)) {
+		t.Error("tracking pixel counted")
+	}
+}
+
+func TestLureRisk(t *testing.T) {
+	lure := func(link string) attachmentView {
+		return attachmentView{Report: filecheck.Report{Name: "Offre.pdf", Lure: true, Links: []string{link},
+			Alerts: []filecheck.Alert{{Level: filecheck.LevelWarning, Message: filecheck.MessageLure + " : …"}}}}
+	}
+	for link, light := range map[string]string{
+		"https://contoso-my.sharepoint.com/:b:/g/personal/x": riskRed,
+		"https://x1y2z3a4b5c6d7.workers.dev/":                riskRed,
+		"https://www.example.org/conditions":                 riskOrange,
+	} {
+		r := assessRisk(riskInput{Auth: authenticated("partner.example", ""), Attachments: []attachmentView{lure(link)}})
+		if r.Light != light {
+			t.Errorf("%s: %s %+v", link, r.Light, r.Reasons)
+		}
 	}
 }

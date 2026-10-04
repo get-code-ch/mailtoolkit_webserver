@@ -39,7 +39,9 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
   clickable, with alerts: displayed text pointing to another domain,
   `javascript:` / `data:` schemes, `user@` before the domain, IP addresses, unusual ports, URL shorteners,
   internationalized domains (homographs), forms, automatic redirections, tracking pixels, and the final
-  destination of redirectors such as Outlook Safe Links.
+  destination of redirectors such as Outlook Safe Links, free hostings where phishing kits live (Cloudflare Workers
+  and Pages, Firebase, Netlify, Vercel, GitHub Pages, Azure and Amazon storage…), file sharing links and generated
+  host names.
 - **Header analysis** (package `mailauth`, standard library plus `golang.org/x/net/publicsuffix`):
   - DKIM signatures verified (RSA, Ed25519, simple/relaxed canonicalization; `rsa-sha1` and keys shorter than
     1024 bits refused, `l=` flagged); the attached mail is kept byte for byte for that purpose. For each
@@ -76,7 +78,12 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
   VBA macros and Excel 4.0 (XLM) macro sheets, embedded OLE objects, ActiveX, remote templates and other
   external relationships, DDE fields, password protected documents and archives, ZIP content, PDF actions
   (JavaScript, OpenAction, Launch, embedded files), RTF objects (Equation.3), HTML and SVG scripts, forms and
-  HTML smuggling. Office 97-2003 files are read with the `cfb` package, a defensive compound file reader.
+  HTML smuggling, documents hidden in a web page as `data:` URLs (a PDF shown by an `<embed>`). The links of PDF
+  (object streams included), Office, OpenDocument and HTML documents are extracted and analyzed with the links of
+  the mail; a **lure document** (a sentence or two and a link) is reported, and turns the light red when its link
+  leads to a sharing service (SharePoint, OneDrive, Google Drive, Dropbox…: the legitimate service makes the victim
+  trust the next link) or to a free hosting. Office 97-2003 files are read with the `cfb` package, a defensive
+  compound file reader.
 - **S/MIME signature** (package `smime`, standard library plus `golang.org/x/crypto/ocsp`): CMS reader (BER
   included), integrity of the signed content, signature (RSA, RSA-PSS, ECDSA, Ed25519), certificate chain to the
   system certification authorities at the signing time, revocation through OCSP then the CRL, certified address
@@ -99,6 +106,9 @@ tokenizer browsers follow) and `golang.org/x/net/idna`. Requires Go 1.26 or late
   phone (CEO fraud), gift cards, urgency, credentials asked under threat; the IBANs written in the mail are listed.
   A display name usurping a person of `protected_names` or the organization's name from an outside address is
   reported, and a payment request coming from a free mailbox (Gmail, Outlook.com, Bluewin…) too.
+- **Brand in the display name**: "DHL EXPRESS <someone@unrelated.example>" is the most common disguise, invisible to
+  DMARC (the unrelated domain is authenticated): a display name naming a known brand from a domain that is not
+  the brand's is reported. A mail reduced to an image (no text the filters could read) is reported too.
 - **Risk assessment**: every finding gets a weight and a plain-language explanation; one serious finding or a total
   of 5 turns the light red, a total of 2 orange. The analysis page opens on a **simplified view** for non-technical
   visitors: a traffic light, what is doubtful, what is reassuring and what to do. A switch next to the theme one

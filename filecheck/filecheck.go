@@ -43,7 +43,13 @@ type Report struct {
 	Entries []string
 	// FormHosts are the hosts the forms of an HTML page send to.
 	FormHosts []string
-	family    string
+	// Links are the web links of a document (PDF, Office, OpenDocument,
+	// HTML), TextLength the number of characters of its text (-1 when not
+	// measured), Lure whether it is made of a short text and a link.
+	Links      []string
+	TextLength int
+	Lure       bool
+	family     string
 }
 
 // Level returns the most severe alert level, "" if none.
@@ -93,12 +99,18 @@ const (
 // Analyze inspects a file. name and declaredType come from the mail and are
 // not trusted.
 func Analyze(name, declaredType string, data []byte) Report {
+	return analyze(name, declaredType, data, 0)
+}
+
+// analyze inspects a file, depth counting the documents it is hidden in.
+func analyze(name, declaredType string, data []byte, depth int) Report {
 	r := Report{Name: name, Size: len(data), DeclaredType: strings.ToLower(declaredType)}
 	md5sum, sha1sum, sha256sum := md5.Sum(data), sha1.Sum(data), sha256.Sum256(data)
 	r.MD5, r.SHA1, r.SHA256 = hex.EncodeToString(md5sum[:]), hex.EncodeToString(sha1sum[:]), hex.EncodeToString(sha256sum[:])
 
 	checkName(&r)
 	detect(&r, data)
+	readDocument(&r, data, depth)
 	checkExtension(&r)
 	sort.SliceStable(r.Alerts, func(i, j int) bool { return severity(r.Alerts[i].Level) < severity(r.Alerts[j].Level) })
 	return r

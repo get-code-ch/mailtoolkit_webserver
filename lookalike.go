@@ -29,16 +29,23 @@ func ownBrands(trusted []string) []brand {
 	return own
 }
 
+// microsoftDomains are the domains Microsoft sends from or links to.
+var microsoftDomains = []string{"microsoft.com", "microsoft.ch", "microsoftonline.com", "office.com", "office365.com", "outlook.com",
+	"live.com", "sharepoint.com", "microsoft365.com", "windows.net", "azure.com", "msft.net", "onmicrosoft.com", "mail.microsoft",
+	"cloud.microsoft", "onedrive.com", "1drv.ms", "skype.com", "teams.microsoft.com", "microsoftstore.com"}
+
 // brands are frequent phishing targets, in Switzerland and worldwide.
 var brands = []brand{
 	{"PayPal", "paypal", []string{"paypal.com", "paypal.ch", "paypal.me", "paypalobjects.com", "paypal-communication.com"}},
-	{"Microsoft", "microsoft", []string{"microsoft.com", "microsoft.ch", "microsoftonline.com", "office.com", "office365.com", "outlook.com", "live.com", "sharepoint.com", "microsoft365.com", "windows.net", "azure.com", "msft.net", "onmicrosoft.com"}},
+	{"Microsoft", "microsoft", microsoftDomains},
+	{"SharePoint", "sharepoint", microsoftDomains},
+	{"OneDrive", "onedrive", microsoftDomains},
 	{"Outlook", "outlook", []string{"outlook.com", "office.com", "office365.com", "microsoft.com"}},
 	{"Apple", "apple", []string{"apple.com", "icloud.com", "me.com", "apple.ch"}},
 	{"iCloud", "icloud", []string{"icloud.com", "apple.com"}},
 	{"Google", "google", []string{"google.com", "google.ch", "gmail.com", "googlemail.com", "youtube.com", "googleusercontent.com", "googleapis.com", "gstatic.com", "withgoogle.com", "g.co"}},
 	{"Gmail", "gmail", []string{"gmail.com", "google.com"}},
-	{"Amazon", "amazon", []string{"amazon.com", "amazon.de", "amazon.fr", "amazon.it", "amazon.co.uk", "amazonaws.com", "amazonses.com", "a2z.com"}},
+	{"Amazon", "amazon", []string{"amazon.com", "amazon.de", "amazon.fr", "amazon.it", "amazon.co.uk", "amazon.ch", "amazonaws.com", "amazonses.com", "a2z.com"}},
 	{"Netflix", "netflix", []string{"netflix.com", "netflix.net"}},
 	{"Facebook", "facebook", []string{"facebook.com", "facebookmail.com", "fb.com", "meta.com"}},
 	{"Instagram", "instagram", []string{"instagram.com", "facebookmail.com"}},
@@ -127,7 +134,7 @@ func findLookalikes(subjects []subject, trusted []string) []lookalike {
 
 func checkLookalike(host, org string, list []brand) (lookalike, bool) {
 	label, _, _ := strings.Cut(org, ".")
-	if official(org, list...) {
+	if official(org, list...) || officialHost(host, list) {
 		return lookalike{}, false
 	}
 	for _, b := range list {
@@ -154,6 +161,20 @@ func checkLookalike(host, org string, list []brand) (lookalike, bool) {
 		return l, true
 	}
 	return lookalike{}, false
+}
+
+// officialHost reports whether host is under a domain of one of the
+// brands, for the domains the public suffix list splits
+// (fonts.googleapis.com).
+func officialHost(host string, list []brand) bool {
+	for _, b := range list {
+		for _, d := range b.Domains {
+			if host == d || strings.HasSuffix(host, "."+d) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // official reports whether org is a domain of one of the brands.

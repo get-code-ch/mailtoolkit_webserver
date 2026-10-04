@@ -114,6 +114,7 @@ func assessRisk(in riskInput) riskReport {
 				"votre messagerie : la confiance ne s'applique pas.", a.FromDomain), "DMARC non validé par un serveur de réception")
 		}
 		assessImpersonation(&r, a, in.TrustedDomains, in.ProtectedNames, add)
+		assessDisplayBrand(a, add)
 		if a.Relay != nil {
 			for _, check := range a.Checks {
 				if check.Level == levelInfo && strings.HasPrefix(check.Message, "Envoyé par") {
@@ -378,8 +379,10 @@ func assessLinks(r *riskReport, links []Link, add func(level string, weight int,
 	if dangers > 3 {
 		add(levelDanger, 0, "links", fmt.Sprintf("Et %d autres liens piégés.", dangers-3), "")
 	}
-	qr := slices.ContainsFunc(links, func(l Link) bool { return l.Source == "QR code" })
-	if len(links) > 0 && dangers == 0 && warnings == 0 && !qr {
+	// The links of the QR codes and of the attachments are not checked
+	// the same way (no displayed text to compare): no reassurance.
+	hidden := slices.ContainsFunc(links, func(l Link) bool { return l.Source == "QR code" || l.Source == "pièce jointe" })
+	if len(links) > 0 && dangers == 0 && warnings == 0 && !hidden {
 		r.Positives = append(r.Positives, "Aucun lien trompeur n'a été trouvé.")
 	}
 }
@@ -400,6 +403,9 @@ func assessAttachments(r *riskReport, attachments []attachmentView, relay *relay
 				break
 			}
 		}
+		if a.Lure {
+			assessLure(a, add)
+		}
 		switch a.Level() {
 		case levelDanger:
 			clean = false
@@ -411,6 +417,27 @@ func assessAttachments(r *riskReport, attachments []attachmentView, relay *relay
 	}
 	if len(attachments) > 0 && clean {
 		r.Positives = append(r.Positives, "Les pièces jointes ne contiennent rien de dangereux détectable.")
+	}
+}
+
+// assessLure reports a lure document leading to a sharing service or a
+// free hosting: the legitimate service (a SharePoint sign-in) makes the
+// victim trust the next link, the malicious one.
+func assessLure(a attachmentView, add func(level string, weight int, anchor, simple, detail string)) {
+	for _, raw := range a.Links {
+		host := linkHost(raw)
+		switch {
+		case platformOf(sharingPlatforms, host) != "":
+			add(levelDanger, 3, "attachments", fmt.Sprintf("La pièce jointe « %s » ne contient qu'une phrase d'accroche et un lien vers %s : "+
+				"le partage est légitime (il peut même demander de se connecter à Microsoft 365), mais le document partagé renvoie vers la "+
+				"vraie page d'hameçonnage.", a.Name, platformOf(sharingPlatforms, host)), raw)
+		case platformOf(hostingPlatforms, host) != "" || randomLabel(host) != "":
+			add(levelDanger, 3, "attachments", fmt.Sprintf("La pièce jointe « %s » ne contient presque rien d'autre qu'un lien vers un site "+
+				"jetable (%s) : c'est un document d'hameçonnage.", a.Name, host), raw)
+		default:
+			continue
+		}
+		return
 	}
 }
 
@@ -427,7 +454,8 @@ func relayPage(a attachmentView, relay *relayService) bool {
 		}
 	}
 	for _, alert := range a.Alerts {
-		if alert.Message != filecheck.MessageHTMLPage && !strings.HasPrefix(alert.Message, filecheck.MessageForm) {
+		if alert.Message != filecheck.MessageHTMLPage && !strings.HasPrefix(alert.Message, filecheck.MessageForm) &&
+			!strings.HasPrefix(alert.Message, filecheck.MessageLure) {
 			return false
 		}
 	}

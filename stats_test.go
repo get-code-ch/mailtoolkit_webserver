@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/base64"
 	"fmt"
@@ -152,6 +153,40 @@ func TestQuishingPage(t *testing.T) {
 	location := postFile(t, handler, "/upload", "q.eml", []byte(mail)).Header().Get("Location")
 	page := get(handler, location).Body.String()
 	for _, want := range []string{`id="qrcodes"`, "https://mfa-renew.example.net/login", "quishing", "light-red", `<span class="badge">QR code</span>`, "double authentification"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("%q missing", want)
+		}
+	}
+}
+
+// TestLureAttachmentPage: a short Word document whose only link leads to a
+// SharePoint share, the page behind it asking for the Microsoft 365
+// password before showing the malicious link.
+func TestLureAttachmentPage(t *testing.T) {
+	var doc bytes.Buffer
+	z := zip.NewWriter(&doc)
+	for name, content := range map[string]string{
+		"[Content_Types].xml": `<Types/>`,
+		"word/document.xml":   `<w:document><w:body><w:p><w:r><w:t>Un document sécurisé vous a été partagé : Ouvrir</w:t></w:r></w:p></w:body></w:document>`,
+		"word/_rels/document.xml.rels": `<Relationships><Relationship Id="r1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" ` +
+			`Target="https://fabrikam-my.sharepoint.com/:b:/g/personal/finance/EabcDEF" TargetMode="External"/></Relationships>`,
+	} {
+		f, _ := z.Create(name)
+		f.Write([]byte(content))
+	}
+	z.Close()
+	mail := "From: Comptabilite <compta@fabrikam.example>\r\nTo: a@example.com\r\nSubject: Paiement en attente\r\nDate: Thu, 1 Oct 2026 10:00:00 +0200\r\n" +
+		"Message-ID: <l@fabrikam.example>\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=b\r\n\r\n" +
+		"--b\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nBonjour, veuillez trouver le document ci-joint.\r\n" +
+		"--b\r\nContent-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\n" +
+		"Content-Disposition: attachment; filename=\"Avis de paiement.docx\"\r\nContent-Transfer-Encoding: base64\r\n\r\n" +
+		base64.StdEncoding.EncodeToString(doc.Bytes()) + "\r\n--b--\r\n"
+	s := newTestServer(t)
+	handler := s.routes(t.TempDir())
+	location := postFile(t, handler, "/upload", "l.eml", []byte(mail)).Header().Get("Location")
+	page := get(handler, location).Body.String()
+	for _, want := range []string{"light-red", "Document leurre", "lien vers SharePoint", `<span class="badge">pièce jointe</span>`,
+		"fabrikam-my.sharepoint.com"} {
 		if !strings.Contains(page, want) {
 			t.Errorf("%q missing", want)
 		}

@@ -134,6 +134,18 @@ func qrLinks(codes []qrCode) []Link {
 	return links
 }
 
+// attachmentLinks returns the links of the attached documents, analyzed
+// like the links of the mail.
+func attachmentLinks(attachments []attachmentView) []Link {
+	var links []Link
+	for _, a := range attachments {
+		for _, raw := range a.Links {
+			links = append(links, analyzeLink(cleanURL(raw), "", "pièce jointe", a.Name))
+		}
+	}
+	return links
+}
+
 // assessQR reports the QR codes: a link hidden in a QR code escapes the
 // mail filters, and a request to scan one to log in is the quishing
 // scenario.
