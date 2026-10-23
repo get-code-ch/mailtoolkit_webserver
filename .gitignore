@@ -29,3 +29,7 @@ mail/original_msg.eml
 /ssl/
 *.key
 *.pem
+
+# Test PKI of the S/MIME vectors (protects nothing, needed by the tests)
+!smime/testdata/*.pem
+!smime/testdata/ica.key
