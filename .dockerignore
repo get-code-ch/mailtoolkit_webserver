@@ -1,0 +1,4 @@
+# Secrets, certificates and mailboxes stay out of the build context
+secrets.env
+ssl/
+data/

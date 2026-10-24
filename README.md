@@ -184,6 +184,9 @@ Each database needs a free key, better passed as an environment variable than wr
 
 `"reputation": {"disabled": true}` disables them, as well as the following of the links.
 
+[docs/external-services.md](docs/external-services.md) sums up the registration to every external service, their
+limits and how to check them ([version française](docs/external-services_fr.md)).
+
 ### Statistics page
 
 ```sh
@@ -289,7 +292,8 @@ received directly on port 25, everything in one Docker container.
    then create an address on `https://mtk.kite-project.net` and forward a mail to it as an attachment.
 
 **Update**: `git pull`, `docker build -t mailtoolkit_webserver .`, then `docker rm -f mail-analyzer` and the
-`docker run` command again; the mailboxes in `data/` are kept.
+`docker run` command again; the mailboxes in `data/` are kept. `./deploy.sh --pull` does it all, with the secrets
+read from a file outside the project: see [docs/deploy.md](docs/deploy.md) ([version française](docs/deploy_fr.md)).
 
 ## Without port 25: Cloudflare Email Routing
 

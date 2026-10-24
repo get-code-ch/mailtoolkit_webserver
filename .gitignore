@@ -27,6 +27,7 @@ mail/original_msg.eml
 
 # TLS certificate and private key must never be committed
 /ssl/
+secrets.env
 *.key
 *.pem
 
