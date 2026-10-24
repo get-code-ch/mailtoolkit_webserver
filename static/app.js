@@ -166,3 +166,15 @@ function updateViewSwitch() {
     });
 }
 updateViewSwitch();
+
+// A link to an element inside folded sections unfolds them.
+function revealTarget() {
+    var target = location.hash.length > 1 && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    for (var node = target && target.parentElement; node; node = node.parentElement) {
+        if (node.tagName === "DETAILS") {
+            node.open = true;
+        }
+    }
+}
+window.addEventListener("hashchange", revealTarget);
+revealTarget();

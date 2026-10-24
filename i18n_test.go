@@ -186,6 +186,7 @@ func TestEnglishCoverage(t *testing.T) {
 		english(location)
 		english(strings.Join(strings.Split(location, "/")[:3], "/"))
 	}
+	english("/securite")
 	english("/admin?days=7")
 	// Values of the test mails, not texts of the site.
 	data := []string{"Hello Bonjour", "Is dinner ready", "Example ", "Test SMIME", "Joe SixPack", "dkim test", "Test message", "— Test PKI",

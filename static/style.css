@@ -113,7 +113,8 @@ main {
 }
 
 main.wide {
-    max-width: 1280px;
+    max-width: 2000px;
+    padding-inline: 20px;
 }
 
 a {
@@ -756,8 +757,8 @@ h1.subject {
 
 .analysis {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 400px;
-    gap: 24px;
+    grid-template-columns: minmax(0, 1fr) clamp(340px, 26vw, 480px);
+    gap: 20px;
     align-items: start;
 }
 
@@ -1023,19 +1024,99 @@ details.header-group[open] > summary {
     margin-bottom: 6px;
 }
 
-table.fields th {
-    width: 1%;
-    padding-right: 14px;
-    white-space: nowrap;
+.fields {
+    display: grid;
+    grid-template-columns: 12rem 14px minmax(0, 1fr);
+    font-size: 0.92em;
+}
+
+.field {
+    display: contents;
+}
+
+.field > * {
+    padding: 5px 6px;
+    border-top: 1px solid var(--border);
+}
+
+.field:first-child > * {
+    border-top: 0;
+}
+
+.field-name {
+    overflow: hidden;
     color: var(--accent);
-    font-weight: 400;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-table.fields th code {
-    color: inherit;
+.field-sig {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding-top: 10px;
+    padding-inline: 0;
 }
 
-table.fields tr:target, table.signed-fields tr:target {
+.field:target > * {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.sig-mark {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    vertical-align: middle;
+    background: var(--level, var(--muted));
+    border-radius: 50%;
+}
+
+p > .sig-mark {
+    background: linear-gradient(90deg, var(--ok) 50%, var(--danger) 50%);
+}
+
+/* A folded value shows its first line; opening it shows the rest. */
+details.fold > summary {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+details.fold > summary::-webkit-details-marker {
+    display: none;
+}
+
+details.fold > summary::before {
+    display: none;
+}
+
+details.fold:not([open]) > summary {
+    text-decoration: underline dotted var(--border-strong);
+    text-underline-offset: 4px;
+}
+
+details.fold > summary:hover {
+    color: var(--accent);
+}
+
+details.fold[open] > summary {
+    white-space: normal;
+}
+
+@media (max-width: 640px) {
+    .fields {
+        grid-template-columns: minmax(0, 1fr) 14px;
+    }
+    .field-value {
+        grid-column: 1 / -1;
+        border-top: 0 !important;
+        padding-top: 0 !important;
+    }
+}
+
+table.signed-fields tr:target {
     background: color-mix(in srgb, var(--accent) 12%, transparent);
     box-shadow: inset 3px 0 var(--accent);
 }
@@ -1168,20 +1249,196 @@ tr.signature-input {
 
 /* Links panel */
 
-ol.link-list {
+ol.alert-list, ul.domain-list, ol.link-rows {
     margin: 0;
     padding: 0;
     list-style: none;
 }
 
-li.link {
+aside.links h2 {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+aside.links h3 {
+    margin: 16px 0 8px;
+    color: var(--muted);
+    font-size: 0.78em;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+li.alert-link {
     margin-bottom: 8px;
-    padding: 8px 10px;
-    color: var(--text);
+    padding: 10px 12px;
     background: var(--surface-2);
     border: 1px solid var(--border);
-    border-left: 3px solid var(--level, var(--border));
-    border-radius: 6px;
+    border-left: 3px solid var(--level);
+    border-radius: 8px;
+}
+
+.link-domain {
+    font-family: var(--mono);
+    overflow-wrap: anywhere;
+}
+
+.link-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: baseline;
+    font-size: 0.85em;
+}
+
+.link-text {
+    margin-top: 4px;
+    overflow-wrap: anywhere;
+}
+
+details.domain {
+    color: var(--text);
+    border-top: 1px solid var(--border);
+}
+
+ul.domain-list > li:first-child details.domain {
+    border-top: 0;
+}
+
+details.domain > summary {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    padding: 9px 2px;
+}
+
+details.domain > summary .domain-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-family: var(--mono);
+    font-size: 0.92em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+details.domain.level-danger > summary .domain-name,
+details.domain.level-warning > summary .domain-name {
+    color: var(--level);
+    font-weight: 600;
+}
+
+details.domain > summary .domain-count {
+    color: var(--muted);
+    font-size: 0.82em;
+    white-space: nowrap;
+}
+
+details.domain[open] {
+    padding-bottom: 8px;
+}
+
+li.link-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 5px 0 5px 18px;
+    font-size: 0.92em;
+}
+
+li.link-row.level-danger, li.link-row.level-warning {
+    box-shadow: inset 3px 0 var(--level);
+}
+
+li.link-row .row-main {
+    flex: 1;
+    min-width: 0;
+}
+
+li.link-row .link-text {
+    display: block;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+li.link-row code.link-url {
+    margin-top: 0;
+}
+
+ul.row-notes {
+    margin: 2px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.82em;
+}
+
+li.link-row button.copy {
+    flex: none;
+    padding: 2px 8px;
+    font-size: 0.75em;
+}
+
+details.images {
+    margin: 4px 0 0 18px;
+}
+
+details.images > summary {
+    color: var(--muted);
+    font-size: 0.85em;
+}
+
+details.images ol.link-rows li.link-row {
+    padding-left: 0;
+}
+
+.link-target {
+    margin-top: 4px;
+    font-size: 0.9em;
+}
+
+code.link-url {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 0.8em;
+    word-break: break-all;
+}
+
+details.fold.url > summary {
+    white-space: nowrap;
+}
+
+details.fold.url[open] > summary code.link-url {
+    user-select: all;
+}
+
+details.fold.url:not([open]) code.link-url {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.url-host {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.url-query {
+    opacity: 0.65;
+}
+
+ul.link-warnings {
+    margin: 4px 0 0;
+    padding-left: 18px;
+    font-size: 0.85em;
+}
+
+ul.group-warnings {
+    margin: 0 10px 6px;
 }
 
 .link-head {
@@ -1190,29 +1447,6 @@ li.link {
     gap: 6px;
     align-items: baseline;
     overflow-wrap: anywhere;
-}
-
-.link-text, .link-target {
-    margin-top: 4px;
-    overflow-wrap: anywhere;
-}
-
-code.link-url {
-    display: block;
-    margin-top: 4px;
-    padding: 4px 6px;
-    color: var(--muted);
-    font-size: 0.8em;
-    background: var(--surface-3);
-    border-radius: 4px;
-    word-break: break-all;
-    user-select: all;
-}
-
-ul.link-warnings {
-    margin: 6px 0 0;
-    padding-left: 18px;
-    font-size: 0.9em;
 }
 
 .link-foot {
@@ -1225,30 +1459,11 @@ ul.link-warnings {
     font-size: 0.85em;
 }
 
-details.link-group {
-    margin-bottom: 8px;
-    color: var(--text);
-    background: var(--surface-3);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--level, var(--border));
-    border-radius: 8px;
-}
-
-details.link-group > summary {
+.link-actions {
     display: flex;
-    flex-wrap: wrap;
     gap: 6px;
-    align-items: baseline;
-    padding: 8px 10px;
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 0.92em;
-    overflow-wrap: anywhere;
-}
-
-details.link-group > ol.link-list {
-    padding: 0 8px 4px;
-    font-family: var(--sans);
+    margin-left: auto;
+    font-size: 0.9em;
 }
 
 /* Attachments */
@@ -1860,4 +2075,180 @@ html[lang="fr"] .lang-switch a[hreflang="fr"],
 html[lang="en"] .lang-switch a[hreflang="en"] {
     background: var(--accent);
     color: var(--accent-ink);
+}
+
+/* Security page, external services and credits */
+
+a.nav-link {
+    font-family: var(--mono);
+    font-size: 0.8em;
+    color: var(--muted);
+    text-decoration: none;
+}
+
+a.nav-link:hover {
+    color: var(--accent);
+}
+
+nav.toc {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin: 0 0 18px;
+    font-size: 0.9em;
+}
+
+main.prose section.card {
+    margin-left: 0;
+}
+
+main.prose ul.checks li {
+    margin-bottom: 6px;
+}
+
+table.services th[scope="row"] {
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+table.services td {
+    vertical-align: top;
+}
+
+table.services details.fold {
+    width: min(24rem, 45vw);
+}
+
+table.services td:last-child {
+    white-space: nowrap;
+}
+
+.site-footer .credits {
+    flex-basis: 100%;
+}
+
+.site-footer a {
+    color: inherit;
+}
+
+/* Phones */
+
+@media (max-width: 720px) {
+    .site-header {
+        position: static;
+        padding: 10px 16px;
+    }
+
+    .header-tools {
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 8px 12px;
+        width: 100%;
+    }
+
+    .header-tools .status {
+        display: none;
+    }
+
+    button.theme-toggle > span:last-child {
+        display: none;
+    }
+
+    .address code {
+        font-size: 1.05em;
+        overflow-wrap: anywhere;
+    }
+
+    a.mail-item {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    a.mail-item > * {
+        text-align: left;
+    }
+
+    .card, details.panel {
+        padding: 12px;
+    }
+
+    .card.level-ok, .card.level-warning, .card.level-danger, .card.level-info {
+        margin-left: 0;
+    }
+
+    h1.subject {
+        font-size: 1.5em;
+        overflow-wrap: anywhere;
+    }
+
+    details.panel > summary .summary-note {
+        display: block;
+        margin-top: 2px;
+    }
+
+    li.link-row {
+        padding-left: 6px;
+    }
+
+    details.images {
+        margin-left: 6px;
+    }
+}
+
+/* Tables read as cards on narrow screens: one block per row, each value
+   under its label. */
+@media (max-width: 640px) {
+    table.stack, table.stack tbody, table.stack tr, table.stack th, table.stack td {
+        display: block;
+        width: auto;
+    }
+
+    table.stack thead {
+        display: none;
+    }
+
+    table.stack tr {
+        padding: 10px 12px;
+        border-top: 1px solid var(--border);
+    }
+
+    table.stack tr:first-child {
+        border-top: 0;
+    }
+
+    table.stack th, table.stack td {
+        padding: 2px 0;
+        border: 0;
+        white-space: normal !important;
+    }
+
+    table.stack th[scope="row"], table.stack td.row-title {
+        font-weight: 600;
+    }
+
+    table.stack td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 0.72em;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    table.stack details.fold {
+        width: auto;
+    }
+}
+
+li.alert-link, li.link-row {
+    color: var(--text);
+}
+
+main.prose section.card > h2:first-child {
+    margin-top: 0;
+}
+
+/* The simplified view keeps a reading width on wide screens. */
+:root:not([data-view="detailed"]) main.wide:has(.simple-view) {
+    max-width: 1000px;
 }

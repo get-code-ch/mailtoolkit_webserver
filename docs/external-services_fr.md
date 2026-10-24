@@ -104,6 +104,10 @@ true` les requêtes OCSP et CRL.
 
 ## Vérifier un service
 
+Sur la page d'une analyse, vue détaillée, le panneau **Services externes** liste chaque service consulté, les éléments qui
+lui ont été demandés et sa réponse (« rien de connu », « N signalés » ou « sans réponse »), puis les services non
+configurés. La page **Sécurité** (`/securite`) indique quels services sont actifs sur le serveur.
+
 Sur la page d'une analyse, vue détaillée, section **Bases de menaces** :
 
 | La page affiche | Signification |

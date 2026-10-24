@@ -132,6 +132,9 @@ func TestThreatErrors(t *testing.T) {
 	if len(report.Findings) != 0 || len(report.Errors) != 1 || report.Errors[0] != "URLhaus" {
 		t.Errorf("%+v", report)
 	}
+	if l := report.Lookups; len(l) != 1 || l[0].Service != "URLhaus" || l[0].Failed != 1 || l[0].Subjects[0] != "malware.example" {
+		t.Errorf("lookups %+v", l)
+	}
 	if newThreatChecker(ThreatIntelConfig{}) != nil {
 		t.Error("checker without key")
 	}

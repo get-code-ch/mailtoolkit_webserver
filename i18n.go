@@ -230,7 +230,7 @@ func (t *translator) translateValue(v string, depth int) string {
 }
 
 // translatedAttributes are the attributes holding text for the reader.
-var translatedAttributes = map[string]bool{"title": true, "aria-label": true, "placeholder": true, "alt": true}
+var translatedAttributes = map[string]bool{"title": true, "aria-label": true, "placeholder": true, "alt": true, "data-label": true}
 
 // voidElements have no end tag.
 var voidElements = map[atom.Atom]bool{atom.Area: true, atom.Base: true, atom.Br: true, atom.Col: true, atom.Embed: true, atom.Hr: true,

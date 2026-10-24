@@ -50,6 +50,18 @@ type Link struct {
 	Visit *pageVisit
 }
 
+// Resource reports a URL loaded by the mail (image, style sheet) rather
+// than a link the reader clicks.
+func (l Link) Resource() bool {
+	return l.Source == "image" || l.Source == "image de fond" || strings.HasPrefix(l.Source, "style") || strings.HasPrefix(l.Source, "ressource")
+}
+
+// Alert reports a dangerous or suspicious link.
+func (l Link) Alert() bool {
+	level := l.Level()
+	return level == levelDanger || level == levelWarning
+}
+
 // Visitable reports whether the link can be followed by the server.
 func (l Link) Visitable() bool {
 	lower := strings.ToLower(l.URL)
@@ -357,7 +369,7 @@ func analyzeLink(raw, text, source, part string) Link {
 	} else if platform != "" {
 		warn(levelInfo, "Lien de suivi des clics ("+platform+")")
 	}
-	if source == "image" || source == "image de fond" || strings.HasPrefix(source, "style") || strings.HasPrefix(source, "ressource") {
+	if link.Resource() {
 		return link // images are often served from CDNs with generated names
 	}
 	if p := platformOf(hostingPlatforms, host); p != "" {
@@ -619,6 +631,87 @@ type linkGroup struct {
 	Links  []Link
 	// Level is the most severe level of the links.
 	Level string
+	// Common are the warnings of every link of a group of several links,
+	// shown once for the group.
+	Common []LinkWarning
+}
+
+// Clicked returns the links the reader can click, Loaded the images and
+// other resources loaded by the mail.
+func (g linkGroup) Clicked() []Link {
+	return slices.DeleteFunc(slices.Clone(g.Links), Link.Resource)
+}
+
+func (g linkGroup) Loaded() []Link {
+	return slices.DeleteFunc(slices.Clone(g.Links), func(l Link) bool { return !l.Resource() })
+}
+
+// Own returns the warnings of a link of the group, without the common ones.
+func (g linkGroup) Own(l Link) []LinkWarning {
+	if len(g.Common) == 0 {
+		return l.Warnings
+	}
+	var own []LinkWarning
+	for _, w := range l.Warnings {
+		if !slices.Contains(g.Common, w) {
+			own = append(own, w)
+		}
+	}
+	return own
+}
+
+// commonWarnings returns the warnings shared by all the links.
+func commonWarnings(links []Link) []LinkWarning {
+	if len(links) < 2 {
+		return nil
+	}
+	var common []LinkWarning
+	for _, w := range links[0].Warnings {
+		shared := !slices.Contains(common, w)
+		for _, l := range links[1:] {
+			shared = shared && slices.Contains(l.Warnings, w)
+		}
+		if shared {
+			common = append(common, w)
+		}
+	}
+	return common
+}
+
+// urlView splits a URL for display, keeping its text unchanged: the host
+// is highlighted, the query and the fragment, often long trackers, dimmed.
+type urlView struct {
+	// User is the local part of a mailto address, with its "@".
+	Scheme, User, Host, Path, Query string
+}
+
+func newURLView(raw string) urlView {
+	var v urlView
+	rest := raw
+	if i := strings.Index(rest, "://"); i > 0 && !strings.ContainsAny(rest[:i], "/?#") {
+		v.Scheme, rest = rest[:i+3], rest[i+3:]
+		end := strings.IndexAny(rest, "/?#")
+		if end < 0 {
+			end = len(rest)
+		}
+		v.Host, rest = rest[:end], rest[end:]
+	} else if scheme, address, ok := strings.Cut(rest, ":"); ok && strings.EqualFold(scheme, "mailto") {
+		v.Scheme, rest = scheme+":", address
+		if at := strings.LastIndexByte(rest, '@'); at >= 0 {
+			end := strings.IndexAny(rest[at:], "?#")
+			if end < 0 {
+				end = len(rest) - at
+			}
+			v.User, v.Host, v.Query = rest[:at+1], rest[at+1:at+end], rest[at+end:]
+			return v
+		}
+	}
+	if i := strings.IndexAny(rest, "?#"); i >= 0 {
+		v.Path, v.Query = v.Path+rest[:i], rest[i:]
+	} else {
+		v.Path += rest
+	}
+	return v
 }
 
 // Open tells whether the group is shown unfolded: when it holds a suspect
@@ -628,8 +721,8 @@ func (g linkGroup) Open() bool {
 }
 
 // groupLinks groups the links by organizational domain (mail.bank.example
-// and www.bank.example together), domains in alphabetical order, links
-// without domain last. Inside a group, links are sorted by URL.
+// and www.bank.example together), the domains holding a suspicious link
+// first, then in alphabetical order, links without domain last. Inside a group, links are sorted by URL.
 func groupLinks(links []Link) []linkGroup {
 	index := map[string]int{}
 	var groups []linkGroup
@@ -648,9 +741,13 @@ func groupLinks(links []Link) []linkGroup {
 		}
 	}
 	for i := range groups {
+		groups[i].Common = commonWarnings(groups[i].Links)
 		sort.SliceStable(groups[i].Links, func(a, b int) bool { return groups[i].Links[a].URL < groups[i].Links[b].URL })
 	}
 	sort.SliceStable(groups, func(a, b int) bool {
+		if alertA, alertB := groups[a].Open(), groups[b].Open(); alertA != alertB {
+			return alertA
+		}
 		if (groups[a].Domain == "") != (groups[b].Domain == "") {
 			return groups[b].Domain == ""
 		}

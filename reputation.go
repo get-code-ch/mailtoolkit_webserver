@@ -75,7 +75,32 @@ type reputation struct {
 	Errors  []string
 	Domains []domainAge
 	Checked int
+	// Lookups tell what each list and the registries were asked.
+	Lookups []serviceLookup
 }
+
+// listService names the service of a blocklist zone.
+func listService(zone string) string {
+	name := zoneName(zone)
+	switch {
+	case strings.HasPrefix(name, "zen."):
+		if isSpamhaus(zone) {
+			return "Spamhaus ZEN"
+		}
+	case strings.HasPrefix(name, "dbl."):
+		if isSpamhaus(zone) {
+			return "Spamhaus DBL"
+		}
+	case name == "bl.spamcop.net":
+		return "SpamCop"
+	case strings.HasSuffix(name, "surbl.org"):
+		return "SURBL"
+	}
+	return name
+}
+
+// rdapService names the registries in the lookups.
+const rdapService = "Registres de domaines (RDAP)"
 
 // listing is an IP address or a domain found in a blocklist.
 type listing struct {
@@ -183,18 +208,35 @@ func (r *reputationChecker) check(ctx context.Context, ips, domains []subject) r
 		}
 		meaning, level, ok := decode(zone, addrs[0])
 		if !ok {
-			if !slices.Contains(rep.Errors, zone) {
-				rep.Errors = append(rep.Errors, zone)
+			lookupOf(&rep.Lookups, listService(zone)).Failed++
+			// zoneName: the zone holds the DQS key.
+			if !slices.Contains(rep.Errors, zoneName(zone)) {
+				rep.Errors = append(rep.Errors, zoneName(zone))
 			}
 			return
 		}
+		lookupOf(&rep.Lookups, listService(zone)).Found++
 		rep.Listings = append(rep.Listings, listing{Subject: s.Value, Role: s.Role, List: zoneName(zone), Code: addrs[0].String(), Meaning: meaning, Level: level})
 	}
+	// The lookups are recorded before the queries start.
+	var valid []subject
 	for _, s := range ips {
-		ip, err := netip.ParseAddr(s.Value)
-		if err != nil {
-			continue
+		if _, err := netip.ParseAddr(s.Value); err == nil {
+			valid = append(valid, s)
 		}
+	}
+	for _, zone := range r.ipLists {
+		for _, s := range valid {
+			lookupOf(&rep.Lookups, listService(zone)).add(s.Value)
+		}
+	}
+	for _, zone := range r.domainLists {
+		for _, s := range domains {
+			lookupOf(&rep.Lookups, listService(zone)).add(s.Value)
+		}
+	}
+	for _, s := range valid {
+		ip := netip.MustParseAddr(s.Value)
 		for _, zone := range r.ipLists {
 			wg.Add(1)
 			go query(s, zone, reverseIP(ip)+"."+zone, ipListing)
@@ -214,6 +256,7 @@ func (r *reputationChecker) check(ctx context.Context, ips, domains []subject) r
 			}
 			seen[s.Value] = true
 			rep.Domains = append(rep.Domains, domainAge{Domain: s.Value, Role: s.Role})
+			lookupOf(&rep.Lookups, rdapService).add(s.Value)
 		}
 		for i := range rep.Domains {
 			wg.Add(1)
@@ -225,6 +268,8 @@ func (r *reputationChecker) check(ctx context.Context, ips, domains []subject) r
 				d.Registered = registered
 				if err != nil {
 					d.Error = err.Error()
+				} else if !registered.IsZero() {
+					lookupOf(&rep.Lookups, rdapService).Found++
 				}
 			}(&rep.Domains[i])
 		}

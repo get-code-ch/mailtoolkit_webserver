@@ -53,14 +53,15 @@ func TestReverseIP(t *testing.T) {
 
 func TestReputationCheck(t *testing.T) {
 	resolver := mapResolver{ip: map[string][]string{
-		"7.100.51.198.zen.spamhaus.org":    {"127.0.0.4"},
-		"7.100.51.198.bl.spamcop.net":      {"127.0.0.2"},
-		"evil.example.dbl.spamhaus.org":    {"127.0.1.4"},
-		"evil.example.multi.surbl.org":     {"127.0.0.24"},
-		"refused.example.dbl.spamhaus.org": {"127.255.255.254"},
-		"news.example.multi.surbl.org":     {"127.0.0.1"},
-		"mydomain.KEY.dbl.dq.spamhaus.net": {"127.0.1.2"},
-		"mtk.example.net.dbl.spamhaus.org": {"127.0.1.2"},
+		"7.100.51.198.zen.spamhaus.org":           {"127.0.0.4"},
+		"7.100.51.198.bl.spamcop.net":             {"127.0.0.2"},
+		"evil.example.dbl.spamhaus.org":           {"127.0.1.4"},
+		"evil.example.multi.surbl.org":            {"127.0.0.24"},
+		"refused.example.dbl.spamhaus.org":        {"127.255.255.254"},
+		"news.example.multi.surbl.org":            {"127.0.0.1"},
+		"mydomain.KEY.dbl.dq.spamhaus.net":        {"127.0.1.2"},
+		"refused.example.KEY.dbl.dq.spamhaus.net": {"127.255.255.254"},
+		"mtk.example.net.dbl.spamhaus.org":        {"127.0.1.2"},
 	}}
 	checker := newReputationChecker(ReputationConfig{RDAPDisabled: true}, resolver, []string{"mtk.example.net"})
 	rep := checker.check(context.Background(),
@@ -89,11 +90,27 @@ func TestReputationCheck(t *testing.T) {
 		t.Errorf("errors %v", rep.Errors)
 	}
 
+	lookups := map[string]serviceLookup{}
+	for _, l := range rep.Lookups {
+		lookups[l.Service] = l
+	}
+	if l := lookups["Spamhaus DBL"]; len(l.Subjects) != 4 || l.Found != 1 || l.Failed != 1 {
+		t.Errorf("DBL lookup %+v", l)
+	}
+	if l := lookups["Spamhaus ZEN"]; len(l.Subjects) != 1 || l.Subjects[0] != "198.51.100.7" || l.Found != 1 {
+		t.Errorf("ZEN lookup %+v", l)
+	}
+
 	// Through the Spamhaus Data Query Service, the key is never shown.
 	dqs := newReputationChecker(ReputationConfig{RDAPDisabled: true, SpamhausDQSKey: "KEY", DomainLists: []string{"dbl.spamhaus.org"}}, resolver, nil)
 	rep = dqs.check(context.Background(), nil, []subject{{"mydomain", "From"}})
 	if len(rep.Listings) != 1 || rep.Listings[0].List != "dbl.dq.spamhaus.net" {
 		t.Errorf("DQS listings %+v", rep.Listings)
+	}
+	rep = dqs.check(context.Background(), nil, []subject{{"refused.example", "From"}})
+	if strings.Contains(fmt.Sprint(rep), "KEY") || len(rep.Lookups) != 1 || rep.Lookups[0].Service != "Spamhaus DBL" ||
+		rep.Lookups[0].Failed != 1 || strings.Join(rep.Errors, ",") != "dbl.dq.spamhaus.net" {
+		t.Errorf("DQS key shown or lookup missing: %+v", rep)
 	}
 
 	if (*reputationChecker)(nil).check(context.Background(), nil, nil).Checked != 0 || newReputationChecker(ReputationConfig{Disabled: true}, resolver, nil) != nil {

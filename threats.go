@@ -45,6 +45,38 @@ type threatReport struct {
 	// Services are the databases queried, Errors those that failed.
 	Services []string
 	Errors   []string
+	// Lookups tell what each database was asked, in the order of Services.
+	Lookups []serviceLookup
+}
+
+// serviceLookup is what an external service was asked about a mail, and
+// how it answered.
+type serviceLookup struct {
+	Service  string
+	Subjects []string
+	// Found counts the subjects known to the service, Failed the queries
+	// left without answer.
+	Found, Failed int
+}
+
+// lookup returns the record of a service, created on first use.
+func lookupOf(lookups *[]serviceLookup, service string) *serviceLookup {
+	for i := range *lookups {
+		if (*lookups)[i].Service == service {
+			return &(*lookups)[i]
+		}
+	}
+	*lookups = append(*lookups, serviceLookup{Service: service})
+	return &(*lookups)[len(*lookups)-1]
+}
+
+// add records the subjects of a query.
+func (l *serviceLookup) add(subjects ...string) {
+	for _, s := range subjects {
+		if !slices.Contains(l.Subjects, s) {
+			l.Subjects = append(l.Subjects, s)
+		}
+	}
 }
 
 // threatFinding is a link host, a URL or a file known to a database.
@@ -166,34 +198,38 @@ func (t *threatChecker) check(ctx context.Context, s threatSubjects) threatRepor
 	}
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	run := func(service, key string, lookup func() ([]threatFinding, error)) {
+	run := func(service, key string, subjects []string, lookup func() ([]threatFinding, error)) {
 		if !slices.Contains(report.Services, service) {
 			report.Services = append(report.Services, service)
 		}
+		lookupOf(&report.Lookups, service).add(subjects...)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			findings, err := t.cached(service+"\x00"+key, lookup)
 			mu.Lock()
 			defer mu.Unlock()
+			l := lookupOf(&report.Lookups, service)
 			if err != nil {
+				l.Failed++
 				if !slices.Contains(report.Errors, service) {
 					report.Errors = append(report.Errors, service)
 				}
 				return
 			}
+			l.Found += len(findings)
 			report.Findings = append(report.Findings, findings...)
 		}()
 	}
 	if t.config.AbuseCHKey != "" {
 		for _, h := range s.Hosts {
-			run("URLhaus", h, func() ([]threatFinding, error) { return t.urlhausHost(ctx, h) })
+			run("URLhaus", h, []string{h}, func() ([]threatFinding, error) { return t.urlhausHost(ctx, h) })
 		}
 		for _, u := range s.URLs {
-			run("URLhaus", u, func() ([]threatFinding, error) { return t.urlhausURL(ctx, u) })
+			run("URLhaus", u, []string{u}, func() ([]threatFinding, error) { return t.urlhausURL(ctx, u) })
 		}
 		for _, f := range s.Files {
-			run("MalwareBazaar", f.SHA256, func() ([]threatFinding, error) { return t.malwareBazaar(ctx, f) })
+			run("MalwareBazaar", f.SHA256, []string{f.Name}, func() ([]threatFinding, error) { return t.malwareBazaar(ctx, f) })
 		}
 	}
 	if t.config.SafeBrowsingKey != "" && len(s.Hosts)+len(s.URLs) > 0 {
@@ -202,14 +238,14 @@ func (t *threatChecker) check(ctx context.Context, s threatSubjects) threatRepor
 			urls = append(urls, "http://"+h+"/")
 		}
 		urls = append(urls, s.URLs...)
-		run("Google Safe Browsing", strings.Join(urls, " "), func() ([]threatFinding, error) { return t.safeBrowsingLookup(ctx, urls) })
+		run("Google Safe Browsing", strings.Join(urls, " "), append(slices.Clone(s.Hosts), s.URLs...), func() ([]threatFinding, error) { return t.safeBrowsingLookup(ctx, urls) })
 	}
 	if t.config.VirusTotalKey != "" {
 		budget := maxVirusTotal
 		for _, f := range s.Files {
 			if budget > 0 {
 				budget--
-				run("VirusTotal", "file:"+f.SHA256, func() ([]threatFinding, error) {
+				run("VirusTotal", "file:"+f.SHA256, []string{f.Name}, func() ([]threatFinding, error) {
 					return t.virusTotalLookup(ctx, "files/"+f.SHA256, f.Name, "pièce jointe", "https://www.virustotal.com/gui/file/"+f.SHA256)
 				})
 			}
@@ -220,7 +256,7 @@ func (t *threatChecker) check(ctx context.Context, s threatSubjects) threatRepor
 			if budget > 0 && org != "" && !seen[org] {
 				budget--
 				seen[org] = true
-				run("VirusTotal", "domain:"+org, func() ([]threatFinding, error) {
+				run("VirusTotal", "domain:"+org, []string{org}, func() ([]threatFinding, error) {
 					return t.virusTotalLookup(ctx, "domains/"+org, org, "lien", "https://www.virustotal.com/gui/domain/"+org)
 				})
 			}

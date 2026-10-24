@@ -14,7 +14,16 @@ import (
 // templateFuncs are the functions available in the views.
 var templateFuncs = template.FuncMap{"resultClass": resultClass, "visibleSpace": visibleSpace, "dkimView": dkimView, "asset": asset, "brands": func() []brand { return brands },
 	"smimeLevel": smimeLevel, "smimeText": smimeText, "qrLevel": qrLevel, "fraudReasons": fraudReasons,
-	"add": func(a, b int) int { return a + b }}
+	"add": func(a, b int) int { return a + b }, "urlView": newURLView,
+	"join": strings.Join, "linkRow": func(g linkGroup, l Link) struct {
+		Group linkGroup
+		Link  Link
+	} {
+		return struct {
+			Group linkGroup
+			Link  Link
+		}{g, l}
+	}}
 
 // qrLevel is the most severe level of the QR codes.
 func qrLevel(codes []qrCode) string {
@@ -100,9 +109,9 @@ var headerCategories = []struct {
 }{
 	{"Expéditeur et destinataires", true, []string{"from", "sender", "reply-to", "to", "cc", "bcc", "subject", "date", "message-id",
 		"in-reply-to", "references", "return-path", "thread-topic", "thread-index"}, nil},
-	{"Authentification", false, []string{"dkim-signature", "authentication-results", "received-spf", "domainkey-signature"},
+	{"Authentification", true, []string{"dkim-signature", "authentication-results", "received-spf", "domainkey-signature"},
 		[]string{"arc-"}},
-	{"Chemin", false, []string{"received", "x-received", "delivered-to", "x-original-to", "envelope-to"}, nil},
+	{"Chemin", true, []string{"received", "x-received", "delivered-to", "x-original-to", "envelope-to"}, nil},
 	{"Contenu", false, []string{"mime-version"}, []string{"content-"}},
 	{"Listes et désabonnement", false, []string{"precedence", "feedback-id"}, []string{"list-"}},
 	{spamCategory, false, nil, nil},
@@ -200,7 +209,8 @@ func fieldParams(f mailauth.Field) []mailauth.Tag {
 }
 
 // visibleSpace shows the characters that matter in a canonicalized field:
-// line ends, tabulations and trailing spaces, as marked HTML.
+// tabulations and trailing spaces, as marked HTML. Line ends are always
+// CRLF and left unmarked.
 func visibleSpace(s string) template.HTML {
 	mark := func(text string) string { return `<span class="ws">` + text + `</span>` }
 	var b strings.Builder
@@ -217,7 +227,7 @@ func visibleSpace(s string) template.HTML {
 			b.WriteString(mark(strings.Repeat("·", spaces)))
 		}
 		if i < len(lines)-1 {
-			b.WriteString(mark("CRLF") + "\n")
+			b.WriteString("\n")
 		}
 	}
 	return template.HTML(b.String())

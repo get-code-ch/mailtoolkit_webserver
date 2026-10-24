@@ -235,8 +235,8 @@ func TestHeaderGroups(t *testing.T) {
 	if strings.Join(got, "|") != want {
 		t.Errorf("groups %s\nwant %s", strings.Join(got, "|"), want)
 	}
-	if !groups[0].Open || groups[1].Open {
-		t.Error("only the sender group should be open")
+	if !groups[0].Open || !groups[1].Open || !groups[2].Open || groups[3].Open {
+		t.Error("only the sender, authentication and path groups should be open")
 	}
 	if from := fields["From"]; from.Value != "Café <joe@example.com>" || !from.Decoded || len(from.Signed) != 1 || from.Signed[0].Domain != "example.com" {
 		t.Errorf("From = %+v", from)
@@ -256,7 +256,7 @@ func TestHeaderGroups(t *testing.T) {
 }
 
 func TestVisibleSpace(t *testing.T) {
-	want := `subject:&lt;a<span class="ws">TAB</span>b<span class="ws">··</span><span class="ws">CRLF</span>` + "\n"
+	want := `subject:&lt;a<span class="ws">TAB</span>b<span class="ws">··</span>` + "\n"
 	if got := string(visibleSpace("subject:<a\tb  \r\n")); got != want {
 		t.Errorf("visibleSpace = %q", got)
 	}

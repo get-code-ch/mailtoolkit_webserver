@@ -152,7 +152,7 @@ func TestQuishingPage(t *testing.T) {
 	handler := s.routes(t.TempDir())
 	location := postFile(t, handler, "/upload", "q.eml", []byte(mail)).Header().Get("Location")
 	page := get(handler, location).Body.String()
-	for _, want := range []string{`id="qrcodes"`, "https://mfa-renew.example.net/login", "quishing", "light-red", `<span class="badge">QR code</span>`, "double authentification"} {
+	for _, want := range []string{`id="qrcodes"`, "https://mfa-renew.example.net/login", "quishing", "light-red", `>QR code</span>`, "double authentification"} {
 		if !strings.Contains(page, want) {
 			t.Errorf("%q missing", want)
 		}
@@ -185,7 +185,7 @@ func TestLureAttachmentPage(t *testing.T) {
 	handler := s.routes(t.TempDir())
 	location := postFile(t, handler, "/upload", "l.eml", []byte(mail)).Header().Get("Location")
 	page := get(handler, location).Body.String()
-	for _, want := range []string{"light-red", "Document leurre", "lien vers SharePoint", `<span class="badge">pièce jointe</span>`,
+	for _, want := range []string{"light-red", "Document leurre", "lien vers SharePoint", `>pièce jointe</span>`,
 		"fabrikam-my.sharepoint.com"} {
 		if !strings.Contains(page, want) {
 			t.Errorf("%q missing", want)

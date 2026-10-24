@@ -186,16 +186,16 @@ func TestGroupLinks(t *testing.T) {
 	}
 	want := []string{
 		"192.0.2.1[warning]=http://192.0.2.1/x",
-		"bank.co.uk[]=https://news.bank.co.uk/",
 		"evil.example[danger]=https://evil.example/login",
+		"bank.co.uk[]=https://news.bank.co.uk/",
 		"shop.example[info]=https://mail.shop.example/a,https://www.shop.example/b,mailto:info@shop.example",
 		"[]=relative/path",
 	}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("groups:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
-	if !groups[0].Open() || !groups[2].Open() || groups[3].Open() {
-		t.Error("only suspect groups should be open")
+	if !groups[0].Open() || !groups[1].Open() || groups[2].Open() {
+		t.Error("the suspect groups should come first and be open")
 	}
 }
 
@@ -220,5 +220,42 @@ func TestClickTrackers(t *testing.T) {
 	}
 	if trackerOf("marketingusercontent.com.evil.example") != "" || trackerOf("x.105.eu.prod.marketingusercontent.com") == "" {
 		t.Error("trackerOf suffix matching")
+	}
+}
+
+func TestURLView(t *testing.T) {
+	for raw, want := range map[string]urlView{
+		"https://www.example.com/a/b?x=1#f": {Scheme: "https://", Host: "www.example.com", Path: "/a/b", Query: "?x=1#f"},
+		"http://example.com":                {Scheme: "http://", Host: "example.com"},
+		"mailto:joe@example.org?subject=Hi": {Scheme: "mailto:", User: "joe@", Host: "example.org", Query: "?subject=Hi"},
+		"/relative/path?q":                  {Path: "/relative/path", Query: "?q"},
+	} {
+		if got := newURLView(raw); got != want {
+			t.Errorf("%s: %+v, want %+v", raw, got, want)
+		}
+		v := newURLView(raw)
+		if v.Scheme+v.User+v.Host+v.Path+v.Query != raw {
+			t.Errorf("%s: text changed", raw)
+		}
+	}
+}
+
+func TestCommonWarnings(t *testing.T) {
+	http := LinkWarning{levelInfo, "Connexion non chiffrée (http)"}
+	pixel := LinkWarning{levelInfo, "pixel"}
+	groups := groupLinks([]Link{
+		{URL: "http://a.example/1", Host: "a.example", Warnings: []LinkWarning{http, pixel}},
+		{URL: "http://a.example/2", Host: "a.example", Warnings: []LinkWarning{http}},
+		{URL: "http://b.example/", Host: "b.example", Warnings: []LinkWarning{http}},
+	})
+	if len(groups[0].Common) != 1 || groups[0].Common[0] != http {
+		t.Errorf("common %+v", groups[0].Common)
+	}
+	if own := groups[0].Own(groups[0].Links[0]); len(own) != 1 || own[0] != pixel {
+		t.Errorf("own %+v", own)
+	}
+	// A single link keeps its warnings.
+	if len(groups[1].Common) != 0 || len(groups[1].Own(groups[1].Links[0])) != 1 {
+		t.Errorf("single link group %+v", groups[1])
 	}
 }

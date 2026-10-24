@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"html/template"
 	"io"
 	"log"
@@ -105,6 +106,7 @@ func (s *server) routes(staticFolder string) http.Handler {
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}/part/{content}", s.mailPart)
 	mux.HandleFunc("POST /inbox/{token}/{id}/{n}/visit", s.visitLink)
 	mux.HandleFunc("GET /inbox/{token}/{id}/{n}/attachment/{attachment}", s.mailAttachment)
+	mux.HandleFunc("GET /securite", s.security)
 	mux.HandleFunc("GET /admin", s.admin)
 	mux.HandleFunc("POST /admin/lists", s.adminLists)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticFolder))))
@@ -142,6 +144,32 @@ func redirectToHTTPS(httpsPort, acmeWebroot string) http.Handler {
 
 func (s *server) index(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, "index.html", struct{ Title string }{"Analyse de mail"})
+}
+
+// security describes the protection of the analyzed mails and the external
+// services of this server.
+func (s *server) security(w http.ResponseWriter, r *http.Request) {
+	s.render(w, r, "security.html", struct {
+		Title            string
+		Retention        string
+		Services         []externalService
+		BehindCloudflare bool
+		Repository       string
+	}{"Sécurité et protection des données", durationText(s.store.retention), s.externalServices(), s.behindCloudflare, repositoryURL})
+}
+
+// repositoryURL is the source code of the site.
+const repositoryURL = "https://github.com/get-code-ch/mailtoolkit_webserver"
+
+// durationText writes a retention period in words: "24 heures", "7 jours".
+func durationText(d time.Duration) string {
+	switch {
+	case d >= 48*time.Hour && d%(24*time.Hour) == 0:
+		return fmt.Sprintf("%d jours", d/(24*time.Hour))
+	case d >= 2*time.Hour:
+		return fmt.Sprintf("%d heures", int(d.Hours()))
+	}
+	return fmt.Sprintf("%d minutes", int(d.Minutes()))
 }
 
 func (s *server) newMailbox(w http.ResponseWriter, r *http.Request) {
@@ -331,15 +359,18 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 		Frame       string
 		Links       []Link
 		LinkGroups  []linkGroup
-		Dangers     int
-		Warnings    int
-		Auth        *headerAnalysis
-		Risk        riskReport
-		SMIME       smime.Result
-		Reputation  reputation
-		Lookalikes  []lookalike
-		Threats     threatReport
-		QRCodes     []qrCode
+		// Alerts are the dangerous links first, then the suspicious ones.
+		Alerts     []Link
+		Dangers    int
+		Warnings   int
+		Auth       *headerAnalysis
+		Risk       riskReport
+		SMIME      smime.Result
+		Reputation reputation
+		Lookalikes []lookalike
+		Threats    threatReport
+		Services   servicesReport
+		QRCodes    []qrCode
 		// QRSkipped counts the images not scanned for QR codes.
 		QRSkipped int
 		Fraud     fraudAnalysis
@@ -395,6 +426,9 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 	destinations := applyVisits(data.Links, visits)
 	data.LinkGroups = groupLinks(data.Links)
 	for _, link := range data.Links {
+		if link.Alert() {
+			data.Alerts = append(data.Alerts, link)
+		}
 		switch link.Level() {
 		case levelDanger:
 			data.Dangers++
@@ -402,6 +436,7 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 			data.Warnings++
 		}
 	}
+	slices.SortStableFunc(data.Alerts, func(a, b Link) int { return severity[a.Level()] - severity[b.Level()] })
 	hop, err := strconv.Atoi(r.URL.Query().Get("hop"))
 	if err != nil {
 		hop = -1
@@ -427,6 +462,7 @@ func (s *server) analysis(w http.ResponseWriter, r *http.Request) {
 	data.Risk = assessRisk(riskInput{Auth: &auth, Links: data.Links, Attachments: data.Attachments,
 		Reputation: data.Reputation, Lookalikes: data.Lookalikes, TrustedDomains: trusted, ProtectedNames: s.protectedNames,
 		SMIME: data.SMIME, QRCodes: data.QRCodes, Fraud: data.Fraud, Threats: data.Threats, Lists: lists, Destinations: destinations})
+	data.Services = s.servicesReport(data.Threats, data.Reputation, data.Links, data.SMIME)
 	s.stats.recordAnalysis(base, data.Risk, data.Lookalikes, data.Reputation, data.QRCodes,
 		suggestionDomains(data.Risk, &auth, append(slices.Clone(data.Links), destinations...), data.Lookalikes))
 	s.render(w, r, "mail.html", data)

@@ -102,6 +102,10 @@ and CRL queries.
 
 ## Checking a service
 
+On the page of an analysis, detailed view, the **External services** panel lists each service consulted, the items it was
+asked about and its answer ("nothing known", "N reported" or "no answer"), then the services not configured. The
+**Security** page (`/securite`) shows which services are enabled on the server.
+
 On the page of an analysis, detailed view, section **Bases de menaces**:
 
 | The page shows | Meaning |

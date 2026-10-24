@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>{{template "head" .Title}}</head>
+<body>
+{{template "site-header"}}
+<main class="prose">
+    <p class="crumbs"><a href="/">← Accueil</a></p>
+    <h1>Sécurité et protection des données</h1>
+    <p class="lead">Ce qui protège votre poste pendant l'analyse, ce que le serveur conserve, et à quels services externes il
+        s'adresse.</p>
+
+    <nav class="toc" aria-label="Sommaire">
+        <a href="#isolement">Isolement de l'analyse</a>
+        <a href="#donnees">Données conservées</a>
+        <a href="#prestataires">Prestataires externes</a>
+        <a href="#limites">Limites</a>
+        <a href="#code">Code source</a>
+    </nav>
+
+    <section id="isolement" class="card">
+        <h2>Isolement de l'analyse</h2>
+        <ul class="checks">
+            <li class="level-ok">Le contenu du mail est affiché dans un cadre isolé (<code>sandbox</code>) : aucun script ne s'exécute,
+                aucun formulaire ne s'envoie, et le cadre n'a pas accès au reste du site.</li>
+            <li class="level-ok">Les images distantes sont bloquées : l'expéditeur n'apprend pas que vous avez ouvert son mail.</li>
+            <li class="level-ok">Les liens ne sont jamais cliquables. Les liens suspects sont ouverts par le serveur, jamais par votre
+                navigateur.</li>
+            <li class="level-ok">Les pièces jointes sont examinées sans être ouvertes ni exécutées : type réel, macros, archives, liens
+                et QR codes.</li>
+            <li class="level-ok">Les pages du site ne chargent aucun script, aucune police et aucun outil de mesure d'audience
+                externes. Les en-têtes de sécurité (<code>Content-Security-Policy</code>, <code>Referrer-Policy: no-referrer</code>)
+                empêchent les adresses privées des boîtes de fuiter vers d'autres sites.</li>
+            <li class="level-ok">Les connexions au site sont chiffrées (HTTPS). Le serveur de messagerie accepte le chiffrement
+                STARTTLS.</li>
+        </ul>
+    </section>
+
+    <section id="donnees" class="card">
+        <h2>Données conservées</h2>
+        <div class="table-scroll">
+        <table class="stack">
+            <thead><tr><th>Donnée</th><th>Durée</th><th>Usage</th></tr></thead>
+            <tbody>
+            <tr><td class="row-title">Mails reçus ou déposés, avec leur enveloppe (expéditeur, destinataire, adresse IP de l'envoi ou du dépôt)</td>
+                <td data-label="Durée">{{.Retention}}, puis suppression automatique</td><td data-label="Usage">affichage de l'analyse sur votre page privée</td></tr>
+            <tr><td class="row-title">Adresse temporaire et page privée</td><td data-label="Durée">{{.Retention}}</td><td data-label="Usage">réception des mails à analyser</td></tr>
+            <tr><td class="row-title">Réponses des services externes</td><td data-label="Durée">quelques heures, en mémoire</td><td data-label="Usage">éviter de répéter les mêmes requêtes</td></tr>
+            <tr><td class="row-title">Adresses IP des visiteurs</td><td data-label="Durée">une heure, en mémoire</td><td data-label="Usage">limiter les abus (nombre de boîtes créées, de liens suivis)</td></tr>
+            <tr><td class="row-title">Statistiques</td><td data-label="Durée">400 jours</td><td data-label="Usage">compteurs par jour : nombre d'analyses, verdicts, marques imitées et
+                domaines suspects ; jamais le contenu, les adresses ni le sujet des mails</td></tr>
+            </tbody>
+        </table>
+        </div>
+        <p>Le bouton « Supprimer » efface immédiatement un mail ou toute une boîte. Le lien d'une page privée suffit pour la
+            consulter : ne le partagez qu'avec les personnes concernées.</p>
+        <p>Le site n'utilise qu'un cookie, <code>lang</code>, quand vous choisissez la langue. Le thème et la vue choisis restent
+            dans votre navigateur (<code>localStorage</code>).</p>
+        <p class="note">N'analysez que des mails que vous avez le droit de transmettre : un mail contient souvent des données
+            personnelles de tiers.</p>
+    </section>
+
+    <section id="prestataires" class="card">
+        <h2>Prestataires externes</h2>
+        <p>Pour juger un mail, le serveur interroge des bases de menaces, des listes noires et des registres. Il ne leur transmet
+            jamais le contenu du mail ni l'adresse de ses destinataires, seulement les éléments indiqués ci-dessous. Chaque analyse
+            liste, dans la vue détaillée, les services consultés et ce qui leur a été demandé.</p>
+        <div class="table-scroll">
+        <table class="services stack">
+            <thead><tr><th>Service</th><th>Sur ce serveur</th><th>Vérifie</th><th>Reçoit</th></tr></thead>
+            <tbody>
+            {{range .Services}}
+            <tr>
+                <th scope="row">{{if .Site}}<a href="{{.Site}}" rel="noopener noreferrer">{{.Name}}</a>{{else}}{{.Name}}{{end}}</th>
+                <td data-label="Sur ce serveur">{{if .Enabled}}<span class="badge level-ok">actif</span>{{else}}<span class="badge">non configuré</span>{{end}}
+                    {{with .Note}}<div class="note">{{.}}</div>{{end}}</td>
+                <td data-label="Vérifie">{{.Checks}}</td>
+                <td data-label="Reçoit">{{.Sent}}</td>
+            </tr>
+            {{end}}
+            {{if .BehindCloudflare}}
+            <tr>
+                <th scope="row"><a href="https://www.cloudflare.com/" rel="noopener noreferrer">Cloudflare</a></th>
+                <td data-label="Sur ce serveur"><span class="badge level-ok">actif</span></td>
+                <td data-label="Vérifie">protection et acheminement du site web</td>
+                <td data-label="Reçoit">les pages consultées et les fichiers déposés, qui transitent par son réseau ; pas les mails reçus par
+                    messagerie</td>
+            </tr>
+            {{end}}
+            </tbody>
+        </table>
+        </div>
+        <p class="note">Les offres gratuites de Google Safe Browsing, VirusTotal et Spamhaus sont réservées à un usage non
+            commercial. Chaque service applique sa propre politique de confidentialité, consultable sur son site.</p>
+    </section>
+
+    <section id="limites" class="card">
+        <h2>Limites</h2>
+        <ul>
+            <li>Aucune analyse n'est infaillible : un site d'hameçonnage récent est souvent inconnu des bases pendant plusieurs
+                heures. En cas de doute, ne cliquez pas et demandez conseil.</li>
+            <li>Les vérifications (DNS, listes noires, clés DKIM) sont faites au moment de l'analyse, pas au moment de l'envoi du
+                mail.</li>
+            <li>Un lien suivi par le serveur peut confirmer à l'expéditeur que le mail a été reçu. Les liens à usage unique
+                (désinscription, confirmation, réinitialisation) ne sont jamais suivis automatiquement.</li>
+        </ul>
+    </section>
+
+    <section id="code" class="card">
+        <h2>Code source</h2>
+        <p>Le code de ce site est ouvert, sous licence MIT :
+            <a href="{{.Repository}}" rel="noopener noreferrer">{{.Repository}}</a>. Il a été réalisé avec l'aide de l'IA
+            Claude, développée par Anthropic.</p>
+    </section>
+</main>
+{{template "site-footer"}}
+</body>
+</html>
